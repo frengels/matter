@@ -1,0 +1,3 @@
+build/
+subprojects/catch2/
+.dirs-local.el
