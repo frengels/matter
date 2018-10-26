@@ -1,3 +1,4 @@
 build/
-subprojects/catch2/
+subprojects/Catch2-*
+subprojects/packagecache/
 .dirs-local.el
