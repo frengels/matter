@@ -18,16 +18,19 @@ struct is_entity<
         typename T::id_type,
         typename T::version_type,
         std::enable_if_t<
-            std::is_convertible_v<typename T::id_type,
-                           decltype(std::declval<const T&>().id())>>,
-        std::enable_if_t<
-            std::is_convertible_v<typename T::version_type,
-                           decltype(std::declval<const T&>().version())>>,
+            std::is_convertible_v<const typename T::id_type&,
+                                  decltype(std::declval<const T&>().id())>>,
+        std::enable_if_t<std::is_convertible_v<
+            const typename T::version_type&,
+            decltype(std::declval<const T&>().version())>>,
         std::enable_if_t<std::is_same_v<bool,
                                         decltype(std::declval<const T&>() ==
-                                                 std::declval<const T&>())>>>>
-    : public std::true_type
+                                                 std::declval<const T&>())>>,
+        decltype(bool(std::declval<const T&>()))>> : public std::true_type
 {};
+
+template<typename T>
+constexpr bool is_entity_v = is_entity<T>::value;
 } // namespace matter
 
 #endif

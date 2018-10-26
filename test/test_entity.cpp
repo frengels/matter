@@ -4,6 +4,7 @@
 #include <string>
 
 #include "matter/entity/entity_traits.hpp"
+#include "matter/entity/entity.hpp"
 
 struct custom_entity
 {
@@ -29,12 +30,17 @@ public:
     {
         return m_ver == other.m_ver && m_id.compare(other.m_id) == 0;
     }
+
+    explicit operator bool() const {
+	return !std::empty(m_id);
+    }
 };
 
 TEST_CASE("entity")
 {
     SECTION("traits")
     {
+	REQUIRE(matter::is_entity_v<matter::entity<uint32_t, uint32_t>>);
         REQUIRE(matter::is_entity<custom_entity>::value);
     }
 }
