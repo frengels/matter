@@ -1,9 +1,11 @@
 #ifndef MATTER_ENTITY_HPP
 #define MATTER_ENTITY_HPP
 
-#include <type_traits>
-
 #pragma once
+
+#include <queue>
+#include <type_traits>
+#include <vector>
 
 namespace matter
 {
@@ -24,10 +26,19 @@ public:
     static constexpr id_type invalid_id = 0;
 
 private:
-    id_type m_id;
+    id_type      m_id;
     version_type m_version;
 
 public:
+    constexpr entity(const id_type& id, const version_type& ver) noexcept
+        : m_id{id}, m_version{ver}
+    {}
+
+    constexpr entity(const entity&) noexcept = default;
+    constexpr entity& operator=(const entity&) noexcept = default;
+    constexpr entity(entity&&) noexcept                 = default;
+    constexpr entity& operator=(entity&&) noexcept = default;
+
     constexpr id_type id() const noexcept
     {
         return m_id;
@@ -41,6 +52,11 @@ public:
     constexpr bool operator==(const entity& other) const noexcept
     {
         return m_id == other.m_id && m_version == other.m_version;
+    }
+
+    constexpr bool operator!=(const entity& other) const noexcept
+    {
+        return !(*this == other);
     }
 
     explicit constexpr operator bool() const noexcept

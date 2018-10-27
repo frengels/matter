@@ -1,7 +1,14 @@
+catch2_lib = static_library(
+  'catch2',
+  'catch2.cpp',
+  dependencies: catch2_dep,
+)
+
 entity_test = executable(
   'test_entity',
   'test_entity.cpp',
-  dependencies: [catch2_dep, matter_dep]
+  link_with: catch2_lib,
+  dependencies: [catch2_dep, matter_dep],
 )
 
 test('entity', entity_test)

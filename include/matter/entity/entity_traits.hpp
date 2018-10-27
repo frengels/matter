@@ -17,6 +17,7 @@ struct is_entity<
     std::void_t<
         typename T::id_type,
         typename T::version_type,
+        decltype(T::invalid_id),
         std::enable_if_t<
             std::is_convertible_v<const typename T::id_type&,
                                   decltype(std::declval<const T&>().id())>>,
@@ -26,11 +27,17 @@ struct is_entity<
         std::enable_if_t<std::is_same_v<bool,
                                         decltype(std::declval<const T&>() ==
                                                  std::declval<const T&>())>>,
-        decltype(bool(std::declval<const T&>()))>> : public std::true_type
+        decltype(bool(std::declval<const T&>())),
+        decltype(std::declval<typename T::id_type>() ==
+                 std::declval<typename T::id_type>()),
+        decltype(std::declval<typename T::version_type>() ==
+                 std::declval<typename T::version_type>())>>
+    : public std::true_type
 {};
 
 template<typename T>
 constexpr bool is_entity_v = is_entity<T>::value;
+
 } // namespace matter
 
 #endif
