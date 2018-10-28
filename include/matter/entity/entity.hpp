@@ -23,7 +23,7 @@ public:
     using id_type      = Tid;
     using version_type = Tversion;
 
-    static constexpr id_type invalid_id = 0;
+    static constexpr id_type invalid_id = -1;
 
 private:
     id_type      m_id;

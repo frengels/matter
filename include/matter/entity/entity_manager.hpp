@@ -42,8 +42,8 @@ public:
         {
             // initialize with version 0
             ver = 0;
+	    id = static_cast<id_type>(std::size(m_entities));
             m_entities.push_back(ver);
-            id = static_cast<id_type>(std::size(m_entities));
         }
 
         return entity_type{id, ver};
@@ -67,14 +67,12 @@ public:
 
     version_type& current_version(const id_type& id)
     {
-        // id 0 is invalid so ids start at 1, to fill all space id 1 occupies
-        // slot 0
-        return m_entities[id - 1];
+        return m_entities[id];
     }
 
     const version_type& current_version(const id_type& id) const
     {
-        return m_entities[id - 1];
+        return m_entities[id];
     }
 
     size_t size() const noexcept
