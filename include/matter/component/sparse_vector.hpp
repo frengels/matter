@@ -42,6 +42,11 @@ private:
 public:
     sparse_vector() = default;
 
+    sparse_vector(const sparse_vector&) = default;
+    sparse_vector& operator=(const sparse_vector&) = default;
+    sparse_vector(sparse_vector&&) noexcept        = default;
+    sparse_vector& operator=(sparse_vector&&) noexcept = default;
+
     auto begin() noexcept -> decltype(std::begin(m_packed))
     {
         return std::begin(m_packed);
