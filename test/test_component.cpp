@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 
+#include "matter/component/identity.hpp"
 #include "matter/component/sparse_vector.hpp"
 
 struct random_component
@@ -70,5 +71,34 @@ TEST_CASE("sparse_vector")
                 REQUIRE(vec[i * 10].i == i * 10);
             }
         }
+    }
+}
+
+template<int>
+struct test_tag
+{};
+
+TEST_CASE("identity")
+{
+    SECTION("decay")
+    {
+        REQUIRE(matter::identity<test_tag<0>>::get<float>() ==
+                matter::identity<test_tag<0>>::get<const float&&>());
+    }
+
+    SECTION("different tag")
+    {
+        REQUIRE(matter::identity<test_tag<1>>::get<float>() ==
+                matter::identity<test_tag<2>>::get<int>());
+    }
+
+    SECTION("consecutive ids")
+    {
+        auto id1 = matter::identity<test_tag<3>>::get<int>();
+        auto id2 = matter::identity<test_tag<3>>::get<float>();
+        auto id3 = matter::identity<test_tag<3>>::get<uint8_t>();
+
+        REQUIRE(id1 < id2);
+        REQUIRE(id2 < id3);
     }
 }
