@@ -21,3 +21,12 @@ component_test = executable(
 )
 
 test('component', component_test)
+
+ecs_test = executable(
+  'test_ecs',
+  'test_ecs.cpp',
+  link_with: catch2_lib,
+  dependencies: [catch2_dep, matter_dep],
+)
+
+test('ecs', ecs_test)

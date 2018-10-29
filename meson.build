@@ -3,7 +3,7 @@ project(
   'cpp',
   license: 'MIT',
   default_options: [
-    'cpp_std=c++17',
+    'cpp_std=c++2a',
     'warning_level=1',
   ]
 )
