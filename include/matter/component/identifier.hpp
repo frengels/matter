@@ -1,17 +1,18 @@
-#ifndef MATTER_COMPONENT_IDENTITY_HPP
-#define MATTER_COMPONENT_IDENTITY_HPP
+#ifndef MATTER_COMPONENT_IDENTIFIER_HPP
+#define MATTER_COMPONENT_IDENTIFIER_HPP
 
 #pragma once
 
 #include <type_traits>
+#include <atomic>
 
 namespace matter
 {
 template<typename Tag>
-struct identity
+struct identifier
 {
 private:
-    static size_t m_next_id;
+  static std::atomic<std::size_t> m_next_id;
 
     template<typename T>
     static size_t _get() noexcept
@@ -30,7 +31,7 @@ public:
 };
 
 template<typename Tag>
-size_t identity<Tag>::m_next_id = 0;
+std::atomic<std::size_t> identifier<Tag>::m_next_id = 0;
 } // namespace matter
 
 #endif
