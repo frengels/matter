@@ -119,6 +119,10 @@ public:
 
 private:
 public:
+    /*!
+     * ecs.create_entity<Mesh, RigidBody, Transform>(std::forward_as_tuple(...),
+     * std::forward_as_tuple(...), std::forward_as_tuple(...));
+     */
     template<typename... Cs, typename... CsArgs>
     matter::entity_handle<entity_type> create_entity(CsArgs... comp_args)
     {
