@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include <type_traits>
 #include <atomic>
+#include <type_traits>
 
 namespace matter
 {
@@ -12,18 +12,18 @@ template<typename Tag>
 struct identifier
 {
 private:
-  static std::atomic<std::size_t> m_next_id;
+    static std::atomic<std::size_t> m_next_id;
 
     template<typename T>
-    static size_t _get() noexcept
+    static std::size_t _get() noexcept
     {
-        static const size_t id = m_next_id++;
+        static const std::size_t id = m_next_id++;
         return id;
     }
 
 public:
     template<typename T>
-    static size_t get() noexcept
+    static std::size_t get() noexcept
     {
         return _get<typename std::remove_cv<
             typename std::remove_reference<T>::type>::type>();

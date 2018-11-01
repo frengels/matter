@@ -80,6 +80,7 @@ public:
     reference operator[](const index_type& idx) noexcept
     {
         assert(idx < std::size(m_index));
+        assert(m_index[idx] != -1);
         return m_packed[m_index[idx]];
     }
 

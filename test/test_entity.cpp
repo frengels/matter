@@ -61,7 +61,7 @@ TEST_CASE("entity manager")
         CHECK(manager.is_valid(ent1));
         CHECK(manager.is_valid(ent2));
 
-        SECTION("destroy");
+        SECTION("destroy")
         {
             manager.destroy(ent1);
             manager.destroy(ent2);
