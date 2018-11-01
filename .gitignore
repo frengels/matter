@@ -2,3 +2,4 @@ build/
 subprojects/Catch2-*
 subprojects/packagecache/
 .dirs-local.el
+compile_commands.json
