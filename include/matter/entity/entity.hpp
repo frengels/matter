@@ -21,16 +21,16 @@ struct entity
 
 public:
     using id_type      = Tid;
-    using version_type = Tversion;
+    using generation_type = Tversion;
 
     static constexpr id_type invalid_id = -1;
 
 private:
     id_type      m_id;
-    version_type m_version;
+    generation_type m_version;
 
 public:
-    constexpr entity(const id_type& id, const version_type& ver) noexcept
+    constexpr entity(const id_type& id, const generation_type& ver) noexcept
         : m_id{id}, m_version{ver}
     {}
 
@@ -44,7 +44,7 @@ public:
         return m_id;
     }
 
-    constexpr version_type version() const noexcept
+    constexpr generation_type version() const noexcept
     {
         return m_version;
     }

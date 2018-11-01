@@ -16,13 +16,13 @@ struct is_entity<
     T,
     std::void_t<
         typename T::id_type,
-        typename T::version_type,
+        typename T::generation_type,
         decltype(T::invalid_id),
         std::enable_if_t<
             std::is_convertible_v<const typename T::id_type&,
                                   decltype(std::declval<const T&>().id())>>,
         std::enable_if_t<std::is_convertible_v<
-            const typename T::version_type&,
+            const typename T::generation_type&,
             decltype(std::declval<const T&>().version())>>,
         std::enable_if_t<std::is_same_v<bool,
                                         decltype(std::declval<const T&>() ==
@@ -30,8 +30,8 @@ struct is_entity<
         decltype(bool(std::declval<const T&>())),
         decltype(std::declval<typename T::id_type>() ==
                  std::declval<typename T::id_type>()),
-        decltype(std::declval<typename T::version_type>() ==
-                 std::declval<typename T::version_type>())>>
+        decltype(std::declval<typename T::generation_type>() ==
+                 std::declval<typename T::generation_type>())>>
     : public std::true_type
 {};
 

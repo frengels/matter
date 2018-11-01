@@ -18,10 +18,10 @@ struct entity_manager
 
     using entity_type  = Entity;
     using id_type      = typename entity_type::id_type;
-    using version_type = typename entity_type::version_type;
+    using generation_type = typename entity_type::generation_type;
 
 private:
-    std::vector<version_type> m_entities;
+    std::vector<generation_type> m_entities;
     std::queue<id_type>       m_free_entities;
 
 public:
@@ -31,7 +31,7 @@ public:
     entity_type create()
     {
         id_type      id;
-        version_type ver;
+        generation_type ver;
         if (!std::empty(m_free_entities))
         {
             id = std::move(m_free_entities.front());
@@ -65,12 +65,12 @@ public:
         return current_version(ent.id()) == ent.version();
     }
 
-    version_type& current_version(const id_type& id)
+    generation_type& current_version(const id_type& id)
     {
         return m_entities[id];
     }
 
-    const version_type& current_version(const id_type& id) const
+    const generation_type& current_version(const id_type& id) const
     {
         return m_entities[id];
     }
