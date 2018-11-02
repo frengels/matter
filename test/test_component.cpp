@@ -1,7 +1,12 @@
 #include <catch2/catch.hpp>
 
+#include "matter/component/component_manager.hpp"
 #include "matter/component/identifier.hpp"
 #include "matter/component/sparse_vector.hpp"
+#include "matter/entity/entity.hpp"
+#include "matter/entity/entity_manager.hpp"
+
+#include <string>
 
 struct random_component
 {
@@ -70,6 +75,32 @@ TEST_CASE("sparse_vector")
             {
                 REQUIRE(vec[i * 10].i == i * 10);
             }
+        }
+    }
+}
+
+TEST_CASE("storage")
+{
+    using entity_type = matter::entity<uint32_t, uint32_t>;
+
+    matter::entity_manager<entity_type>    entities;
+    matter::component_manager<entity_type> components;
+
+    SECTION("add storages")
+    {
+        auto& str_store = components.storage<std::string>();
+        auto& int_store = components.storage<int>();
+
+        auto ent1 = entities.create();
+        auto ent2 = entities.create();
+
+        SECTION("create objects")
+        {
+            str_store.emplace(ent1.id(), "ent1");
+            str_store.emplace(ent2.id(), "ent2");
+
+            int_store.emplace(ent1.id(), 1);
+            int_store.emplace(ent2.id(), 2);
         }
     }
 }

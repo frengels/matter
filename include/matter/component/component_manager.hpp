@@ -15,6 +15,48 @@ namespace detail
 {
 struct component_tag
 {};
+
+struct component_container_ptr
+{
+    using deleter_type = std::add_pointer_t<void(void*)>;
+    void*        ptr;
+    deleter_type deleter;
+
+    component_container_ptr(void* cont, deleter_type deleter)
+        : ptr{cont}, deleter{deleter}
+    {}
+
+    template<typename Container>
+    component_container_ptr(Container* cont, deleter_type deleter)
+        : component_container_ptr{static_cast<void*>(cont), deleter}
+    {}
+
+    component_container_ptr(const component_container_ptr&) noexcept = delete;
+    component_container_ptr&
+    operator=(const component_container_ptr&) noexcept = delete;
+
+    component_container_ptr(component_container_ptr&& other) noexcept
+        : ptr{std::move(other.ptr)}, deleter{std::move(other.deleter)}
+    {
+        other.ptr     = nullptr;
+        other.deleter = nullptr;
+    }
+    component_container_ptr& operator=(component_container_ptr&& other) noexcept
+    {
+        std::swap(ptr, other.ptr);
+        std::swap(deleter, other.deleter);
+
+	return *this;
+    }
+
+    ~component_container_ptr()
+    {
+        if (ptr)
+        {
+            deleter(ptr);
+        }
+    }
+};
 } // namespace detail
 
 template<typename Entity>
@@ -25,32 +67,15 @@ struct component_manager
 
 private:
     /// type erased list of component arrays
-    std::vector<std::unique_ptr<void>> m_component_list;
+    std::vector<detail::component_container_ptr> m_component_list;
 
 public:
     template<typename C>
-    matter::component_storage<entity_type, C>& get_storage() noexcept
+    matter::component_storage<entity_type, C>& storage() noexcept
     {
-        auto id = component_id<C>();
-        assert(id < std::size(m_component_list));
-
-        auto& comp_storage =
-            *static_cast<matter::component_storage<entity_type, C>*>(
-                m_component_list[id].get());
-        return comp_storage;
-    }
-
-    template<typename C>
-    const matter::component_storage<entity_type, C>& get_storage() const
-        noexcept
-    {
-        auto id = component_id<C>();
-        assert(id < std::size(m_component_list));
-
-        const auto& comp_storage =
-            *static_cast<matter::component_storage<entity_type, C>*>(
-                m_component_list[id].get());
-        return comp_storage;
+        auto id = create_storage_if_null<C>();
+        return *static_cast<matter::component_storage<entity_type, C>*>(
+            m_component_list[id].ptr);
     }
 
 private:
@@ -66,26 +91,19 @@ private:
         auto id = component_id<C>();
         if (id >= std::size(m_component_list)) // create the storage
         {
-            m_component_list.emplace_back(std::unique_ptr<void>(
-                new matter::component_storage<entity_type, C>{}, [](void* p) {
-                    auto* storage =
-                        static_cast<matter::component_storage<entity_type, C>>(
-                            p);
-                    delete storage;
-                }));
-            assert(id < std::size(m_component_list) &&
-                   "forgot to insert a component storage");
+            m_component_list.emplace_back(
+                new matter::component_storage<entity_type, C>(),
+                [](void* cont) {
+                    auto* real_cont =
+                        static_cast<matter::component_storage<entity_type, C>*>(
+                            cont);
+                    delete real_cont;
+                });
         }
+        assert(id < std::size(m_component_list) &&
+               "forgot to insert a component storage");
 
-	return id;
-    }
-
-    template<typename C>
-    matter::component_storage<entity_type, C>& storage() noexcept
-    {
-        auto id = create_storage_if_null<C>();
-        return *static_cast<matter::component_storage<entity_type, C>*>(
-            m_component_list[id].get());
+        return id;
     }
 };
 } // namespace matter

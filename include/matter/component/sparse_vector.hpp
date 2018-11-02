@@ -33,11 +33,14 @@ public:
     using const_iterator =
         typename std::vector<value_type, allocator_type>::const_iterator;
 
-private:
-    std::vector<index_type> m_index;
-    std::vector<index_type> m_backref;
+    static constexpr index_type invalid_index =
+        std::numeric_limits<index_type>::max();
 
-    std::vector<value_type, allocator_type> m_packed;
+private:
+    std::vector<index_type> m_index{};
+    std::vector<index_type> m_backref{};
+
+    std::vector<value_type, allocator_type> m_packed{};
 
 public:
     sparse_vector() = default;
@@ -80,7 +83,7 @@ public:
     reference operator[](const index_type& idx) noexcept
     {
         assert(idx < std::size(m_index));
-        assert(m_index[idx] != -1);
+        assert(m_index[idx] != invalid_index);
         return m_packed[m_index[idx]];
     }
 
@@ -102,7 +105,7 @@ public:
             return false;
         }
 
-        return m_index[idx] != static_cast<index_type>(-1);
+        return m_index[idx] != invalid_index;
     }
 
     size_type size() const noexcept
@@ -148,7 +151,7 @@ public:
         auto real_idx = m_index[idx];
 
         m_index[m_backref.back()] = m_index[idx];
-        m_index[idx]              = -1;
+        m_index[idx]              = invalid_index;
         swap(m_packed[real_idx], m_packed.back());
         swap(m_backref[real_idx], m_backref.back());
 
@@ -169,7 +172,7 @@ public:
 
         m_packed.erase(packed_it);
         back_it      = m_backref.erase(back_it);
-        m_index[idx] = -1;
+        m_index[idx] = invalid_index;
 
         // correct all sparse references because objects were shifted
         for (; back_it != std::end(m_backref); ++back_it)
@@ -191,7 +194,7 @@ public:
 
         if (idx >= std::size(m_index))
         {
-            m_index.resize(idx + 1, -1);
+            m_index.resize(idx + 1, invalid_index);
         }
 
         auto packed_idx = std::size(m_packed);
@@ -206,7 +209,7 @@ public:
 
         if (idx >= std::size(m_index))
         {
-            m_index.resize(idx + 1, -1);
+            m_index.resize(idx + 1, invalid_index);
         }
 
         auto packed_idx = std::size(m_packed);
@@ -222,7 +225,7 @@ public:
 
         if (idx >= std::size(m_index))
         {
-            m_index.resize(idx + 1, -1);
+            m_index.resize(idx + 1, invalid_index);
         }
 
         auto      packed_idx = std::size(m_packed);
@@ -238,7 +241,7 @@ public:
 
         // invalidate index
         auto idx     = m_backref.back();
-        m_index[idx] = -1;
+        m_index[idx] = invalid_index;
 
         // pop backreference and value
         m_backref.pop_back();
