@@ -20,18 +20,18 @@ struct entity
                   "Tversion must be an integral type");
 
 public:
-    using id_type      = Tid;
+    using id_type         = Tid;
     using generation_type = Tversion;
 
     static constexpr id_type invalid_id = -1;
 
 private:
-    id_type      m_id;
-    generation_type m_version;
+    id_type         m_id;
+    generation_type m_generation;
 
 public:
     constexpr entity(const id_type& id, const generation_type& ver) noexcept
-        : m_id{id}, m_version{ver}
+        : m_id{id}, m_generation{ver}
     {}
 
     constexpr entity(const entity&) noexcept = default;
@@ -44,14 +44,14 @@ public:
         return m_id;
     }
 
-    constexpr generation_type version() const noexcept
+    constexpr generation_type generation() const noexcept
     {
-        return m_version;
+        return m_generation;
     }
 
     constexpr bool operator==(const entity& other) const noexcept
     {
-        return m_id == other.m_id && m_version == other.m_version;
+        return m_id == other.m_id && m_generation == other.m_generation;
     }
 
     constexpr bool operator!=(const entity& other) const noexcept

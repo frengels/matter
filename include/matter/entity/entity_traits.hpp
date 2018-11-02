@@ -23,7 +23,7 @@ struct is_entity<
                                   decltype(std::declval<const T&>().id())>>,
         std::enable_if_t<std::is_convertible_v<
             const typename T::generation_type&,
-            decltype(std::declval<const T&>().version())>>,
+            decltype(std::declval<const T&>().generation())>>,
         std::enable_if_t<std::is_same_v<bool,
                                         decltype(std::declval<const T&>() ==
                                                  std::declval<const T&>())>>,

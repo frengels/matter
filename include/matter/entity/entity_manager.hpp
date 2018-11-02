@@ -36,7 +36,7 @@ public:
         {
             id = std::move(m_free_entities.front());
             m_free_entities.pop();
-            ver = current_version(id);
+            ver = current_generation(id);
         }
         else
         {
@@ -54,23 +54,23 @@ public:
         // assert a valid context
         assert(ent.id() <= std::size(m_entities));
         // check we're trying to destroy a current entity
-        assert(ent.version() == current_version(ent.id()));
+        assert(ent.generation() == current_generation(ent.id()));
 
-        ++current_version(ent.id());
+        ++current_generation(ent.id());
         m_free_entities.push(ent.id());
     }
 
     bool is_valid(const entity_type& ent) const
     {
-        return current_version(ent.id()) == ent.version();
+        return current_generation(ent.id()) == ent.generation();
     }
 
-    generation_type& current_version(const id_type& id)
+    generation_type& current_generation(const id_type& id)
     {
         return m_entities[id];
     }
 
-    const generation_type& current_version(const id_type& id) const
+    const generation_type& current_generation(const id_type& id) const
     {
         return m_entities[id];
     }
