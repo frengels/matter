@@ -1,5 +1,5 @@
-#ifndef MATTER_COMPONENT_COMPONENT_STORAGE_HPP
-#define MATTER_COMPONENT_COMPONENT_STORAGE_HPP
+#ifndef MATTER_COMPONENT_COMPONENT_CONTAINER_HPP
+#define MATTER_COMPONENT_COMPONENT_CONTAINER_HPP
 
 #pragma once
 
@@ -8,7 +8,7 @@
 namespace matter
 {
 template<typename Entity, typename T>
-struct component_storage
+struct component_container
 {
 public:
     using component_type = T;
@@ -22,7 +22,7 @@ private:
     sparse_vector_type m_components;
 
 public:
-    component_storage() = default;
+    component_container() = default;
 
     template<typename... Args>
     component_type&
@@ -31,6 +31,8 @@ public:
     {
         return m_components.emplace_back(id, std::forward<Args>(args)...);
     }
+
+
 };
 } // namespace matter
 
