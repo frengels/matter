@@ -8,3 +8,4 @@ compile_commands.json
 *.kdev4
 .kdev4/
 .vs/
+CMakeSettings.json

@@ -8,7 +8,7 @@
 namespace matter
 {
 template<typename Entity, typename T>
-struct component_container
+struct sparse_vector_storage
 {
 public:
     using component_type = T;
@@ -22,7 +22,7 @@ private:
     sparse_vector_type m_components;
 
 public:
-    component_container() = default;
+    sparse_vector_storage() = default;
 
     template<typename... Args>
     component_type&

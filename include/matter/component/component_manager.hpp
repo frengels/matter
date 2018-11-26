@@ -6,7 +6,7 @@
 #include <cassert>
 #include <memory>
 
-#include "matter/component/component_container.hpp"
+#include "matter/component/sparse_vector_storage.hpp"
 #include "matter/component/identifier.hpp"
 
 namespace matter
@@ -71,10 +71,10 @@ private:
 
 public:
     template<typename C>
-    matter::component_container<entity_type, C>& storage() noexcept
+    matter::sparse_vector_storage<entity_type, C>& storage() noexcept
     {
         auto id = create_storage_if_null<C>();
-        return *static_cast<matter::component_container<entity_type, C>*>(
+        return *static_cast<matter::sparse_vector_storage<entity_type, C>*>(
             m_component_list[id].ptr);
     }
 
@@ -92,10 +92,10 @@ private:
         if (id >= std::size(m_component_list)) // create the storage
         {
             m_component_list.emplace_back(
-                new matter::component_container<entity_type, C>(),
+                new matter::sparse_vector_storage<entity_type, C>(),
                 [](void* cont) {
                     auto* real_cont =
-                        static_cast<matter::component_container<entity_type, C>*>(
+                        static_cast<matter::sparse_vector_storage<entity_type, C>*>(
                             cont);
                     delete real_cont;
                 });
