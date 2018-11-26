@@ -30,7 +30,7 @@ before_build:
     cmake .. -G %generator%
 
 build:
-  project: c:\projects\matter\build\template.sln
+  project: c:\projects\matter\build\matter.sln
   verbosity: minimal
   parallel: true
 only_commits:
