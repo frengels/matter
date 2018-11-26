@@ -33,6 +33,10 @@ build:
   project: c:\projects\matter\build\matter.sln
   verbosity: minimal
   parallel: true
+
+test_script:
+  - ctest -C %configuration% --output-on-failure
+
 only_commits:
   files:
     - CMakeLists.txt
