@@ -14,13 +14,6 @@ struct random_component
 
     random_component(int i) : i{i}
     {}
-
-    friend void swap(random_component& lhs, random_component& rhs) noexcept
-    {
-        using std::swap;
-
-        swap(lhs.i, rhs.i);
-    }
 };
 
 TEST_CASE("sparse_vector")
