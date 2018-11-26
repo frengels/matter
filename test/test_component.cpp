@@ -16,6 +16,17 @@ struct random_component
     {}
 };
 
+namespace matter::traits
+{
+template<>
+struct component_traits<random_component>
+{
+    template<typename Entity>
+    using storage_type =
+        matter::sparse_vector_storage<Entity, random_component>;
+};
+} // namespace matter::traits
+
 TEST_CASE("sparse_vector")
 {
     matter::sparse_vector<random_component> vec;
@@ -78,6 +89,23 @@ TEST_CASE("sparse_vector")
         }
     }
 }
+
+namespace matter::traits
+{
+template<>
+struct component_traits<int>
+{
+    template<typename Entity>
+    using storage_type = matter::sparse_vector_storage<Entity, int>;
+};
+
+template<>
+struct component_traits<std::string>
+{
+    template<typename Entity>
+    using storage_type = matter::vector_storage<Entity, std::string>;
+};
+} // namespace matter::traits
 
 TEST_CASE("storage")
 {
