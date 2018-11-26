@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Catch2 REQUIRED)
-
 set(matter_headers
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/ecs.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/component/component_container.hpp

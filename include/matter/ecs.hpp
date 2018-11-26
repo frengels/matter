@@ -63,8 +63,8 @@ void repeat(F&& f)
 }
 
 template<typename ComponentManager,
-         std::size_t... Is,
          typename T,
+         std::size_t... Is,
          typename... Args>
 auto emplace_component_from_tuple_impl(
     ComponentManager&                     manager,
