@@ -1,8 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "matter/component/component_manager.hpp"
-#include "matter/component/identifier.hpp"
-#include "matter/component/sparse_vector.hpp"
+#include "matter/component.hpp"
 #include "matter/entity/entity.hpp"
 #include "matter/entity/entity_manager.hpp"
 

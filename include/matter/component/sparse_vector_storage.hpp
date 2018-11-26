@@ -26,7 +26,7 @@ public:
 
     template<typename... Args>
     component_type&
-    emplace(const typename entity_type::id_type& id, Args&&... args) noexcept(
+    emplace(typename entity_type::id_type id, Args&&... args) noexcept(
         noexcept(component_type(std::declval<Args&&>()...)))
     {
         return m_components.emplace_back(id, std::forward<Args>(args)...);
