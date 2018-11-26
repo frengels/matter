@@ -9058,7 +9058,7 @@ bool isDebuggerActive()
 namespace Catch
 {
 
-ITransientExpression::~ITransientExpression() = default;
+  //ITransientExpression::~ITransientExpression() = default;
 
 void formatReconstructedExpression(std::ostream&      os,
                                    std::string const& lhs,
