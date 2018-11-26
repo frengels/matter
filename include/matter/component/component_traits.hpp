@@ -5,13 +5,16 @@
 
 #include <type_traits>
 
-namespace matter
+namespace matter::traits
 {
-template<typename T, typename = void>
-struct is_component_traits : public std::false_type
-{};
-
-  //template<typename T, typename = std::void_t<
-} // namespace matter
+/**
+ * The component_traits struct should be specialized for each type of component
+ * you wish to use, provided properties should be:
+ *  - storage_type: required storage type
+ *  - meta_type [optional]: meta information for serialization
+ */
+template<typename C>
+struct component_traits;
+} // namespace matter::traits
 
 #endif

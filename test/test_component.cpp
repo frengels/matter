@@ -1,8 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "matter/component/component_manager.hpp"
-#include "matter/component/identifier.hpp"
-#include "matter/component/sparse_vector.hpp"
+#include "matter/component.hpp"
 #include "matter/entity/entity.hpp"
 #include "matter/entity/entity_manager.hpp"
 
@@ -15,6 +13,17 @@ struct random_component
     random_component(int i) : i{i}
     {}
 };
+
+namespace matter::traits
+{
+template<>
+struct component_traits<random_component>
+{
+    template<typename Entity>
+    using storage_type =
+        matter::sparse_vector_storage<Entity, random_component>;
+};
+} // namespace matter::traits
 
 TEST_CASE("sparse_vector")
 {
@@ -78,6 +87,23 @@ TEST_CASE("sparse_vector")
         }
     }
 }
+
+namespace matter::traits
+{
+template<>
+struct component_traits<int>
+{
+    template<typename Entity>
+    using storage_type = matter::sparse_vector_storage<Entity, int>;
+};
+
+template<>
+struct component_traits<std::string>
+{
+    template<typename Entity>
+    using storage_type = matter::vector_storage<Entity, std::string>;
+};
+} // namespace matter::traits
 
 TEST_CASE("storage")
 {

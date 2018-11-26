@@ -6,8 +6,9 @@
 #include <cassert>
 #include <memory>
 
-#include "matter/component/sparse_vector_storage.hpp"
+#include "matter/component/component_traits.hpp"
 #include "matter/component/identifier.hpp"
+#include "matter/component/sparse_vector_storage.hpp"
 
 namespace matter
 {
@@ -46,7 +47,7 @@ struct component_container_ptr
         std::swap(ptr, other.ptr);
         std::swap(deleter, other.deleter);
 
-	return *this;
+        return *this;
     }
 
     ~component_container_ptr()
@@ -71,10 +72,12 @@ private:
 
 public:
     template<typename C>
-    matter::sparse_vector_storage<entity_type, C>& storage() noexcept
+    auto& storage() noexcept
     {
+        using storage_type =
+            matter::traits::component_traits<C>::storage_type<entity_type>;
         auto id = create_storage_if_null<C>();
-        return *static_cast<matter::sparse_vector_storage<entity_type, C>*>(
+        return *static_cast<storage_type*>(
             m_component_list[id].ptr);
     }
 
@@ -91,14 +94,12 @@ private:
         auto id = component_id<C>();
         if (id >= std::size(m_component_list)) // create the storage
         {
-            m_component_list.emplace_back(
-                new matter::sparse_vector_storage<entity_type, C>(),
-                [](void* cont) {
-                    auto* real_cont =
-                        static_cast<matter::sparse_vector_storage<entity_type, C>*>(
-                            cont);
-                    delete real_cont;
-                });
+            using storage_type =
+                matter::traits::component_traits<C>::storage_type<entity_type>;
+            m_component_list.emplace_back(new storage_type(), [](void* storage) {
+                auto* real_storage = static_cast<storage_type*>(storage);
+                delete real_storage;
+            });
         }
         assert(id < std::size(m_component_list) &&
                "forgot to insert a component storage");

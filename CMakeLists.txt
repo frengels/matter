@@ -8,6 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(matter_headers
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/ecs.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/component.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/component/sparse_vector_storage.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/component/component_manager.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/component/component_traits.hpp
