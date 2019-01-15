@@ -14,7 +14,8 @@ namespace matter
 template<typename Entity, typename... Cs>
 struct cx_registry
 {
-    std::tuple<matter::storage_type_t<Cs>...> components_;
+    using entity_type = Entity;
+    std::tuple<matter::storage_type_t<entity_type, Cs>...> components_;
 
     template<typename C>
     static constexpr bool manages() noexcept
