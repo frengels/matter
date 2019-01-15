@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <queue>
 #include <type_traits>
 #include <vector>
@@ -64,6 +65,8 @@ public:
         return m_id != invalid_id;
     }
 };
+
+using default_entity = entity<uint32_t, uint32_t>;
 } // namespace matter
 
 #endif
