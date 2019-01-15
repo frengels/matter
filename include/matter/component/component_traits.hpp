@@ -15,6 +15,16 @@ namespace matter
  */
 template<typename C>
 struct component_traits;
-} // namespace matter::traits
+
+template<typename C, typename = void>
+struct has_storage_type : std::false_type
+{};
+
+template<typename C>
+struct has_storage_type<C,
+                        std::void_t<typename component_traits<C>::storage_type>>
+    : std::true_type
+{};
+} // namespace matter
 
 #endif
