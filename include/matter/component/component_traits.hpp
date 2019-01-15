@@ -39,7 +39,7 @@ struct storage_type
 {
     using type =
         std::conditional_t<has_storage_type<Entity, C>::value,
-                           component_traits<C>::template storage_type<Entity>,
+                           typename component_traits<C>::template storage_type<Entity>,
                            matter::sparse_vector_storage<Entity, C>>;
 };
 
