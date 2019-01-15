@@ -2,6 +2,7 @@ set(catch2_INCLUDE_DIR
   ${CMAKE_SOURCE_DIR}/external)
 
 set(unit_tests
+  registry
   component
   ecs
   entity)
