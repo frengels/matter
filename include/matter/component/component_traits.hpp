@@ -5,7 +5,7 @@
 
 #include <type_traits>
 
-namespace matter::traits
+namespace matter
 {
 /**
  * The component_traits struct should be specialized for each type of component
