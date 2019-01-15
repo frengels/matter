@@ -3,11 +3,12 @@
 #include <string>
 
 #include "matter/registry.hpp"
+#include "matter/entity/entity.hpp"
 
 TEST_CASE("registry")
 {
 
-  matter::cx_registry<std::string, int, float> registry;
+  matter::cx_registry<matter::default_entity, std::string, int, float> registry;
 
   SECTION("manages")
   {

@@ -34,17 +34,20 @@ struct has_storage_type<
 
 /// gets the storage_type set in component_traits or defaults to
 /// sparse_vector_storage<C>
-template<typename Entity, typename C>
-struct storage_type
-{
-    using type =
-        std::conditional_t<has_storage_type<Entity, C>::value,
-                           typename component_traits<C>::template storage_type<Entity>,
-                           matter::sparse_vector_storage<Entity, C>>;
-};
+  template<typename Entity, typename C, typename = void>
+  struct storage_type
+  {
+    using type = typename component_traits<C>::template storage_type<Entity>;
+  };
 
-template<typename Entity, typename C>
-using storage_type_t = typename storage_type<Entity, C>::type;
+  template<typename Entity, typename C>
+  struct storage_type<Entity, C, std::void_t<std::enable_if_t<!has_storage_type<Entity, C>::value>>>
+  {
+    using type = matter::sparse_vector_storage<Entity, C>;
+  };
+
+  template<typename Entity, typename C>
+  using storage_type_t = typename storage_type<Entity, C>::type;
 } // namespace matter
 
 #endif

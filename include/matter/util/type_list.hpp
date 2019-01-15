@@ -7,19 +7,20 @@
 
 namespace matter
 {
+namespace detail
+{
 template<typename T, typename... Ts>
-struct has_type;
+struct contains : std::false_type
+{};
 
-template<typename T, typename T1>
-struct has_type<T, T1> : std::is_same<T, T1>
+template<typename T, typename... Rest>
+struct contains<T, T, Rest...> : std::true_type
 {};
 
 template<typename T, typename T1, typename... Rest>
-struct has_type<T, T1, Rest...> : std::conditional<std::is_same<T, T1>::value,
-                                                   std::true_type,
-                                                   has_type<T, Rest...>>
+struct contains<T, T1, Rest...> : contains<T, Rest...>
 {};
-
+} // namespace detail
 } // namespace matter
 
 #endif
