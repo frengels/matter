@@ -39,6 +39,9 @@ struct storage_type
                                     component_traits<C>::storage_type,
                                     matter::sparse_vector_storage<C>>;
 };
+
+template<typename C>
+using storage_type_t = typename storage_type<C>::type;
 } // namespace matter
 
 #endif
