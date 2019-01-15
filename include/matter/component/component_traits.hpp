@@ -18,7 +18,7 @@ namespace matter
 template<typename C>
 struct component_traits;
 
-template<typename C, typename = void>
+template<typename Entity, typename C, typename = void>
 struct has_storage_type : std::false_type
 {};
 
@@ -26,6 +26,7 @@ struct has_storage_type : std::false_type
 /// particular component
 template<typename Entity, typename C>
 struct has_storage_type<
+    Entity,
     C,
     std::void_t<typename component_traits<C>::template storage_type<Entity>>>
     : std::true_type
@@ -37,7 +38,7 @@ template<typename Entity, typename C>
 struct storage_type
 {
     using type =
-        std::conditional_t<has_storage_type<C>::value,
+        std::conditional_t<has_storage_type<Entity, C>::value,
                            component_traits<C>::template storage_type<Entity>,
                            matter::sparse_vector_storage<Entity, C>>;
 };
