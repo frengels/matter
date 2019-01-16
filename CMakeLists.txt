@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(matter_headers
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/registry.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/ecs.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/component.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/component/sparse_vector_storage.hpp
