@@ -12,10 +12,13 @@ TEST_CASE("registry")
 
   SECTION("manages")
   {
-    CHECK(registry.manages<std::string>());
-    CHECK(registry.manages<int>());
-    CHECK(registry.manages<float>());
+    static_assert(registry.manages<std::string>());
+    static_assert(registry.manages<int>());
+    static_assert(registry.manages<float>());
 
-    CHECK(!registry.manages<size_t>());
+    static_assert(!registry.manages<size_t>());
+
+    // test the automatically generated variadic version
+    static_assert(registry.manages<std::string, int, float>());
   }
 }

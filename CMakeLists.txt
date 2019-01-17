@@ -19,6 +19,8 @@ set(matter_headers
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/entity/entity_handle.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/entity/entity_manager.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/entity/entity_traits.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/util/crtp.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/matter/util/type_list.hpp
 ) 
 
 add_library(matter INTERFACE)
