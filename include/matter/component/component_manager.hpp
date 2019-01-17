@@ -75,7 +75,7 @@ public:
     auto& storage() noexcept
     {
         using storage_type =
-            matter::traits::component_traits<C>::storage_type<entity_type>;
+            matter::component_traits<C>::storage_type<entity_type>;
         auto id = create_storage_if_null<C>();
         return *static_cast<storage_type*>(
             m_component_list[id].ptr);
@@ -95,7 +95,7 @@ private:
         if (id >= std::size(m_component_list)) // create the storage
         {
             using storage_type =
-                matter::traits::component_traits<C>::storage_type<entity_type>;
+                matter::component_traits<C>::storage_type<entity_type>;
             m_component_list.emplace_back(new storage_type(), [](void* storage) {
                 auto* real_storage = static_cast<storage_type*>(storage);
                 delete real_storage;
