@@ -6,7 +6,6 @@ set(unit_tests
   component
   ecs
   entity
-  util)
 
 function(set_test_source variable test)
   set(${variable} test_${test}.cpp PARENT_SCOPE)
