@@ -14,9 +14,10 @@ catch_lib = static_library(
 
 foreach t : tests
   test_exe = executable(
+    t,
     'test_@0@.cpp'.format(t),
     link_with: catch_lib,
-    dependencies: [ matter ],
+    dependencies: [matter, catch2_dep],
   )
   test(t, test_exe)
 endforeach
