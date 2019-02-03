@@ -23,6 +23,7 @@ struct storage_types<
                 matter::detail::enable_if_same_t<
                     void,
                     decltype(std::declval<Storage&>().emplace(
+                        std::declval<typename Storage::id_type>(),
                         std::declval<typename Storage::value_type&&>()))>,
                 matter::detail::enable_if_same_t<
                     void,
