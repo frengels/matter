@@ -33,6 +33,12 @@ public:
     using const_iterator =
         typename std::vector<value_type, allocator_type>::const_iterator;
 
+    using reverse_iterator =
+        typename std::vector<value_type, allocator_type>::reverse_iterator;
+    using const_reverse_iterator =
+        typename std::vector<value_type,
+                             allocator_type>::const_reverse_iterator;
+
     static constexpr index_type invalid_index =
         std::numeric_limits<index_type>::max();
 
@@ -50,44 +56,90 @@ public:
     sparse_vector(sparse_vector&&) noexcept        = default;
     sparse_vector& operator=(sparse_vector&&) noexcept = default;
 
-    auto begin() noexcept -> decltype(std::begin(m_packed))
+    iterator begin() noexcept
     {
-        return std::begin(m_packed);
+        return m_packed.begin();
     }
 
-    auto end() noexcept -> decltype(std::end(m_packed))
+    iterator end() noexcept
     {
-        return std::end(m_packed);
+        return m_packed.end();
     }
 
-    auto begin() const noexcept -> decltype(std::begin(m_packed))
+    const_iterator begin() const noexcept
     {
-        return std::begin(m_packed);
+        return m_packed.begin();
     }
 
-    auto end() const noexcept -> decltype(std::end(m_packed))
+    const_iterator end() const noexcept
     {
-        return std::end(m_packed);
+        return m_packed.end();
     }
 
-    auto cbegin() const noexcept -> decltype(std::begin(m_packed))
+    const_iterator cbegin() const noexcept
     {
-        return std::begin(m_packed);
+        return m_packed.cbegin();
     }
 
-    auto cend() const noexcept -> decltype(std::end(m_packed))
+    const_iterator cend() const noexcept
     {
-        return std::end(m_packed);
+        return m_packed.cend();
     }
 
-    reference operator[](const index_type& idx) noexcept
+    reverse_iterator rbegin() noexcept
+    {
+        return m_packed.rbegin();
+    }
+
+    reverse_iterator rend() noexcept
+    {
+        return m_packed.rend();
+    }
+
+    const_reverse_iterator rbegin() const noexcept
+    {
+        return m_packed.rbegin();
+    }
+
+    const_reverse_iterator rend() const noexcept
+    {
+        return m_packed.rend();
+    }
+
+    const_reverse_iterator crbegin() const noexcept
+    {
+        return m_packed.crbegin();
+    }
+
+    const_reverse_iterator crend() const noexcept
+    {
+        return m_packed.crend();
+    }
+
+    index_type index_of(const_iterator it) const noexcept
+    {
+        auto dist = std::distance(begin(), it);
+        assert(static_cast<std::size_t>(dist) < m_packed.size());
+
+        return *(m_backref.begin() + dist);
+    }
+
+    index_type index_of(const_reverse_iterator rit) const noexcept
+    {
+        auto dist = std::distance(rbegin(), rit);
+	assert(static_cast<std::size_t>(dist) < m_packed.size());
+
+	return *(m_backref.rbegin() + dist);
+    }
+
+    reference operator[](index_type idx) noexcept
     {
         assert(idx < std::size(m_index));
         assert(m_index[idx] != invalid_index);
         return m_packed[m_index[idx]];
     }
 
-    const_reference operator[](const index_type& idx) const noexcept
+    const_reference operator[](index_type idx) const noexcept
     {
         assert(idx < std::size(m_index));
         return m_packed[m_index[idx]];
@@ -98,7 +150,7 @@ public:
         return m_packed.empty();
     }
 
-    bool has_value(const index_type& idx) const noexcept
+    bool contains(index_type idx) const noexcept
     {
         if (idx >= std::size(m_index))
         {
@@ -142,26 +194,9 @@ public:
         m_index.clear();
     }
 
-    void swap_and_pop(const index_type& idx)
+    void erase(index_type idx)
     {
-        using std::swap;
-
-        assert(has_value(idx));
-
-        auto real_idx = m_index[idx];
-
-        m_index[m_backref.back()] = m_index[idx];
-        m_index[idx]              = invalid_index;
-        swap(m_packed[real_idx], m_packed.back());
-        swap(m_backref[real_idx], m_backref.back());
-
-        m_packed.pop_back();
-        m_backref.pop_back();
-    }
-
-    void erase(const index_type& idx)
-    {
-        assert(has_value(idx));
+        assert(contains(idx));
 
         auto real_idx = m_index[idx];
 
@@ -190,7 +225,7 @@ public:
 
     void push_back(const index_type& idx, const T& value)
     {
-        assert(!has_value(idx));
+        assert(!contains(idx));
 
         if (idx >= std::size(m_index))
         {
@@ -205,7 +240,7 @@ public:
 
     void push_back(const index_type& idx, T&& value)
     {
-        assert(!has_value(idx));
+        assert(!contains(idx));
 
         if (idx >= std::size(m_index))
         {
@@ -221,7 +256,7 @@ public:
     template<typename... Args>
     reference emplace_back(const index_type& idx, Args&&... args)
     {
-        assert(!has_value(idx));
+        assert(!contains(idx));
 
         if (idx >= std::size(m_index))
         {

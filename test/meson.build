@@ -1,6 +1,7 @@
 tests = [
   'registry',
   'component',
+  'storage',
   'ecs',
   'entity',
   'variant',
