@@ -88,32 +88,48 @@ public:
 
     reverse_iterator rbegin() noexcept
     {
-	return m_packed.rbegin();
+        return m_packed.rbegin();
     }
 
     reverse_iterator rend() noexcept
     {
-	return m_packed.rend();
+        return m_packed.rend();
     }
 
     const_reverse_iterator rbegin() const noexcept
     {
-	return m_packed.rbegin();
+        return m_packed.rbegin();
     }
 
     const_reverse_iterator rend() const noexcept
     {
-	return m_packed.rend();
+        return m_packed.rend();
     }
 
     const_reverse_iterator crbegin() const noexcept
     {
-	return m_packed.crbegin();
+        return m_packed.crbegin();
     }
 
     const_reverse_iterator crend() const noexcept
     {
-	return m_packed.crend();
+        return m_packed.crend();
+    }
+
+    index_type index_of(const_iterator it) const noexcept
+    {
+        auto dist = std::distance(begin(), it);
+        assert(static_cast<std::size_t>(dist) < m_packed.size());
+
+        return *(m_backref.begin() + dist);
+    }
+
+    index_type index_of(const_reverse_iterator rit) const noexcept
+    {
+        auto dist = std::distance(rbegin(), rit);
+	assert(static_cast<std::size_t>(dist) < m_packed.size());
+
+	return *(m_backref.rbegin() + dist);
     }
 
     reference operator[](index_type idx) noexcept

@@ -70,6 +70,16 @@ public:
         return m_components.rend();
     }
 
+    id_type index_of(const_iterator it) const noexcept
+    {
+        return m_components.index_of(it);
+    }
+
+    id_type index_of(const_reverse_iterator rit) const noexcept
+    {
+        return m_components.index_of(rit);
+    }
+
     bool contains(id_type id) const noexcept
     {
         return m_components.contains(id);
