@@ -31,8 +31,15 @@ struct storage_types<
                 matter::detail::enable_if_same_t<
                     bool,
                     decltype(std::declval<Storage&>().has(
-                        std::declval<typename Storage::id_type>()))>>>
+                        std::declval<typename Storage::id_type>()))>,
+                decltype(std::declval<Storage&>().begin()),
+                decltype(std::declval<const Storage&>().begin()),
+                decltype(std::declval<Storage&>().end()),
+                decltype(std::declval<const Storage&>().end()),
+                decltype(std::declval<Storage&>().rbegin()),
+                decltype(std::declval<const Storage&>().rend())>>
 {
+    using id_type    = typename Storage::id_type;
     using value_type = typename Storage::value_type;
 };
 } // namespace detail
