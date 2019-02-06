@@ -83,6 +83,34 @@ using has_contains_sfinae =
                     decltype(std::declval<const Storage&>().contains(
                         std::declval<typename Storage::id_type>()))>>;
 
+template<typename Storage>
+using has_contains_sfinae =
+    std::void_t<typename Storage::id_type,
+                matter::detail::enable_if_same_t<
+                    bool,
+                    decltype(std::declval<const Storage&>().contains(
+                        std::declval<typename Storage::id_type>()))>>;
+
+template<typename Storage>
+using is_accessible_sfinae =
+    std::void_t<typename Storage::value_type,
+                typename Storage::id_type,
+                matter::detail::enable_if_same_t<
+                    typename Storage::value_type&,
+                    decltype(std::declval<Storage&>().operator[](
+                        std::declval<typename Storage::id_type>()))>,
+                has_contains_sfinae<Storage>>;
+
+template<typename Storage>
+using is_const_accessible_sfinae =
+    std::void_t<typename Storage::value_type,
+                typename Storage::id_type,
+                matter::detail::enable_if_same_t<
+                    const typename Storage::value_type&,
+                    decltype(std::declval<const Storage&>().operator[](
+                        std::declval<typename Storage::id_type>()))>,
+                has_contains_sfinae<Storage>>;
+
 } // namespace detail
 
 template<typename Storage, typename = void>
@@ -192,6 +220,27 @@ struct is_storage_component_constructible
 template<typename Storage, typename Component, typename... Args>
 constexpr bool is_storage_component_constructible_v =
     is_storage_component_constructible<Storage, Component, Args...>::value;
+
+template<typename Storage, typename = void>
+struct is_storage_accessible : std::false_type
+{};
+
+template<typename Storage>
+struct is_storage_accessible<Storage, is_accessible_sfinae<Storage>>
+    : is_storage<Storage>
+{};
+
+template<typename Storage>
+constexpr bool is_storage_accessible_v = is_storage_accessible<Storage>::value;
+
+template<typename Storage, typename = void>
+struct is_storage_const_accessible : std::false_type
+{};
+
+template<typename Storage>
+struct is_storage_const_accessible<Storage, is_const_accessible_sfinae<Storage>>
+    : is_storage<Storage>
+{};
 } // namespace matter
 
 #endif
