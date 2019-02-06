@@ -178,7 +178,7 @@ struct is_storage_component_constructible_impl<
     std::tuple<Args...>,
     matter::detail::
         is_storage_component_constructible_sfinae<Storage, Component, Args...>>
-    : std::true_type
+    : is_storage<Storage>
 {};
 } // namespace detail
 
