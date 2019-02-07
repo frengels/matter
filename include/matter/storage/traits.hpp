@@ -18,21 +18,31 @@ using is_storage_sfinae =
 template<typename Storage>
 using is_iterable_sfinae = std::void_t<
     typename Storage::iterator,
+    typename Storage::id_type,
     matter::detail::enable_if_same_t<typename Storage::iterator,
                                      decltype(
                                          std::declval<Storage&>().begin())>,
-    matter::detail::eanble_if_same_t<typename Storage::iterator,
-                                     decltype(std::declval<Storage&>().end())>>;
+    matter::detail::enable_if_same_t<typename Storage::iterator,
+                                     decltype(std::declval<Storage&>().end())>,
+    matter::detail::enable_if_same_t<
+        typename Storage::id_type,
+        decltype(std::declval<const Storage&>().index_of(
+            std::declval<typename Storage::iterator>()))>>;
 
 template<typename Storage>
 using is_const_iterable_sfinae =
     std::void_t<typename Storage::const_iterator,
+                typename Storage::id_type,
                 matter::detail::enable_if_same_t<
                     typename Storage::const_iterator,
                     decltype(std::declval<const Storage&>().begin())>,
                 matter::detail::enable_if_same_t<
                     typename Storage::const_iterator,
-                    decltype(std::declval<const Sotrage&>().end())>>;
+                    decltype(std::declval<const Storage&>().end())>,
+                matter::detail::enable_if_same_t<
+                    typename Storage::id_type,
+                    decltype(std::declval<const Storage&>().index_of(
+                        std::declval<typename Storage::const_iterator>()))>>;
 
 template<typename Storage>
 using is_reverse_iterable_sfinae =
@@ -40,7 +50,7 @@ using is_reverse_iterable_sfinae =
                 matter::detail::enable_if_same_t<
                     typename Storage::reverse_iterator,
                     decltype(std::declval<Storage&>().rbegin())>,
-                matter::detail::eanble_if_same_t<
+                matter::detail::enable_if_same_t<
                     typename Storage::reverse_iterator,
                     decltype(std::declval<Storage&>().rend())>>;
 
@@ -52,17 +62,17 @@ using is_const_reverse_iterable_sfinae =
                     decltype(std::declval<const Storage&>().rbegin())>,
                 matter::detail::enable_if_same_t<
                     typename Storage::const_reverse_iterator,
-                    decltype(std::declval<const Sotrage&>().rend())>>;
+                    decltype(std::declval<const Storage&>().rend())>>;
 
-template<typename Storage, typename Size>
-using is_sized_sfinae = std::void_t<
-    matter::detail::enable_if_same_t<Size, typename Storage::size_type>,
-    matter::detail::enable_if_same_t<
-        typename Storage::size_type,
-        decltype(std::declval<const Storage&>().size())>>;
+template<typename Storage>
+using is_sized_sfinae =
+    std::void_t<typename Storage::id_type,
+                matter::detail::enable_if_same_t<
+                    typename Storage::id_type,
+                    decltype(std::declval<const Storage&>().size())>>;
 
 template<typename Storage, typename Component, typename... Args>
-using is_component_constructible = std::void_t<
+using is_component_constructible_sfinae = std::void_t<
     typename Storage::id_type,
     matter::detail::enable_if_same_t<Component, typename Storage::value_type>,
     matter::detail::enable_if_same_t<
@@ -74,14 +84,6 @@ using is_component_constructible = std::void_t<
         void,
         decltype(std::declval<Storage&>().destroy(
             std::declval<typename Storage::id_type>()))>>;
-
-template<typename Storage>
-using has_contains_sfinae =
-    std::void_t<typename Storage::id_type,
-                matter::detail::enable_if_same_t<
-                    bool,
-                    decltype(std::declval<const Storage&>().contains(
-                        std::declval<typename Storage::id_type>()))>>;
 
 template<typename Storage>
 using has_contains_sfinae =
@@ -122,7 +124,7 @@ struct is_storage<Storage, detail::is_storage_sfinae<Storage>> : std::true_type
 {};
 
 template<typename Storage>
-constexpr bool is_storage_v = is_storage_v<Storage>::value;
+constexpr bool is_storage_v = is_storage<Storage>::value;
 
 template<typename Storage, typename = void>
 struct is_storage_iterable : std::false_type
@@ -205,16 +207,16 @@ struct is_storage_component_constructible_impl<
     Component,
     std::tuple<Args...>,
     matter::detail::
-        is_storage_component_constructible_sfinae<Storage, Component, Args...>>
+        is_component_constructible_sfinae<Storage, Component, Args...>>
     : is_storage<Storage>
 {};
 } // namespace detail
 
 template<typename Storage, typename Component, typename... Args>
 struct is_storage_component_constructible
-    : detail::is_component_constructible_impl<Storage,
-                                              Component,
-                                              std::tuple<Args...>>
+    : detail::is_storage_component_constructible_impl<Storage,
+                                                      Component,
+                                                      std::tuple<Args...>>
 {};
 
 template<typename Storage, typename Component, typename... Args>
@@ -226,7 +228,7 @@ struct is_storage_accessible : std::false_type
 {};
 
 template<typename Storage>
-struct is_storage_accessible<Storage, is_accessible_sfinae<Storage>>
+struct is_storage_accessible<Storage, detail::is_accessible_sfinae<Storage>>
     : is_storage<Storage>
 {};
 
@@ -238,9 +240,14 @@ struct is_storage_const_accessible : std::false_type
 {};
 
 template<typename Storage>
-struct is_storage_const_accessible<Storage, is_const_accessible_sfinae<Storage>>
+struct is_storage_const_accessible<Storage,
+                                   detail::is_const_accessible_sfinae<Storage>>
     : is_storage<Storage>
 {};
+
+template<typename Storage>
+constexpr bool is_storage_const_accessible_v =
+    is_storage_const_accessible<Storage>::value;
 } // namespace matter
 
 #endif
