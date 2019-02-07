@@ -18,6 +18,10 @@ using is_storage_defined_sfinae =
 
 template<typename Component>
 using is_dependent_sfinae = std::void_t<typename Component::depends_on>;
+
+template<typename Component>
+using is_component_sfinae = std::void_t<std::enable_if_t<
+    !detail::is_specialization_of<Component, std::tuple>::value>>;
 } // namespace detail
 
 template<typename Component>
@@ -71,6 +75,18 @@ struct component_depends_on<
 {
     using type = typename Component::depends_on;
 };
+
+template<typename Component, typename = void>
+struct is_component : std::false_type
+{};
+
+template<typename Component>
+struct is_component<Component, detail::is_component_sfinae<Component>>
+    : std::true_type
+{};
+
+template<typename Component>
+constexpr bool is_component_v = is_component<Component>::value;
 } // namespace matter
 
 #endif

@@ -34,6 +34,11 @@ struct multi_depending_struct
 
 TEST_CASE("component")
 {
+    SECTION("is component")
+    {
+        static_assert(matter::is_component_v<random_component>);
+        static_assert(!matter::is_component_v<std::tuple<random_component>>);
+    }
     SECTION("storage type")
     {
         static_assert(
@@ -55,11 +60,11 @@ TEST_CASE("component")
         static_assert(matter::is_component_dependent_v<multi_depending_struct>);
         static_assert(!matter::is_component_dependent_v<empty_component>);
 
-	// check that single types are correctly converted to tuple
+        // check that single types are correctly converted to tuple
         static_assert(std::is_same_v<std::tuple<empty_component>,
                                      typename matter::component_depends_on<
                                          single_depending_struct>::type>);
-	// and tuples remain intact
+        // and tuples remain intact
         static_assert(
             std::is_same_v<std::tuple<single_depending_struct, empty_component>,
                            typename matter::component_depends_on<
