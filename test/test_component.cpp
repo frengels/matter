@@ -24,12 +24,19 @@ struct empty_component
 
 TEST_CASE("component")
 {
-    static_assert(
-        matter::is_component_storage_defined_v<random_component, uint32_t>);
+    SECTION("storage type")
+    {
+        static_assert(
+            matter::is_component_storage_defined_v<random_component, uint32_t>);
 
-    static_assert(matter::is_component_empty_v<empty_component>);
-    static_assert(
-        !matter::is_component_storage_defined_v<empty_component, uint32_t>);
+        static_assert(
+            !matter::is_component_storage_defined_v<empty_component, uint32_t>);
+    }
+
+    SECTION("empty")
+    {
+        static_assert(matter::is_component_empty_v<empty_component>);
+    }
 }
 
 template<int>
