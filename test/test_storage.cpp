@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 
+#include "matter/storage/sparse_vector.hpp"
 #include "matter/storage/sparse_vector_storage.hpp"
 #include "matter/storage/traits.hpp"
 
@@ -25,7 +26,8 @@ TEST_CASE("sparse_vector_storage")
     static_assert(matter::is_storage_iterable_v<decltype(my_storage)>);
     static_assert(matter::is_storage_const_iterable_v<decltype(my_storage)>);
     static_assert(matter::is_storage_reverse_iterable_v<decltype(my_storage)>);
-    static_assert(matter::is_storage_const_reverse_iterable_v<decltype(my_storage)>);
+    static_assert(
+        matter::is_storage_const_reverse_iterable_v<decltype(my_storage)>);
     static_assert(matter::is_storage_sized_v<decltype(my_storage)>);
     static_assert(matter::is_storage_accessible_v<decltype(my_storage)>);
     static_assert(matter::is_storage_const_accessible_v<decltype(my_storage)>);
@@ -99,6 +101,58 @@ TEST_CASE("sparse_vector_storage")
         {
             auto index = my_storage.index_of(rit);
             validate(index, rit->i);
+        }
+    }
+}
+
+TEST_CASE("sparse_vector")
+{
+    matter::sparse_vector<my_component> vec;
+
+    SECTION("check invalid")
+    {
+        CHECK(!vec.contains(0));
+        CHECK(!vec.contains(1));
+    }
+
+    SECTION("insert")
+    {
+        vec.push_back(0, my_component(0));
+
+        REQUIRE(vec.contains(0));
+        CHECK(vec[0].i == 0);
+
+        SECTION("remove iterator")
+        {
+            auto it = std::begin(vec);
+            REQUIRE(it->i == 0);
+            REQUIRE(vec.contains(0));
+
+            vec.erase(it);
+
+            REQUIRE(!vec.contains(0));
+        }
+
+        SECTION("remove")
+        {
+            vec.erase(0);
+            REQUIRE(!vec.contains(0));
+        }
+
+        for (int i = 1; i < 10; ++i)
+        {
+            vec.emplace_back(i * 10, i * 10);
+        }
+
+        SECTION("remove shifing")
+        {
+            vec.erase(0);
+            REQUIRE(!vec.contains(0));
+
+            for (int i = 1; i < 10; ++i)
+            {
+                REQUIRE(vec[i * 10].i == i * 10);
+            }
         }
     }
 }
