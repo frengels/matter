@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 namespace matter
 {
 namespace detail
