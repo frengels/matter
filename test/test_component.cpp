@@ -22,6 +22,16 @@ struct random_component
 struct empty_component
 {};
 
+struct single_depending_struct
+{
+    using depends_on = empty_component;
+};
+
+struct multi_depending_struct
+{
+    using depends_on = std::tuple<single_depending_struct, empty_component>;
+};
+
 TEST_CASE("component")
 {
     SECTION("storage type")
