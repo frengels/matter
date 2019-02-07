@@ -47,6 +47,14 @@ TEST_CASE("component")
     {
         static_assert(matter::is_component_empty_v<empty_component>);
     }
+
+    SECTION("depends")
+    {
+        static_assert(
+            matter::is_component_dependent_v<single_depending_struct>);
+        static_assert(matter::is_component_dependent_v<multi_depending_struct>);
+        static_assert(!matter::is_component_dependent_v<empty_component>);
+    }
 }
 
 template<int>

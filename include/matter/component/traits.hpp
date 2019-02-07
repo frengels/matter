@@ -17,7 +17,7 @@ using is_storage_defined_sfinae =
     std::void_t<typename Component::template storage_type<Id>>;
 
 template<typename Component>
-using is_dependent_sfinae = std::void_t<typename Component::dependent_on>;
+using is_dependent_sfinae = std::void_t<typename Component::depends_on>;
 } // namespace detail
 
 template<typename Component>
@@ -49,7 +49,7 @@ struct is_component_dependent : std::false_type
 
 template<typename Component>
 struct is_component_dependent<Component, detail::is_dependent_sfinae<Component>>
-    : std::false_type
+    : std::true_type
 {};
 
 template<typename Component>
