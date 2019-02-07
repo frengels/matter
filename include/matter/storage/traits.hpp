@@ -11,186 +11,243 @@ namespace matter
 {
 namespace detail
 {
-template<typename Storage, typename = void>
-struct storage_types
-{};
+template<typename Storage>
+using is_storage_sfinae =
+    std::void_t<typename Storage::value_type, typename Storage::id_type>;
 
 template<typename Storage>
-struct storage_types<
-    Storage,
-    std::void_t<
+using is_iterable_sfinae = std::void_t<
+    typename Storage::iterator,
+    typename Storage::id_type,
+    matter::detail::enable_if_same_t<typename Storage::iterator,
+                                     decltype(
+                                         std::declval<Storage&>().begin())>,
+    matter::detail::enable_if_same_t<typename Storage::iterator,
+                                     decltype(std::declval<Storage&>().end())>,
+    matter::detail::enable_if_same_t<
         typename Storage::id_type,
-        typename Storage::value_type,
-        typename Storage::iterator,
-        typename Storage::const_iterator,
-        typename Storage::reverse_iterator,
-        typename Storage::const_reverse_iterator,
-        decltype(Storage()),
-        matter::detail::enable_if_same_t<
-            void,
-            decltype(std::declval<Storage&>().emplace(
-                std::declval<typename Storage::id_type>(),
-                std::declval<typename Storage::value_type&&>()))>,
-        matter::detail::enable_if_same_t<
-            void,
-            decltype(std::declval<Storage&>().erase(
-                std::declval<typename Storage::id_type>()))>,
-        matter::detail::enable_if_same_t<
-            bool,
-            decltype(std::declval<const Storage&>().contains(
-                std::declval<typename Storage::id_type>()))>,
-        matter::detail::enable_if_same_t<typename Storage::iterator,
-                                         decltype(
-                                             std::declval<Storage&>().begin())>,
-        matter::detail::enable_if_same_t<
-            typename Storage::const_iterator,
-            decltype(std::declval<const Storage&>().begin())>,
-        matter::detail::enable_if_same_t<typename Storage::iterator,
-                                         decltype(
-                                             std::declval<Storage&>().end())>,
-        matter::detail::enable_if_same_t<
-            typename Storage::const_iterator,
-            decltype(std::declval<const Storage&>().end())>,
-        matter::detail::enable_if_same_t<
-            typename Storage::reverse_iterator,
-            decltype(std::declval<Storage&>().rbegin())>,
-        matter::detail::enable_if_same_t<
-            typename Storage::const_reverse_iterator,
-            decltype(std::declval<const Storage&>().rbegin())>,
-        matter::detail::enable_if_same_t<typename Storage::reverse_iterator,
-                                         decltype(
-                                             std::declval<Storage&>().rend())>,
-        matter::detail::enable_if_same_t<
-            typename Storage::const_reverse_iterator,
-            decltype(std::declval<const Storage&>().rend())>,
-        matter::detail::enable_if_same_t<
-            typename Storage::id_type,
-            decltype(std::declval<const Storage&>().index_of(
-                std::declval<typename Storage::const_iterator>()))>,
-        matter::detail::enable_if_same_t<
-            typename Storage::id_type,
-            decltype(std::declval<const Storage&>().index_of(
-                std::declval<typename Storage::const_reverse_iterator>()))>,
-        matter::detail::enable_if_same_t<
-            typename Storage::value_type&,
-            decltype(std::declval<
-                     Storage&>()[std::declval<typename Storage::id_type>()])>,
-        matter::detail::enable_if_same_t<
-            const typename Storage::value_type&,
-            decltype(std::declval<const Storage&>()
-                         [std::declval<typename Storage::id_type>()])>>>
-{
-    using id_type                = typename Storage::id_type;
-    using value_type             = typename Storage::value_type;
-    using iterator               = typename Storage::iterator;
-    using const_iterator         = typename Storage::const_iterator;
-    using reverse_iterator       = typename Storage::reverse_iterator;
-    using const_reverse_iterator = typename Storage::const_reverse_iterator;
+        decltype(std::declval<const Storage&>().index_of(
+            std::declval<typename Storage::iterator>()))>>;
 
-    static Storage
-    make_storage() noexcept(std::is_nothrow_constructible_v<Storage>)
-    {
-        return Storage();
-    }
+template<typename Storage>
+using is_const_iterable_sfinae =
+    std::void_t<typename Storage::const_iterator,
+                typename Storage::id_type,
+                matter::detail::enable_if_same_t<
+                    typename Storage::const_iterator,
+                    decltype(std::declval<const Storage&>().begin())>,
+                matter::detail::enable_if_same_t<
+                    typename Storage::const_iterator,
+                    decltype(std::declval<const Storage&>().end())>,
+                matter::detail::enable_if_same_t<
+                    typename Storage::id_type,
+                    decltype(std::declval<const Storage&>().index_of(
+                        std::declval<typename Storage::const_iterator>()))>>;
 
-    template<typename... Args>
-    static void emplace(Storage& store, id_type id, Args&&... args) noexcept(
-        noexcept(store.emplace(id, std::forward<Args>(args)...)))
-    {
-        static_assert(std::is_constructible_v<value_type, Args...>,
-                      "cannot emplace value_type from Args into Storage");
+template<typename Storage>
+using is_reverse_iterable_sfinae =
+    std::void_t<typename Storage::reverse_iterator,
+                matter::detail::enable_if_same_t<
+                    typename Storage::reverse_iterator,
+                    decltype(std::declval<Storage&>().rbegin())>,
+                matter::detail::enable_if_same_t<
+                    typename Storage::reverse_iterator,
+                    decltype(std::declval<Storage&>().rend())>>;
 
-        store.emplace(id, std::forward<Args>(args)...);
-    }
+template<typename Storage>
+using is_const_reverse_iterable_sfinae =
+    std::void_t<typename Storage::const_reverse_iterator,
+                matter::detail::enable_if_same_t<
+                    typename Storage::const_reverse_iterator,
+                    decltype(std::declval<const Storage&>().rbegin())>,
+                matter::detail::enable_if_same_t<
+                    typename Storage::const_reverse_iterator,
+                    decltype(std::declval<const Storage&>().rend())>>;
 
-    static void erase(Storage& store,
-                      id_type  id) noexcept(noexcept(store.erase(id)))
-    {
-        store.erase(id);
-    }
+template<typename Storage>
+using is_sized_sfinae =
+    std::void_t<typename Storage::id_type,
+                matter::detail::enable_if_same_t<
+                    typename Storage::id_type,
+                    decltype(std::declval<const Storage&>().size())>>;
 
-    static bool contains(const Storage& store,
-                         id_type id) noexcept(noexcept(store.contains(id)))
-    {
-        return store.contains(id);
-    }
+template<typename Storage, typename Component, typename... Args>
+using is_component_constructible_sfinae = std::void_t<
+    typename Storage::id_type,
+    matter::detail::enable_if_same_t<Component, typename Storage::value_type>,
+    matter::detail::enable_if_same_t<
+        void,
+        decltype(std::declval<Storage&>().construct(
+            std::declval<typename Storage::id_type>(),
+            std::declval<Args&&>()...))>,
+    matter::detail::enable_if_same_t<
+        void,
+        decltype(std::declval<Storage&>().destroy(
+            std::declval<typename Storage::id_type>()))>>;
 
-    static iterator begin(Storage& store) noexcept(noexcept(store.begin()))
-    {
-        return store.begin();
-    }
+template<typename Storage>
+using has_contains_sfinae =
+    std::void_t<typename Storage::id_type,
+                matter::detail::enable_if_same_t<
+                    bool,
+                    decltype(std::declval<const Storage&>().contains(
+                        std::declval<typename Storage::id_type>()))>>;
 
-    static const_iterator
-    begin(const Storage& store) noexcept(noexcept(store.begin()))
-    {
-        return store.begin();
-    }
+template<typename Storage>
+using is_accessible_sfinae =
+    std::void_t<typename Storage::value_type,
+                typename Storage::id_type,
+                matter::detail::enable_if_same_t<
+                    typename Storage::value_type&,
+                    decltype(std::declval<Storage&>().operator[](
+                        std::declval<typename Storage::id_type>()))>,
+                has_contains_sfinae<Storage>>;
 
-    static iterator end(Storage& store) noexcept(noexcept(store.end()))
-    {
-        return store.end();
-    }
+template<typename Storage>
+using is_const_accessible_sfinae =
+    std::void_t<typename Storage::value_type,
+                typename Storage::id_type,
+                matter::detail::enable_if_same_t<
+                    const typename Storage::value_type&,
+                    decltype(std::declval<const Storage&>().operator[](
+                        std::declval<typename Storage::id_type>()))>,
+                has_contains_sfinae<Storage>>;
 
-    static const_iterator end(const Storage& store) noexcept(noexcept(store.end()))
-    {
-        return store.end();
-    }
-
-    static reverse_iterator
-    rbegin(Storage& store) noexcept(noexcept(store.rbegin()))
-    {
-        return store.rbegin();
-    }
-
-    static const_reverse_iterator
-    rbegin(const Storage& store) noexcept(noexcept(store.rbegin()))
-    {
-        return store.rbegin();
-    }
-
-    static reverse_iterator
-    rend(Storage& store) noexcept(noexcept(store.rend()))
-    {
-        return store.rend();
-    }
-
-    static const_reverse_iterator rend(const Storage& store) noexcept(
-        noexcept(store.rend()))
-    {
-        return store.rend();
-    }
-
-    static id_type
-    index_of(const Storage& store,
-             const_iterator it) noexcept(noexcept(store.index_of(it)))
-    {
-        return store.index_of(it);
-    }
-
-    static id_type
-    index_of(const Storage&         store,
-             const_reverse_iterator rit) noexcept(noexcept(store.index_of(rit)))
-    {
-        return store.index_of(rit);
-    }
-
-    static value_type& get(Storage& store,
-                           id_type  id) noexcept(noexcept(store[id]))
-    {
-        return store[id];
-    }
-
-    static const value_type& get(const Storage& store,
-                                 id_type id) noexcept(noexcept(store[id]))
-    {
-        return store[id];
-    }
-};
 } // namespace detail
 
-template<typename Storage>
-struct storage_traits : detail::storage_types<Storage>
+template<typename Storage, typename = void>
+struct is_storage : std::false_type
 {};
+
+template<typename Storage>
+struct is_storage<Storage, detail::is_storage_sfinae<Storage>> : std::true_type
+{};
+
+template<typename Storage>
+constexpr bool is_storage_v = is_storage<Storage>::value;
+
+template<typename Storage, typename = void>
+struct is_storage_iterable : std::false_type
+{};
+
+template<typename Storage>
+struct is_storage_iterable<Storage, detail::is_iterable_sfinae<Storage>>
+    : is_storage<Storage>
+{};
+
+template<typename Storage>
+constexpr bool is_storage_iterable_v = is_storage_iterable<Storage>::value;
+
+template<typename Storage, typename = void>
+struct is_storage_const_iterable : std::false_type
+{};
+
+template<typename Storage>
+struct is_storage_const_iterable<Storage,
+                                 detail::is_const_iterable_sfinae<Storage>>
+    : is_storage<Storage>
+{};
+
+template<typename Storage>
+constexpr bool is_storage_const_iterable_v =
+    is_storage_const_iterable<Storage>::value;
+
+template<typename Storage, typename = void>
+struct is_storage_reverse_iterable : std::false_type
+{};
+
+template<typename Storage>
+struct is_storage_reverse_iterable<Storage,
+                                   detail::is_reverse_iterable_sfinae<Storage>>
+    : is_storage<Storage>
+{};
+
+template<typename Storage>
+constexpr bool is_storage_reverse_iterable_v =
+    is_storage_reverse_iterable<Storage>::value;
+
+template<typename Storage, typename = void>
+struct is_storage_const_reverse_iterable : std::false_type
+{};
+
+template<typename Storage>
+struct is_storage_const_reverse_iterable<
+    Storage,
+    detail::is_const_reverse_iterable_sfinae<Storage>> : is_storage<Storage>
+{};
+
+template<typename Storage>
+constexpr bool is_storage_const_reverse_iterable_v =
+    is_storage_const_reverse_iterable<Storage>::value;
+
+template<typename Storage, typename = void>
+struct is_storage_sized : std::false_type
+{};
+
+template<typename Storage>
+struct is_storage_sized<Storage, detail::is_sized_sfinae<Storage>>
+    : is_storage<Storage>
+{};
+
+template<typename Storage>
+constexpr bool is_storage_sized_v = is_storage_sized<Storage>::value;
+
+namespace detail
+{
+template<typename Storage,
+         typename Component,
+         typename ArgsTuple,
+         typename = void>
+struct is_storage_component_constructible_impl : std::false_type
+{};
+
+template<typename Storage, typename Component, typename... Args>
+struct is_storage_component_constructible_impl<
+    Storage,
+    Component,
+    std::tuple<Args...>,
+    matter::detail::
+        is_component_constructible_sfinae<Storage, Component, Args...>>
+    : is_storage<Storage>
+{};
+} // namespace detail
+
+template<typename Storage, typename Component, typename... Args>
+struct is_storage_component_constructible
+    : detail::is_storage_component_constructible_impl<Storage,
+                                                      Component,
+                                                      std::tuple<Args...>>
+{};
+
+template<typename Storage, typename Component, typename... Args>
+constexpr bool is_storage_component_constructible_v =
+    is_storage_component_constructible<Storage, Component, Args...>::value;
+
+template<typename Storage, typename = void>
+struct is_storage_accessible : std::false_type
+{};
+
+template<typename Storage>
+struct is_storage_accessible<Storage, detail::is_accessible_sfinae<Storage>>
+    : is_storage<Storage>
+{};
+
+template<typename Storage>
+constexpr bool is_storage_accessible_v = is_storage_accessible<Storage>::value;
+
+template<typename Storage, typename = void>
+struct is_storage_const_accessible : std::false_type
+{};
+
+template<typename Storage>
+struct is_storage_const_accessible<Storage,
+                                   detail::is_const_accessible_sfinae<Storage>>
+    : is_storage<Storage>
+{};
+
+template<typename Storage>
+constexpr bool is_storage_const_accessible_v =
+    is_storage_const_accessible<Storage>::value;
 } // namespace matter
 
 #endif

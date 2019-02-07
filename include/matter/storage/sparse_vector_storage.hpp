@@ -85,6 +85,11 @@ public:
         return m_components.contains(id);
     }
 
+    id_type size() const noexcept
+    {
+        return static_cast<id_type>(m_components.size());
+    }
+
     value_type& operator[](id_type id) noexcept
     {
         return m_components[id];
@@ -96,14 +101,14 @@ public:
     }
 
     template<typename... Args>
-    void emplace(id_type id, Args&&... args) noexcept(
+    void construct(id_type id, Args&&... args) noexcept(
         std::is_nothrow_constructible_v<value_type, Args&&...>)
 
     {
         m_components.emplace_back(id, std::forward<Args>(args)...);
     }
 
-    void erase(id_type id)
+    void destroy(id_type id)
     {
         m_components.erase(id);
     }
