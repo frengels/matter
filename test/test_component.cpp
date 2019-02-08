@@ -32,6 +32,19 @@ struct multi_depending_struct
     using depends_on = std::tuple<single_depending_struct, empty_component>;
 };
 
+struct variant_group
+{};
+
+struct variant1
+{
+    using variant_of = variant_group;
+};
+
+struct variant2
+{
+    using variant_of = variant_group;
+};
+
 TEST_CASE("component")
 {
     SECTION("is component")
@@ -86,6 +99,12 @@ TEST_CASE("component")
                                                        random_component,
                                                        empty_component>);
         }
+    }
+
+    SECTION("variant")
+    {
+        static_assert(matter::is_component_variant_v<variant1>);
+        static_assert(!matter::is_component_variant_v<variant_group>);
     }
 }
 

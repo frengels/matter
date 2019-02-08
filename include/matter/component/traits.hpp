@@ -22,6 +22,9 @@ using is_dependent_sfinae = std::void_t<typename Component::depends_on>;
 template<typename Component>
 using is_component_sfinae = std::void_t<std::enable_if_t<
     !detail::is_specialization_of<Component, std::tuple>::value>>;
+
+template<typename Component>
+using is_variant_sfinae = std::void_t<typename Component::variant_of>;
 } // namespace detail
 
 template<typename Component>
@@ -99,6 +102,19 @@ struct is_component_depends_present
 template<typename Component, typename... Cs>
 constexpr bool is_component_depends_present_v =
     is_component_depends_present<Component, Cs...>::value;
+
+template<typename Component, typename = void>
+struct is_component_variant : std::false_type
+{};
+
+template<typename Component>
+struct is_component_variant<Component, detail::is_variant_sfinae<Component>>
+    : std::true_type
+{};
+
+template<typename Component>
+constexpr bool is_component_variant_v = is_component_variant<Component>::value;
+
 } // namespace matter
 
 #endif
