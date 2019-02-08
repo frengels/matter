@@ -10,3 +10,4 @@ compile_commands.json
 .vs/
 CMakeSettings.json
 .cquery_cached_index/
+.cquery
