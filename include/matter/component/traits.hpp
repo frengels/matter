@@ -76,6 +76,9 @@ struct component_depends_on<
     using type = typename Component::depends_on;
 };
 
+template<typename Component>
+using component_depends_on_t = typename component_depends_on<Component>::type;
+
 template<typename Component, typename = void>
 struct is_component : std::false_type
 {};
@@ -87,6 +90,15 @@ struct is_component<Component, detail::is_component_sfinae<Component>>
 
 template<typename Component>
 constexpr bool is_component_v = is_component<Component>::value;
+
+template<typename Component, typename... Cs>
+struct is_component_depends_present
+    : matter::detail::tuple_in_list<component_depends_on_t<Component>, Cs...>
+{};
+
+template<typename Component, typename... Cs>
+constexpr bool is_component_depends_present_v =
+    is_component_depends_present<Component, Cs...>::value;
 } // namespace matter
 
 #endif

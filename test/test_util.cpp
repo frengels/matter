@@ -23,5 +23,7 @@ TEST_CASE("util")
                                             unsigned char,
                                             uint16_t,
                                             uint32_t>);
+
+	static_assert(matter::detail::tuple_in_list_v<std::tuple<>>);
     }
 }

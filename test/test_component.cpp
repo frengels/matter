@@ -69,6 +69,23 @@ TEST_CASE("component")
             std::is_same_v<std::tuple<single_depending_struct, empty_component>,
                            typename matter::component_depends_on<
                                multi_depending_struct>::type>);
+
+        SECTION("dependencies validation")
+        {
+            static_assert(
+                matter::is_component_depends_present_v<single_depending_struct,
+                                                       empty_component>);
+            static_assert(
+                !matter::is_component_depends_present_v<single_depending_struct,
+                                                        multi_depending_struct,
+                                                        random_component>);
+
+            static_assert(
+                matter::is_component_depends_present_v<multi_depending_struct,
+                                                       single_depending_struct,
+                                                       random_component,
+                                                       empty_component>);
+        }
     }
 }
 
