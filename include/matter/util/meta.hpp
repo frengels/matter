@@ -51,6 +51,38 @@ struct tuple_in_list<std::tuple<T1s...>, T2s...>
 
 template<typename TTup, typename... Ts>
 constexpr bool tuple_in_list_v = tuple_in_list<TTup, Ts...>::value;
+
+namespace impl
+{
+template<typename Tup, typename... Ts>
+struct merge_non_void_impl
+{};
+
+template<typename... Filtered>
+struct merge_non_void_impl<std::tuple<Filtered...>>
+{
+    using type = std::tuple<Filtered...>;
+};
+
+template<typename... Filtered, typename... Ts>
+struct merge_non_void_impl<std::tuple<Filtered...>, void, Ts...>
+    : merge_non_void_impl<std::tuple<Filtered...>, Ts...>
+{};
+
+template<typename... Filtered, typename T, typename... Ts>
+struct merge_non_void_impl<std::tuple<Filtered...>, T, Ts...>
+    : merge_non_void_impl<std::tuple<Filtered..., T>, Ts...>
+{};
+} // namespace impl
+
+/// \brief merge all non `false_type` types into a tuple
+template<typename... Ts>
+struct merge_non_void : impl::merge_non_void_impl<std::tuple<>, Ts...>
+{};
+
+template<typename... Ts>
+using merge_non_void_t = typename merge_non_void<Ts...>::type;
+
 } // namespace detail
 } // namespace matter
 

@@ -24,6 +24,12 @@ TEST_CASE("util")
                                             uint16_t,
                                             uint32_t>);
 
-	static_assert(matter::detail::tuple_in_list_v<std::tuple<>>);
+        static_assert(matter::detail::tuple_in_list_v<std::tuple<>>);
+
+        static_assert(
+            std::is_same_v<
+                matter::detail::
+                    merge_non_void_t<int, float, void, int>,
+                std::tuple<int, float, int>>);
     }
 }
