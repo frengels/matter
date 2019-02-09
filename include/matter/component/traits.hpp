@@ -115,6 +115,21 @@ struct is_component_variant<Component, detail::is_variant_sfinae<Component>>
 template<typename Component>
 constexpr bool is_component_variant_v = is_component_variant<Component>::value;
 
+template<typename Candidate, typename Component, typename = void>
+struct is_component_variant_of : std::false_type
+{};
+
+template<typename Candidate, typename Component>
+struct is_component_variant_of<Candidate,
+                               Component,
+                               detail::is_variant_sfinae<Candidate>>
+    : std::is_same<typename Candidate::variant_of, Component>
+{};
+
+template<typename Candidate, typename Component>
+constexpr bool is_component_variant_of_v =
+    is_component_variant_of<Candidate, Component>::value;
+
 } // namespace matter
 
 #endif
