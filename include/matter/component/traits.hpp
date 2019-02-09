@@ -130,6 +130,27 @@ template<typename Candidate, typename Component>
 constexpr bool is_component_variant_of_v =
     is_component_variant_of<Candidate, Component>::value;
 
+namespace detail
+{
+/// \brief void if the Candidate is not a variant of the Component
+/// Used for merging using `merge_non_void`, which merges all types that aren't
+/// void, and that's why if a Candidate isn't a variant of Component we want to
+/// return void.
+template<typename Candidate, typename Component>
+struct if_not_variant_of_void;
+} // namespace detail
+
+template<typename Component, typename... Cs>
+struct component_variants
+    : detail::merge_non_void<
+          std::conditional_t<is_component_variant_of_v<Cs, Component>,
+                             Cs,
+                             void>...>
+{};
+
+template<typename Component, typename... Cs>
+using component_variants_t =
+    typename component_variants<Component, Cs...>::type;
 } // namespace matter
 
 #endif

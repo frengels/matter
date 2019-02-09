@@ -45,6 +45,11 @@ struct variant2
     using variant_of = variant_group;
 };
 
+struct other_variant
+{
+    using variant_of = empty_component;
+};
+
 TEST_CASE("component")
 {
     SECTION("is component")
@@ -64,6 +69,7 @@ TEST_CASE("component")
     SECTION("empty")
     {
         static_assert(matter::is_component_empty_v<empty_component>);
+        static_assert(!matter::is_component_empty_v<random_component>);
     }
 
     SECTION("depends")
@@ -105,6 +111,22 @@ TEST_CASE("component")
     {
         static_assert(matter::is_component_variant_v<variant1>);
         static_assert(!matter::is_component_variant_v<variant_group>);
+
+        static_assert(
+            matter::is_component_variant_of_v<variant1, variant_group>);
+        static_assert(
+            !matter::is_component_variant_of_v<single_depending_struct,
+                                               variant_group>);
+
+        static_assert(
+            std::is_same_v<matter::component_variants_t<variant_group,
+                                                        single_depending_struct,
+                                                        multi_depending_struct,
+                                                        variant1,
+                                                        other_variant,
+                                                        variant2,
+                                                        int>,
+                           std::tuple<variant1, variant2>>);
     }
 }
 
