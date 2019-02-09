@@ -9,9 +9,11 @@ namespace matter
 {
 namespace detail
 {
+/// \brief same as enable_if_t but with is_same check, for void_t
 template<typename T1, typename T2, typename U = void>
 using enable_if_same_t = std::enable_if_t<std::is_same_v<T1, T2>, U>;
 
+/// \brief true if it's a specialization, false otherwise
 template<typename, template<typename...> typename>
 struct is_specialization_of : std::false_type
 {};
@@ -20,6 +22,7 @@ template<template<typename...> typename TTemplate, typename... Ts>
 struct is_specialization_of<TTemplate<Ts...>, TTemplate> : std::true_type
 {};
 
+/// \brief true if we can find `T` in `Ts...`, false otherwise
 template<typename T, typename... Ts>
 struct type_in_list : std::false_type
 {};
@@ -35,6 +38,8 @@ struct type_in_list<T, T, Ts...> : std::true_type
 template<typename T, typename... Ts>
 constexpr bool type_in_list_v = type_in_list<T, Ts...>::value;
 
+/// Check whether all elements of the tuple `TTup` are present in the
+/// provides `Ts...`
 template<typename TTup, typename... Ts>
 struct tuple_in_list : std::false_type
 {};
