@@ -27,6 +27,26 @@ template<typename Component>
 using is_variant_sfinae = std::void_t<typename Component::variant_of>;
 } // namespace detail
 
+template<typename Component, typename = void>
+struct is_component : std::false_type
+{};
+
+/// \brief Detects whether a struct is a valid component
+/// Components must be copy constructible/assignable, and either trivially
+/// copyable/assignable or nothrow move constructible/assignable
+template<typename Component>
+struct is_component<
+    Component,
+    std::enable_if_t<(
+        std::is_nothrow_copy_constructible_v<Component> &&
+        std::is_nothrow_copy_assignable_v<
+            Component>) &&((std::is_trivially_copyable_v<Component> &&
+                            std::is_trivially_assignable_v<Component>) ||
+                           (std::is_nothrow_move_constructible_v<Component> &&
+                            std::is_nothrow_move_assignable_v<Component>) )>>
+    : std::true_type
+{};
+
 template<typename Component>
 struct is_component_empty
     : std::integral_constant<bool, (sizeof(Component) <= 1)>
