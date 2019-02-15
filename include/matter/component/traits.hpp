@@ -20,10 +20,6 @@ template<typename Component>
 using is_dependent_sfinae = std::void_t<typename Component::depends_on>;
 
 template<typename Component>
-using is_component_sfinae = std::void_t<std::enable_if_t<
-    !detail::is_specialization_of<Component, std::tuple>::value>>;
-
-template<typename Component>
 using is_variant_sfinae = std::void_t<typename Component::variant_of>;
 } // namespace detail
 
@@ -37,16 +33,24 @@ struct is_component : std::false_type
 template<typename Component>
 struct is_component<
     Component,
-    std::enable_if_t<(
-        std::is_nothrow_copy_constructible_v<Component> &&
-        std::is_nothrow_copy_assignable_v<
-            Component>) &&((std::is_trivially_copyable_v<Component> &&
-                            std::is_trivially_assignable_v<Component>) ||
-                           (std::is_nothrow_move_constructible_v<Component> &&
-                            std::is_nothrow_move_assignable_v<Component>) )>>
+    std::enable_if_t<
+        !detail::is_specialization_of<Component, std::tuple>::value &&
+        (std::is_nothrow_copy_constructible_v<Component> &&
+         std::is_nothrow_copy_assignable_v<
+             Component>) &&((std::is_trivially_copyable_v<Component> &&
+                             std::is_trivially_assignable_v<Component>) ||
+                            (std::is_nothrow_move_constructible_v<Component> &&
+                             std::is_nothrow_move_assignable_v<Component>) )>>
     : std::true_type
 {};
 
+template<typename Component>
+constexpr bool is_component_v = is_component<Component>::value;
+
+/// \brief detects empty components
+/// empty components are typically used for something like a tag, classes which
+/// qualify for this constraint will be optimized to not take up any space in
+/// storage.
 template<typename Component>
 struct is_component_empty
     : std::integral_constant<bool, (sizeof(Component) <= 1)>
@@ -111,18 +115,6 @@ struct component_depends_on<
 
 template<typename Component>
 using component_depends_on_t = typename component_depends_on<Component>::type;
-
-template<typename Component, typename = void>
-struct is_component : std::false_type
-{};
-
-template<typename Component>
-struct is_component<Component, detail::is_component_sfinae<Component>>
-    : std::true_type
-{};
-
-template<typename Component>
-constexpr bool is_component_v = is_component<Component>::value;
 
 /// \brief Check whether dependencies exist
 /// Holds true if all dependencies of the current component are present in the
