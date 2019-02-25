@@ -33,14 +33,10 @@ struct is_component : std::false_type
 template<typename Component>
 struct is_component<
     Component,
-    std::enable_if_t<
+    std::enable_if_t<(
         !detail::is_specialization_of<Component, std::tuple>::value &&
-        (std::is_nothrow_copy_constructible_v<Component> &&
-         std::is_nothrow_copy_assignable_v<
-             Component>) &&((std::is_trivially_copyable_v<Component> &&
-                             std::is_trivially_assignable_v<Component>) ||
-                            (std::is_nothrow_move_constructible_v<Component> &&
-                             std::is_nothrow_move_assignable_v<Component>) )>>
+        (std::is_nothrow_copy_constructible_v<Component> ||
+	 std::is_nothrow_move_constructible_v<Component>))>>
     : std::true_type
 {};
 
