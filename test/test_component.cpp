@@ -1,133 +1,132 @@
 #include <catch2/catch.hpp>
 
-#include "matter/component.hpp"
+#include "matter/component/identifier.hpp"
+#include "matter/component/traits.hpp"
 #include "matter/entity/entity.hpp"
 #include "matter/entity/entity_manager.hpp"
+#include "matter/storage/sparse_vector_storage.hpp"
 
 #include <string>
 
 struct random_component
 {
+    template<typename Id>
+    using storage_type = matter::sparse_vector_storage<Id, random_component>;
+
     int i;
 
     random_component(int i) : i{i}
     {}
 };
 
-namespace matter::traits
+struct empty_component
+{};
+
+struct single_depending_struct
 {
-template<>
-struct component_traits<random_component>
-{
-    template<typename Entity>
-    using storage_type =
-        matter::sparse_vector_storage<Entity, random_component>;
+    using depends_on = empty_component;
 };
-} // namespace matter::traits
 
-TEST_CASE("sparse_vector")
+struct multi_depending_struct
 {
-    matter::sparse_vector<random_component> vec;
+    using depends_on = std::tuple<single_depending_struct, empty_component>;
+};
 
-    SECTION("check invalid")
+struct variant_group
+{};
+
+struct variant1
+{
+    using variant_of = variant_group;
+};
+
+struct variant2
+{
+    using variant_of = variant_group;
+};
+
+struct other_variant
+{
+    using variant_of = empty_component;
+};
+
+TEST_CASE("component")
+{
+    SECTION("is component")
     {
-        CHECK(!vec.has_value(0));
-        CHECK(!vec.has_value(1));
+        static_assert(matter::is_component_v<random_component>);
+        static_assert(!matter::is_component_v<std::tuple<random_component>>);
+    }
+    SECTION("storage type")
+    {
+        static_assert(
+            matter::is_component_storage_defined_v<random_component, uint32_t>);
+
+        static_assert(
+            !matter::is_component_storage_defined_v<empty_component, uint32_t>);
     }
 
-    SECTION("insert")
+    SECTION("empty")
     {
-        vec.push_back(0, random_component(0));
+        static_assert(matter::is_component_empty_v<empty_component>);
+        static_assert(!matter::is_component_empty_v<random_component>);
+    }
 
-        REQUIRE(vec.has_value(0));
-        CHECK(vec[0].i == 0);
+    SECTION("depends")
+    {
+        static_assert(
+            matter::is_component_dependent_v<single_depending_struct>);
+        static_assert(matter::is_component_dependent_v<multi_depending_struct>);
+        static_assert(!matter::is_component_dependent_v<empty_component>);
 
-        SECTION("remove iterator")
+        // check that single types are correctly converted to tuple
+        static_assert(std::is_same_v<std::tuple<empty_component>,
+                                     typename matter::component_depends_on<
+                                         single_depending_struct>::type>);
+        // and tuples remain intact
+        static_assert(
+            std::is_same_v<std::tuple<single_depending_struct, empty_component>,
+                           typename matter::component_depends_on<
+                               multi_depending_struct>::type>);
+
+        SECTION("dependencies validation")
         {
-            auto it = std::begin(vec);
-            REQUIRE(it->i == 0);
-            REQUIRE(vec.has_value(0));
+            static_assert(
+                matter::is_component_depends_present_v<single_depending_struct,
+                                                       empty_component>);
+            static_assert(
+                !matter::is_component_depends_present_v<single_depending_struct,
+                                                        multi_depending_struct,
+                                                        random_component>);
 
-            vec.erase(it);
-
-            REQUIRE(!vec.has_value(0));
-        }
-
-        SECTION("remove")
-        {
-            vec.erase(0);
-            REQUIRE(!vec.has_value(0));
-        }
-
-        for (int i = 1; i < 10; ++i)
-        {
-            vec.emplace_back(i * 10, i * 10);
-        }
-
-        SECTION("remove shifing")
-        {
-            vec.erase(0);
-            REQUIRE(!vec.has_value(0));
-
-            for (int i = 1; i < 10; ++i)
-            {
-                REQUIRE(vec[i * 10].i == i * 10);
-            }
-        }
-
-        SECTION("swap and pop")
-        {
-            vec.swap_and_pop(0);
-            REQUIRE(!vec.has_value(0));
-
-            for (int i = 1; i < 10; ++i)
-            {
-                REQUIRE(vec[i * 10].i == i * 10);
-            }
+            static_assert(
+                matter::is_component_depends_present_v<multi_depending_struct,
+                                                       single_depending_struct,
+                                                       random_component,
+                                                       empty_component>);
         }
     }
-}
 
-namespace matter::traits
-{
-template<>
-struct component_traits<int>
-{
-    template<typename Entity>
-    using storage_type = matter::sparse_vector_storage<Entity, int>;
-};
-
-template<>
-struct component_traits<std::string>
-{
-    template<typename Entity>
-    using storage_type = matter::vector_storage<Entity, std::string>;
-};
-} // namespace matter::traits
-
-TEST_CASE("storage")
-{
-    using entity_type = matter::entity<uint32_t, uint32_t>;
-
-    matter::entity_manager<entity_type>    entities;
-    matter::component_manager<entity_type> components;
-
-    SECTION("add storages")
+    SECTION("variant")
     {
-        auto& str_store = components.storage<std::string>();
-        auto& int_store = components.storage<int>();
+        static_assert(matter::is_component_variant_v<variant1>);
+        static_assert(!matter::is_component_variant_v<variant_group>);
 
-        auto ent1 = entities.create();
-        auto ent2 = entities.create();
+        static_assert(
+            matter::is_component_variant_of_v<variant1, variant_group>);
+        static_assert(
+            !matter::is_component_variant_of_v<single_depending_struct,
+                                               variant_group>);
 
-        SECTION("create objects")
-        {
-            str_store.emplace(ent1.id(), "ent1");
-            str_store.emplace(ent2.id(), "ent2");
-
-            int_store.emplace(ent1.id(), 1);
-            int_store.emplace(ent2.id(), 2);
-        }
+        static_assert(
+            std::is_same_v<matter::component_variants_t<variant_group,
+                                                        single_depending_struct,
+                                                        multi_depending_struct,
+                                                        variant1,
+                                                        other_variant,
+                                                        variant2,
+                                                        int>,
+                           std::tuple<variant1, variant2>>);
     }
 }
 

@@ -5,6 +5,7 @@ tests = [
   'ecs',
   'entity',
   'variant',
+  'util',
 ]
 
 catch_lib = static_library(
