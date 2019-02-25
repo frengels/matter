@@ -14,7 +14,7 @@ struct identifier
 private:
     static std::atomic<std::size_t> m_next_id;
 
-    template<typename T>
+    template<typename... Ts>
     static std::size_t _get() noexcept
     {
         static const std::size_t id = m_next_id++;
@@ -22,11 +22,11 @@ private:
     }
 
 public:
-    template<typename T>
+    template<typename... Ts>
     static std::size_t get() noexcept
     {
         return _get<typename std::remove_cv<
-            typename std::remove_reference<T>::type>::type>();
+            typename std::remove_reference<Ts>::type>::type...>();
     }
 };
 

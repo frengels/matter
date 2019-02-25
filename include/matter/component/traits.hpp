@@ -5,6 +5,7 @@
 
 #include <tuple>
 #include <type_traits>
+#include <vector>
 
 #include "matter/util/meta.hpp"
 
@@ -12,9 +13,8 @@ namespace matter
 {
 namespace detail
 {
-template<typename Component, typename Id>
-using is_storage_defined_sfinae =
-    std::void_t<typename Component::template storage_type<Id>>;
+template<typename Component>
+using is_storage_defined_sfinae = std::void_t<typename Component::storage_type>;
 
 template<typename Component>
 using is_dependent_sfinae = std::void_t<typename Component::depends_on>;
@@ -51,30 +51,28 @@ constexpr bool is_component_v = is_component<Component>::value;
 /// qualify for this constraint will be optimized to not take up any space in
 /// storage.
 template<typename Component>
-struct is_component_empty
-    : std::integral_constant<bool, (sizeof(Component) <= 1)>
+struct is_component_empty : std::is_empty<Component>
 {};
 
 template<typename Component>
 constexpr bool is_component_empty_v = is_component_empty<Component>::value;
 
-template<typename Component, typename Id, typename = void>
+template<typename Component, typename = void>
 struct is_component_storage_defined : std::false_type
 {};
 
 /// \brief whether the component has custom storage defined
 /// components with `storage_type` defined will use this instead of the default
 /// predefined storage
-template<typename Component, typename Id>
+template<typename Component>
 struct is_component_storage_defined<
     Component,
-    Id,
-    detail::is_storage_defined_sfinae<Component, Id>> : std::true_type
+    detail::is_storage_defined_sfinae<Component>> : std::true_type
 {};
 
-template<typename Component, typename Id>
+template<typename Component>
 constexpr bool is_component_storage_defined_v =
-    is_component_storage_defined<Component, Id>::value;
+    is_component_storage_defined<Component>::value;
 
 template<typename Component, typename = void>
 struct is_component_dependent : std::false_type
@@ -218,6 +216,23 @@ struct component_name<Component,
 
 template<typename Component>
 constexpr auto component_name_v = component_name<Component>::value;
+
+template<typename Component, typename = void>
+struct component_storage
+{
+    using type = std::vector<Component>;
+};
+
+template<typename Component>
+struct component_storage<
+    Component,
+    std::enable_if_t<is_component_storage_defined_v<Component>>>
+{
+    using type = typename Component::storage_type;
+};
+
+template<typename Component>
+using component_storage_t = typename component_storage<Component>::type;
 } // namespace matter
 
 #endif

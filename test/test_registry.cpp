@@ -2,23 +2,43 @@
 
 #include <string>
 
-#include "matter/registry.hpp"
-#include "matter/entity/entity.hpp"
+#include "matter/component/registry.hpp"
+#include "matter/component/traits.hpp"
+#include "matter/util/erased.hpp"
+
+struct float_comp
+{
+    float f;
+};
+
+struct int_comp
+{
+    int i;
+};
+
+struct string_comp
+{
+    std::string str;
+};
 
 TEST_CASE("registry")
 {
+    matter::registry<float_comp, int_comp, string_comp> reg;
 
-  matter::cx_registry<matter::default_entity, std::string, int, float> registry;
+    SECTION("group")
+    {
+        auto grp = decltype(reg)::group<1>{std::make_pair(
+            reg.component_id<int_comp>(),
+            matter::make_erased<matter::component_storage_t<int_comp>>())};
 
-  SECTION("manages")
-  {
-    static_assert(registry.manages<std::string>());
-    static_assert(registry.manages<int>());
-    static_assert(registry.manages<float>());
+        CHECK(grp.contains(reg.component_id<int_comp>()));
+        CHECK(!grp.contains(10));
+        CHECK(!grp.contains(reg.component_id<float_comp>()));
 
-    static_assert(!registry.manages<size_t>());
+        auto& vector = grp.get<int_comp>(reg.component_id<int_comp>());
 
-    // test the automatically generated variadic version
-    static_assert(registry.manages<std::string, int, float>());
-  }
+        // do random operations to verify we obtained the correct storage medium
+        vector.push_back({5});
+        CHECK(vector.size() == 1);
+    }
 }
