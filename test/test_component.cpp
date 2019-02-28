@@ -10,6 +10,8 @@
 
 struct random_component
 {
+    static constexpr auto name = "random_component";
+
     template<typename Id>
     using storage_type = matter::sparse_vector_storage<Id, random_component>;
 
@@ -127,6 +129,15 @@ TEST_CASE("component")
                                                         variant2,
                                                         int>,
                            std::tuple<variant1, variant2>>);
+    }
+
+    SECTION("named")
+    {
+        static_assert(matter::is_component_named_v<random_component>);
+        constexpr auto name = matter::component_name_v<random_component>;
+        static_assert(name.compare("random_component") == 0);
+
+        static_assert(!matter::is_component_named_v<single_depending_struct>);
     }
 }
 

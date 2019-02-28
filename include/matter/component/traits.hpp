@@ -21,6 +21,10 @@ using is_dependent_sfinae = std::void_t<typename Component::depends_on>;
 
 template<typename Component>
 using is_variant_sfinae = std::void_t<typename Component::variant_of>;
+
+template<typename Component>
+using is_named_sfinae = std::void_t<std::enable_if_t<
+    std::is_constructible_v<std::string_view, decltype(Component::name)>>>;
 } // namespace detail
 
 template<typename Component, typename = void>
@@ -36,8 +40,7 @@ struct is_component<
     std::enable_if_t<(
         !detail::is_specialization_of<Component, std::tuple>::value &&
         (std::is_nothrow_copy_constructible_v<Component> ||
-	 std::is_nothrow_move_constructible_v<Component>))>>
-    : std::true_type
+         std::is_nothrow_move_constructible_v<Component>) )>> : std::true_type
 {};
 
 template<typename Component>
@@ -178,6 +181,43 @@ struct component_variants
 template<typename Component, typename... Cs>
 using component_variants_t =
     typename component_variants<Component, Cs...>::type;
+
+template<typename Component, typename = void>
+struct is_component_named : std::false_type
+{};
+
+template<typename Component>
+struct is_component_named<Component,
+                          std::void_t<detail::is_named_sfinae<Component>>>
+    : is_component<Component>
+{};
+
+template<typename Component>
+constexpr bool is_component_named_v = is_component_named<Component>::value;
+
+template<typename Component, typename = void>
+struct component_name;
+
+template<typename Component>
+struct component_name<Component,
+                      std::enable_if_t<is_component_named_v<Component>>>
+{
+    using value_type                  = std::string_view;
+    static constexpr value_type value = std::string_view(Component::name);
+
+    constexpr operator value_type() const noexcept
+    {
+        return value;
+    }
+
+    constexpr value_type operator()() const noexcept
+    {
+        return value;
+    }
+};
+
+template<typename Component>
+constexpr auto component_name_v = component_name<Component>::value;
 } // namespace matter
 
 #endif
