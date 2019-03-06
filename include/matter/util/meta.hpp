@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <optional>
 #include <type_traits>
 
 namespace matter
@@ -22,6 +23,21 @@ template<template<typename...> typename TTemplate, typename... Ts>
 struct is_specialization_of<TTemplate<Ts...>, TTemplate> : std::true_type
 {};
 
+namespace impl
+{
+template<std::size_t I, typename T, typename U, typename... Ts>
+struct search_type_impl : search_type_impl<I + 1, T, Ts...>
+{};
+
+template<std::size_t I, typename T, typename... Ts>
+struct search_type_impl<I, T, T, Ts...> : std::integral_constant<std::size_t, I>
+{};
+} // namespace impl
+
+/// \brief return the index of the type or false_type
+template<typename T, typename... Ts>
+struct search_type : impl::search_type_impl<0, T, Ts...>
+{};
 /// \brief true if we can find `T` in `Ts...`, false otherwise
 template<typename T, typename... Ts>
 struct type_in_list : std::false_type
@@ -37,6 +53,20 @@ struct type_in_list<T, T, Ts...> : std::true_type
 
 template<typename T, typename... Ts>
 constexpr bool type_in_list_v = type_in_list<T, Ts...>::value;
+
+/// \brief get index of type or nullopt
+template<typename T, typename... Ts>
+constexpr std::optional<std::size_t> type_index() noexcept
+{
+    if constexpr (type_in_list_v<T, Ts...>)
+    {
+        return search_type<T, Ts...>::value;
+    }
+    else
+    {
+        return std::nullopt;
+    }
+}
 
 /// Check whether all elements of the tuple `TTup` are present in the
 /// provides `Ts...`

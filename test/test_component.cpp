@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 
+#include "matter/component/component_identifier.hpp"
 #include "matter/component/identifier.hpp"
 #include "matter/component/traits.hpp"
 #include "matter/entity/entity.hpp"
@@ -138,6 +139,27 @@ TEST_CASE("component")
         static_assert(name.compare("random_component") == 0);
 
         static_assert(!matter::is_component_named_v<single_depending_struct>);
+    }
+
+    SECTION("component_identifier")
+    {
+        matter::component_identifier<float, int, std::string> cident;
+
+        static_assert(cident.id_constexpr<float>() == 0);
+        static_assert(cident.is_constexpr<std::string>());
+        static_assert(!cident.is_constexpr<std::string_view>());
+        CHECK(cident.template id<float>() == 0);
+
+        // we test whether the global id doesn't affect the local id
+        CHECK(!cident.is_registered<std::string_view>()); // this will generate
+                                                          // a global id
+        cident.register_type<random_component>(); // this will generate a local
+                                                  // id of num+0
+        cident.register_type<std::string_view>();
+        CHECK(cident.id<random_component>() ==
+              decltype(cident)::constexpr_components_size);
+        CHECK(cident.id<std::string_view>() ==
+              decltype(cident)::constexpr_components_size + 1);
     }
 }
 
