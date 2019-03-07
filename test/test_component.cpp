@@ -2,6 +2,7 @@
 
 #include "matter/component/component_identifier.hpp"
 #include "matter/component/identifier.hpp"
+#include "matter/component/registry.hpp"
 #include "matter/component/traits.hpp"
 #include "matter/entity/entity.hpp"
 #include "matter/entity/entity_manager.hpp"
@@ -13,8 +14,8 @@ struct random_component
 {
     static constexpr auto name = "random_component";
 
-    template<typename Id>
-    using storage_type = matter::sparse_vector_storage<Id, random_component>;
+    using storage_type =
+        matter::sparse_vector_storage<std::size_t, random_component>;
 
     int i;
 
@@ -62,11 +63,9 @@ TEST_CASE("component")
     }
     SECTION("storage type")
     {
-        static_assert(
-            matter::is_component_storage_defined_v<random_component, uint32_t>);
+        static_assert(matter::is_component_storage_defined_v<random_component>);
 
-        static_assert(
-            !matter::is_component_storage_defined_v<empty_component, uint32_t>);
+        static_assert(!matter::is_component_storage_defined_v<empty_component>);
     }
 
     SECTION("empty")
@@ -160,6 +159,11 @@ TEST_CASE("component")
               decltype(cident)::constexpr_components_size);
         CHECK(cident.id<std::string_view>() ==
               decltype(cident)::constexpr_components_size + 1);
+    }
+
+    SECTION("registry")
+    {
+        matter::registry<float, int, char> reg;
     }
 }
 

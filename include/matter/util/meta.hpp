@@ -113,6 +113,48 @@ struct merge_non_void : impl::merge_non_void_impl<std::tuple<>, Ts...>
 template<typename... Ts>
 using merge_non_void_t = typename merge_non_void<Ts...>::type;
 
+template<std::size_t N, typename... Ts>
+struct nth
+{};
+
+template<std::size_t N, typename T, typename... Ts>
+struct nth<N, T, Ts...> : nth<N - 1, Ts...>
+{};
+
+template<typename T, typename... Ts>
+struct nth<0, T, Ts...>
+{
+    using type = T;
+};
+
+template<std::size_t N, typename... Ts>
+using nth_t = typename nth<N, Ts...>::type;
+
+template<typename T, typename TupArgs>
+struct is_constructible_expand_tuple
+{};
+
+template<typename T, typename... Args>
+struct is_constructible_expand_tuple<T, std::tuple<Args...>>
+    : std::is_constructible<T, Args...>
+{};
+
+template<typename T, typename TupArgs>
+constexpr auto is_constructible_expand_tuple_v =
+    is_constructible_expand_tuple<T, TupArgs>::value;
+
+template<typename T, typename TupArgs>
+struct is_nothrow_constructible_expand_tuple
+{};
+
+template<typename T, typename... Args>
+struct is_nothrow_constructible_expand_tuple<T, std::tuple<Args...>>
+    : std::is_nothrow_constructible<T, Args...>
+{};
+
+template<typename T, typename TupArgs>
+constexpr auto is_nothrow_constructible_expand_tuple_v =
+    is_nothrow_constructible_expand_tuple<T, TupArgs>::value;
 } // namespace detail
 } // namespace matter
 

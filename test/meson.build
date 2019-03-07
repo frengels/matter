@@ -6,6 +6,7 @@ tests = [
   'entity',
   'variant',
   'util',
+  'erased',
 ]
 
 catch_lib = static_library(
