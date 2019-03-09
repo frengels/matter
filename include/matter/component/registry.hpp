@@ -296,6 +296,11 @@ public:
         identifier_.template register_type<C>();
     }
 
+    const matter::component_metadata& component_metadata(id_type id) noexcept
+    {
+        return identifier_.metadata(id);
+    }
+
     template<typename... Cs, typename... TupArgs>
     void create(TupArgs&&... args) noexcept(
         (detail::is_nothrow_constructible_expand_tuple_v<Cs, TupArgs> && ...))

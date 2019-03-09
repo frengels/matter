@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "matter/component/identifier.hpp"
+#include "matter/component/metadata.hpp"
 #include "matter/component/traits.hpp"
 
 namespace matter
@@ -41,6 +42,8 @@ private:
     std::unordered_map<std::size_t, std::size_t> runtime_ids_;
     std::size_t next_local_id_{constexpr_components_size};
 
+    std::vector<matter::component_metadata> metadata_;
+
 public:
     constexpr component_identifier() = default;
 
@@ -61,7 +64,19 @@ public:
                0); // if not 0 then we already identify this type
         auto local_id = next_local_id_++;
         runtime_ids_.emplace(id, local_id);
+        // store all available metadata for id -> data relation
+        generate_metadata<Component>();
         return local_id;
+    }
+
+    const matter::component_metadata& metadata(id_type id) noexcept
+    {
+        assert((constexpr_components_size + metadata_.size()) > id);
+
+        // because constexpr components are always known we don't need metadata
+        // for them.
+        auto metadata_id = id - constexpr_components_size;
+        return metadata_[metadata_id];
     }
 
     template<typename Component>
@@ -136,6 +151,26 @@ public:
 
         std::sort(sorted_ids.begin(), sorted_ids.end());
         return sorted_ids;
+    }
+
+private:
+    /// \brief generates metadata for runtime components
+    template<typename Component>
+    void generate_metadata()
+    {
+        std::optional<const std::string_view> name =
+            []() -> std::optional<const std::string_view> {
+            if constexpr (matter::is_component_named_v<Component>)
+            {
+                return matter::component_name_v<Component>;
+            }
+            else
+            {
+                return std::nullopt;
+            }
+        }();
+
+        metadata_.emplace_back(std::move(name));
     }
 };
 } // namespace matter
