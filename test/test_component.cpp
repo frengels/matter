@@ -159,6 +159,24 @@ TEST_CASE("component")
               decltype(cident)::constexpr_components_size);
         CHECK(cident.id<std::string_view>() ==
               decltype(cident)::constexpr_components_size + 1);
+
+        SECTION("metadata")
+        {
+            auto id = cident.id<random_component>();
+
+            const auto& metadata1 = cident.metadata(id);
+            CHECK(metadata1.name.has_value());
+
+            CHECK(metadata1.name->compare(
+                      matter::component_name_v<random_component>) == 0);
+
+            // next has no name
+            id = cident.id<std::string_view>();
+
+            const auto& metadata2 = cident.metadata(id);
+
+            CHECK(!metadata2.name.has_value());
+        }
     }
 
     SECTION("registry")
