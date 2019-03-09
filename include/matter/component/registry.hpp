@@ -15,6 +15,11 @@ namespace matter
 template<typename... Components>
 class registry {
 public:
+    static constexpr std::size_t component_capacity = 64;
+
+    static_assert(component_capacity > sizeof...(Components));
+
+public:
     template<std::size_t I>
     class group {
     public:
@@ -252,15 +257,32 @@ public:
         }
     };
 
+    template<template<std::size_t> typename T, typename IndexSeq>
+    struct indexed_tuple;
+
+    template<template<std::size_t> typename T, std::size_t... N>
+    struct indexed_tuple<T, std::index_sequence<N...>>
+    {
+        using type = std::tuple<T<N>...>;
+    };
+
 public:
     using identifier_type = component_identifier<Components...>;
     using id_type         = typename identifier_type::id_type;
 
 private:
+    template<std::size_t I>
+    using group_vector = std::vector<group<I>>;
+
+private:
     identifier_type identifier_;
 
+    typename indexed_tuple<group_vector,
+                           std::make_index_sequence<component_capacity>>::type
+        groups_;
+
 public:
-    constexpr registry() noexcept = default;
+    constexpr registry() = default;
 
     template<typename C>
     constexpr id_type component_id() const noexcept
@@ -273,7 +295,135 @@ public:
     {
         identifier_.template register_type<C>();
     }
+
+    template<typename... Cs, typename... TupArgs>
+    void create(TupArgs&&... args) noexcept(
+        (detail::is_nothrow_constructible_expand_tuple_v<Cs, TupArgs> && ...))
+    {
+        static_assert(sizeof...(Cs) == sizeof...(TupArgs),
+                      "Did not provide arguments for each Component.");
+        static_assert(
+            (detail::is_constructible_expand_tuple_v<Cs, TupArgs> && ...),
+            "One of the components cannot be constructed from the provided "
+            "args.");
+
+        auto ids        = identifier_.template ids<Cs...>();
+        auto sorted_ids = ids;
+        std::sort(sorted_ids.begin(), sorted_ids.end());
+
+        auto* ideal_group = find_group_from_ids(sorted_ids);
+
+        if (!ideal_group)
+        {
+            // no group exists for these components so create one
+            ideal_group = create_group<Cs...>();
+        }
+
+        (create_impl<Cs>(*ideal_group, ids, std::forward<TupArgs>(args)), ...);
+    }
+
+private:
+    template<typename C, std::size_t I, std::size_t N, typename... Args>
+    void create_impl(group<I>&                     grp,
+                     const std::array<id_type, N>& ids,
+                     std::tuple<Args...>           args) noexcept
+    {
+        create_impl_impl<C>(
+            grp, std::index_sequence_for<Args...>{}, ids, std::move(args));
+    }
+
+    template<typename C,
+             std::size_t I,
+             std::size_t N,
+             std::size_t... Is,
+             typename... Args>
+    void create_impl_impl(group<I>& grp,
+                          std::index_sequence<Is...>,
+                          const std::array<id_type, N>& ids,
+                          std::tuple<Args...>           args) noexcept
+    {
+        grp.template get<C>(ids[I]).emplace_back(
+            std::move(std::get<Is>(args))...);
+    }
+
+    template<typename... Cs>
+    group<sizeof...(Cs)>* create_group() noexcept
+    {
+        constexpr auto I          = sizeof...(Cs);
+        auto           ids        = identifier_.template ids<Cs...>();
+        auto           sorted_ids = ids;
+        std::sort(sorted_ids.begin(), sorted_ids.end());
+        assert(find_group_from_ids(sorted_ids) == nullptr);
+
+        auto& vec = get_group_vector<I>();
+        auto  it  = std::lower_bound(vec.begin(), vec.end(), sorted_ids);
+
+        using seq = std::make_index_sequence<I>;
+        return create_group_impl<Cs...>(seq{}, ids, vec, it);
+    }
+
+    template<typename... Cs, std::size_t... Indices>
+    group<sizeof...(Cs)>* create_group_impl(
+        std::index_sequence<Indices...>,
+        const std::array<id_type, sizeof...(Cs)>&            ids,
+        group_vector<sizeof...(Cs)>&                         vec,
+        typename group_vector<sizeof...(Cs)>::const_iterator it) noexcept
+    {
+        static_assert(sizeof...(Cs) == sizeof...(Indices),
+                      "Cannot pass more types than indices");
+        constexpr auto I = sizeof...(Cs);
+
+        auto inserted_it = vec.insert(
+            it,
+            group<I>{std::forward_as_tuple(
+                ids[Indices],
+                std::in_place_type_t<matter::component_storage_t<Cs>>{})...});
+
+        return std::addressof(*inserted_it);
+    }
+
+    template<std::size_t I>
+    group_vector<I>& get_group_vector() noexcept
+    {
+        return std::get<group_vector<I>>(groups_);
+    }
+
+    template<std::size_t I>
+    const group_vector<I>& get_group_vector() const noexcept
+    {
+        return std::get<group_vector<I>>(groups_);
+    }
+
+    template<std::size_t I>
+    constexpr group<I>*
+    find_group_from_ids(const std::array<id_type, I>& sorted_ids) noexcept
+    {
+        assert(std::is_sorted(sorted_ids.begin(), sorted_ids.end()));
+        auto& vec = get_group_vector<I>();
+
+        auto it = std::lower_bound(vec.begin(), vec.end(), sorted_ids);
+
+        if (it == vec.end())
+        {
+            return nullptr;
+        }
+
+        if (*it == sorted_ids)
+        {
+            return &(*it);
+        }
+
+        return nullptr;
+    }
+
+    template<typename... Cs>
+    group<sizeof...(Cs)>* find_group() noexcept
+    {
+        auto sorted_ids = identifier_.template sorted_ids<Cs...>();
+        return find_group_from_ids(sorted_ids);
+    }
 };
+
 } // namespace matter
 
 #endif

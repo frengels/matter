@@ -9,11 +9,17 @@
 struct float_comp
 {
     float f;
+
+    constexpr float_comp(float f) : f{f}
+    {}
 };
 
 struct int_comp
 {
     int i;
+
+    constexpr int_comp(int i) : i{i}
+    {}
 };
 
 struct string_comp
@@ -91,6 +97,12 @@ TEST_CASE("registry")
     SECTION("register")
     {
         reg.register_component<std::string>();
+        reg.create<std::string>(std::forward_as_tuple("Hello world"));
     }
 
+    SECTION("create")
+    {
+        reg.create<float_comp, int_comp>(std::forward_as_tuple(5.0f),
+                                         std::forward_as_tuple(5));
+    }
 }
