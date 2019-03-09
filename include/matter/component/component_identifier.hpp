@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <unordered_map>
 
 #include "matter/component/identifier.hpp"
@@ -120,6 +121,21 @@ public:
         {
             return id_runtime<Component>();
         }
+    }
+
+    template<typename... Cs>
+    constexpr std::array<id_type, sizeof...(Cs)> ids()
+    {
+        return std::array<id_type, sizeof...(Cs)>{id<Cs>()...};
+    }
+
+    template<typename... Cs>
+    constexpr std::array<id_type, sizeof...(Cs)> sorted_ids()
+    {
+        auto sorted_ids = ids<Cs...>();
+
+        std::sort(sorted_ids.begin(), sorted_ids.end());
+        return sorted_ids;
     }
 };
 } // namespace matter

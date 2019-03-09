@@ -10,6 +10,30 @@ namespace matter
 {
 namespace detail
 {
+namespace impl
+{
+template<typename T, std::size_t... Is, typename... Args>
+constexpr T construct_from_tuple_impl(
+    std::index_sequence<Is...>,
+    std::in_place_type_t<T>,
+    std::tuple<Args...>
+        targs) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+{
+    return T(std::forward<Args>(std::get<Is>(targs))...);
+}
+} // namespace impl
+
+/// \brief create T from a forward_as_tuple
+template<typename T, typename TupArgs>
+constexpr T construct_from_tuple(std::in_place_type_t<T>,
+                                 TupArgs&& targs) noexcept
+{
+    return impl::construct_from_tuple_impl(
+        std::make_index_sequence<std::tuple_size<TupArgs>::value>{},
+        std::in_place_type_t<T>{},
+        std::forward<TupArgs>(targs));
+}
+
 /// \brief same as enable_if_t but with is_same check, for void_t
 template<typename T1, typename T2, typename U = void>
 using enable_if_same_t = std::enable_if_t<std::is_same_v<T1, T2>, U>;
