@@ -169,6 +169,8 @@ TEST_CASE("component")
 
             CHECK(metadata1.name->compare(
                       matter::component_name_v<random_component>) == 0);
+            CHECK(metadata1.size == sizeof(random_component));
+            CHECK(metadata1.align == alignof(random_component));
 
             // next has no name
             id = cident.id<std::string_view>();
@@ -176,6 +178,8 @@ TEST_CASE("component")
             const auto& metadata2 = cident.metadata(id);
 
             CHECK(!metadata2.name.has_value());
+            CHECK(metadata2.size == sizeof(std::string_view));
+            CHECK(metadata2.align == alignof(std::string_view));
         }
     }
 
