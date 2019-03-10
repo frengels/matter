@@ -317,6 +317,19 @@ template<typename... Ts>
 unordered_typed_ids(Ts... tids) noexcept
     ->unordered_typed_ids<typename detail::nth_t<0, Ts...>::id_type, Ts...>;
 
+template<typename T>
+struct is_unordered_typed_ids : std::false_type
+{};
+
+template<typename Id, typename... TIds>
+struct is_unordered_typed_ids<matter::unordered_typed_ids<Id, TIds...>>
+    : std::true_type
+{};
+
+template<typename T>
+static constexpr auto is_unordered_typed_ids_v =
+    is_unordered_typed_ids<T>::value;
+
 namespace detail
 {
 /// we can't directly sort constexpr objects, so use this function to sort it
@@ -397,6 +410,12 @@ public:
               }
           }()}
     {}
+
+    template<std::size_t N>
+    constexpr id_type get() const noexcept
+    {
+        return std::get<N>(ordered_ids_);
+    }
 
     constexpr auto begin() const noexcept
     {
@@ -531,6 +550,46 @@ ordered_typed_ids(Ts... types) noexcept
 template<typename Id, typename... Ts>
 ordered_typed_ids(const unordered_typed_ids<Id, Ts...>& ids) noexcept
     ->ordered_typed_ids<Id, Ts...>;
+
+template<typename T>
+struct is_ordered_typed_ids : std::false_type
+{};
+
+template<typename Id, typename... TIds>
+struct is_ordered_typed_ids<matter::ordered_typed_ids<Id, TIds...>>
+    : std::true_type
+{};
+
+template<typename T>
+static constexpr auto is_ordered_typed_ids_v = is_ordered_typed_ids<T>::value;
 } // namespace matter
+
+namespace std
+{
+template<typename Id, typename... TIds>
+struct tuple_size<matter::unordered_typed_ids<Id, TIds...>>
+    : std::integral_constant<std::size_t, sizeof...(TIds)>
+{};
+
+template<std::size_t N, typename Id, typename... TIds>
+struct tuple_element<N, matter::unordered_typed_ids<Id, TIds...>>
+{
+    using type =
+        decltype(std::declval<matter::unordered_typed_ids<Id, TIds...>>()
+                     .template get<N>());
+};
+
+template<typename Id, typename... TIds>
+struct tuple_size<matter::ordered_typed_ids<Id, TIds...>>
+    : std::integral_constant<std::size_t, sizeof...(TIds)>
+{};
+
+template<std::size_t N, typename Id, typename... TIds>
+struct tuple_element<N, matter::ordered_typed_ids<Id, TIds...>>
+{
+    using type = decltype(std::declval<matter::ordered_typed_ids<Id, TIds...>>()
+                              .template get<N>());
+};
+} // namespace std
 
 #endif

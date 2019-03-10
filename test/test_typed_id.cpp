@@ -40,6 +40,26 @@ TEST_CASE("typed_id")
             auto ordered1  = ident.ordered_ids<float, short, char>();
             auto rt_order1 = ident.ordered_ids<char, unsigned char, double>();
 
+            SECTION("structured bindings")
+            {
+                SECTION("unordered")
+                {
+                    auto [c, s, f] = unordered1;
+                    CHECK(std::is_same_v<typename decltype(c)::type, char>);
+                    CHECK(std::is_same_v<typename decltype(s)::type, short>);
+                    CHECK(std::is_same_v<typename decltype(f)::type, float>);
+                }
+
+                SECTION("ordered")
+                {
+                    // 0char, 2float, 3short
+                    auto [c, f, s] = ordered1;
+                    CHECK(c == ident.id<char>().value());
+                    CHECK(f == ident.id<float>().value());
+                    CHECK(s == ident.id<short>().value());
+                }
+            }
+
             // static types contains
             CHECK(ordered1.contains(matter::ordered_typed_ids{unordered1}));
             CHECK(ordered1.contains(matter::ordered_typed_ids{unordered2}));

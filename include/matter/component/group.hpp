@@ -5,6 +5,8 @@
 
 #include <array>
 #include <cassert>
+#include <functional>
+#include <iterator>
 
 #include "matter/component/traits.hpp"
 #include "matter/component/typed_id.hpp"
@@ -12,39 +14,115 @@
 
 namespace matter
 {
+namespace detail
+{
+/// \brief a group describes the containers for a tuple of components
+/// A group is a lightweight construct which represents a slice of a
+/// `group_vector`, the `id_erased` contained in the group represent a container
+/// for components identified by the `id` within `id_erased`.
+template<bool Const = false>
 class group {
+private:
+    static constexpr auto is_const = Const;
+
+    using erased_type = std::
+        conditional_t<is_const, const matter::id_erased*, matter::id_erased*>;
+    using erased_type_ref = std::
+        conditional_t<is_const, const matter::id_erased&, matter::id_erased&>;
+
 public:
     using id_type = typename matter::id_erased::id_type;
 
+    using const_iterator = const matter::id_erased*;
+    using iterator =
+        std::conditional_t<is_const, const_iterator, matter::id_erased*>;
+
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
+
 private:
-    matter::id_erased* ptr_;
-    const std::size_t  size_;
+    erased_type ptr_;
+    std::size_t size_;
 
 public:
-    constexpr group(matter::id_erased* ptr, std::size_t size) noexcept
+    constexpr group(erased_type ptr, std::size_t size) noexcept
         : ptr_{ptr}, size_{size}
     {
         assert(is_sorted());
     }
 
-    matter::id_erased* begin() noexcept
+    constexpr group(erased_type_ref ref, std::size_t size) noexcept
+        : group{std::addressof(ref), size}
+    {}
+
+    iterator begin() noexcept
     {
         return ptr_;
     }
 
-    const matter::id_erased* begin() const noexcept
+    iterator end() noexcept
+    {
+        return ptr_ + size_;
+    }
+
+    const_iterator begin() const noexcept
     {
         return ptr_;
     }
 
-    matter::id_erased* end() noexcept
+    const_iterator end() const noexcept
     {
         return ptr_ + size_;
     }
 
-    const matter::id_erased* end() const noexcept
+    const_iterator cbegin() const noexcept
     {
-        return ptr_ + size_;
+        return ptr_;
+    }
+
+    const_iterator cend() const noexcept
+    {
+        return ptr_;
+    }
+
+    reverse_iterator rbegin() noexcept
+    {
+        return reverse_iterator{end()};
+    }
+
+    reverse_iterator rend() noexcept
+    {
+        return reverse_iterator{begin()};
+    }
+
+    const_reverse_iterator rbegin() const noexcept
+    {
+        return const_reverse_iterator{end()};
+    }
+
+    const_reverse_iterator rend() const noexcept
+    {
+        return const_reverse_iterator{begin()};
+    }
+
+    const_reverse_iterator crbegin() const noexcept
+    {
+        return const_reverse_iterator{cend()};
+    }
+
+    const_reverse_iterator crend() const noexcept
+    {
+        return const_reverse_iterator{cbegin()};
+    }
+
+    constexpr erased_type data() noexcept
+    {
+        return ptr_;
+    }
+
+    constexpr const matter::id_erased* data() const noexcept
+    {
+        return ptr_;
     }
 
     constexpr bool operator==(const group& other) const noexcept
@@ -63,6 +141,30 @@ public:
     constexpr bool operator!=(const group& other) const noexcept
     {
         return !(*this == other);
+    }
+
+    template<typename... TIds>
+    constexpr auto
+    operator==(const ordered_typed_ids<id_type, TIds...>& ids) const noexcept
+    {
+        assert(ids.size() == size());
+
+        for (std::size_t i = 0; i < size(); ++i)
+        {
+            if (ptr_[i] != ids[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    template<typename... TIds>
+    constexpr auto
+    operator!=(const ordered_typed_ids<id_type, TIds...>& ids) const noexcept
+    {
+        return !(*this == ids);
     }
 
     constexpr bool operator<(const group& other) const noexcept
@@ -127,6 +229,61 @@ public:
         }
 
         return false;
+    }
+
+    template<typename... Stores, typename... InputIts>
+    void _insert_back_impl(
+        std::tuple<Stores&...> stores,
+        std::pair<
+            InputIts,
+            InputIts>... it_pairs) noexcept((std::
+                                                 is_nothrow_constructible_v<
+                                                     typename std::
+                                                         iterator_traits<
+                                                             InputIts>::
+                                                             value_type,
+                                                     typename std::
+                                                         iterator_traits<
+                                                             InputIts>::
+                                                             reference> &&
+                                             ...))
+    {
+        static_assert(sizeof...(Stores) == sizeof...(InputIts));
+
+        (
+            [&]() {
+                auto& store = std::get<Stores&>(stores);
+                store.insert(store.end(), it_pairs.first, it_pairs.second);
+            }(),
+            ...);
+    }
+
+    template<typename... TIds, typename... InputIts>
+    void insert_back(
+        const matter::unordered_typed_ids<id_type, TIds...>& ids,
+        std::pair<
+            InputIts,
+            InputIts>... it_pairs) noexcept((std::
+                                                 is_nothrow_constructible_v<
+                                                     typename std::
+                                                         iterator_traits<
+                                                             InputIts>::
+                                                             value_type,
+                                                     typename std::
+                                                         iterator_traits<
+                                                             InputIts>::
+                                                             reference> &&
+                                             ...))
+    {
+        static_assert(sizeof...(TIds) == sizeof...(InputIts),
+                      "Not the same amount typed_ids and InputIts passed.");
+        static_assert((std::is_same_v<typename TIds::type,
+                                      typename InputIts::value_type> &&
+                       ...),
+                      "typed_id::type and InputIt::value_type do not match.");
+
+        auto stores = storage(ids);
+        _insert_back_impl(stores, it_pairs...);
     }
 
     template<typename... Cs,
@@ -249,7 +406,12 @@ public:
         return {storage(ids.template get<Ts>())...};
     }
 
-    friend void swap(group& lhs, group& rhs) noexcept;
+    friend void swap(group<Const>& lhs, group<Const>& rhs) noexcept
+    {
+        using std::swap;
+        swap(lhs.ptr_, rhs.ptr_);
+        swap(lhs.size_, rhs.size_);
+    }
 
 private:
     /// \brief elements in a group must always be sorted
@@ -288,16 +450,12 @@ private:
         return it;
     }
 };
+} // namespace detail
 
-void swap(group& lhs, group& rhs) noexcept
-{
-    assert(lhs.size_ == rhs.size_);
+using group = ::matter::detail::group<false>;
 
-    for (std::size_t i = 0; i < lhs.size_; ++i)
-    {
-        swap(lhs.ptr_[i], rhs.ptr_[i]);
-    }
-}
+/// \brief a group where the contained stores cannot be modified
+using const_group = ::matter::detail::group<true>;
 } // namespace matter
 
 #endif
