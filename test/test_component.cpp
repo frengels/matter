@@ -24,7 +24,9 @@ struct random_component
 };
 
 struct empty_component
-{};
+{
+    static constexpr auto name = "empty_component";
+};
 
 struct single_depending_struct
 {
@@ -142,7 +144,8 @@ TEST_CASE("component")
 
     SECTION("component_identifier")
     {
-        matter::component_identifier<float, int, std::string> cident;
+        matter::component_identifier<float, int, std::string, empty_component>
+            cident;
 
         static_assert(cident.id_constexpr<float>() == 0);
         static_assert(cident.is_constexpr<std::string>());
@@ -162,20 +165,46 @@ TEST_CASE("component")
 
         SECTION("metadata")
         {
-            auto id = cident.id<random_component>();
+            SECTION("static")
+            {
+                // has a name
+                auto id = cident.id<empty_component>();
 
-            const auto& metadata1 = cident.metadata(id);
-            CHECK(metadata1.name.has_value());
+                const auto& metadata1 = cident.metadata(id);
+                CHECK(metadata1.name.has_value());
+                CHECK(metadata1.name->compare(
+                          matter::component_name_v<empty_component>) == 0);
+                CHECK(metadata1.size == sizeof(empty_component));
+                CHECK(metadata1.align == alignof(empty_component));
 
-            CHECK(metadata1.name->compare(
-                      matter::component_name_v<random_component>) == 0);
+                id                    = cident.id<std::string>();
+                const auto& metadata2 = cident.metadata(id);
 
-            // next has no name
-            id = cident.id<std::string_view>();
+                CHECK(!metadata2.name.has_value());
+                CHECK(metadata2.size == sizeof(std::string));
+                CHECK(metadata2.align == alignof(std::string));
+            }
+            SECTION("runtime")
+            {
+                auto id = cident.id<random_component>();
 
-            const auto& metadata2 = cident.metadata(id);
+                const auto& metadata1 = cident.metadata(id);
+                CHECK(metadata1.name.has_value());
 
-            CHECK(!metadata2.name.has_value());
+                CHECK(metadata1.name->compare(
+                          matter::component_name_v<random_component>) == 0);
+                CHECK(metadata1.size == sizeof(random_component));
+                CHECK(metadata1.align == alignof(random_component));
+
+                // next has no name
+                id = cident.id<std::string_view>();
+
+                const auto& metadata2 = cident.metadata(id);
+
+                CHECK(!metadata2.name.has_value());
+                CHECK(metadata2.size == sizeof(std::string_view));
+                CHECK(metadata2.align == alignof(std::string_view));
+            }
         }
     }
 
