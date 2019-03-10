@@ -42,10 +42,15 @@ private:
     std::unordered_map<std::size_t, std::size_t> runtime_ids_;
     std::size_t next_local_id_{constexpr_components_size};
 
-    std::vector<matter::component_metadata> metadata_;
+    std::array<matter::component_metadata, constexpr_components_size>
+                                            static_metadata_;
+    std::vector<matter::component_metadata> runtime_metadata_;
 
 public:
-    constexpr component_identifier() = default;
+    constexpr component_identifier()
+        : static_metadata_{
+              matter::component_metadata{std::in_place_type_t<Components>{}}...}
+    {}
 
     template<typename Component>
     constexpr bool is_constexpr() const noexcept
@@ -65,18 +70,23 @@ public:
         auto local_id = next_local_id_++;
         runtime_ids_.emplace(id, local_id);
         // store all available metadata for id -> data relation
-        metadata_.emplace_back(std::in_place_type_t<Component>{});
+        runtime_metadata_.emplace_back(std::in_place_type_t<Component>{});
         return local_id;
     }
 
     const matter::component_metadata& metadata(id_type id) noexcept
     {
-        assert((constexpr_components_size + metadata_.size()) > id);
+        assert((constexpr_components_size + runtime_metadata_.size()) > id);
 
-        // because constexpr components are always known we don't need metadata
-        // for them.
-        auto metadata_id = id - constexpr_components_size;
-        return metadata_[metadata_id];
+        if (id >= constexpr_components_size)
+        {
+            auto runtime_id = id - constexpr_components_size;
+            return runtime_metadata_[runtime_id];
+        }
+        else
+        {
+            return static_metadata_[id];
+        }
     }
 
     template<typename Component>
