@@ -14,8 +14,12 @@ matter_inc = include_directories('include')
 catch2_subproj = subproject('catch2')
 catch2_dep = catch2_subproj.get_variable('catch2_dep')
 
+gsl_subproj = subproject('microsoft-gsl')
+gsl_dep = gsl_subproj.get_variable('microsoft_gsl_dep')
+
 matter = declare_dependency(
   include_directories: matter_inc,
+  dependencies: [gsl_dep]
 )
 
 subdir('test')
