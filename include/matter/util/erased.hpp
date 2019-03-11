@@ -84,7 +84,16 @@ public:
     {
         return *static_cast<T*>(obj_);
     }
+
+    friend void swap(erased& lhs, erased& rhs) noexcept;
 }; // namespace matter
+
+void swap(erased& lhs, erased& rhs) noexcept
+{
+    using std::swap;
+    swap(lhs.obj_, rhs.obj_);
+    swap(lhs.deleter_, rhs.deleter_);
+}
 
 template<typename T, typename... Args>
 erased make_erased(Args&&... args) noexcept(
