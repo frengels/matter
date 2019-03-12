@@ -155,8 +155,7 @@ template<std::size_t N, typename... Ts>
 using nth_t = typename nth<N, Ts...>::type;
 
 template<typename T, typename TupArgs>
-struct is_constructible_expand_tuple
-{};
+struct is_constructible_expand_tuple;
 
 template<typename T, typename... Args>
 struct is_constructible_expand_tuple<T, std::tuple<Args...>>
@@ -168,8 +167,7 @@ constexpr auto is_constructible_expand_tuple_v =
     is_constructible_expand_tuple<T, TupArgs>::value;
 
 template<typename T, typename TupArgs>
-struct is_nothrow_constructible_expand_tuple
-{};
+struct is_nothrow_constructible_expand_tuple;
 
 template<typename T, typename... Args>
 struct is_nothrow_constructible_expand_tuple<T, std::tuple<Args...>>

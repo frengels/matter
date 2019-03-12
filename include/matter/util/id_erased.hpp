@@ -136,6 +136,7 @@ public:
                                      const id_erased& erased) noexcept;
     friend constexpr bool operator>=(id_type          id,
                                      const id_erased& erased) noexcept;
+    friend void           swap(id_erased& lhs, id_erased& rhs) noexcept;
 };
 constexpr bool operator==(id_erased::id_type id,
                           const id_erased&   erased) noexcept
@@ -171,6 +172,13 @@ constexpr bool operator>=(id_erased::id_type id,
                           const id_erased&   erased) noexcept
 {
     return id >= erased.id_;
+}
+
+void swap(id_erased& lhs, id_erased& rhs) noexcept
+{
+    using std::swap;
+    swap(lhs.id_, rhs.id_);
+    swap(lhs.erased_, rhs.erased_);
 }
 } // namespace matter
 
