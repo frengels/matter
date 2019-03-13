@@ -33,9 +33,15 @@ public:
     constexpr registry() = default;
 
     template<typename C>
-    constexpr id_type component_id() const noexcept
+    constexpr auto component_id() const
     {
         return identifier_.template id<C>();
+    }
+
+    template<typename... Cs>
+    constexpr auto component_ids() const
+    {
+        return identifier_.template ids<Cs...>();
     }
 
     template<typename C>
@@ -61,44 +67,28 @@ public:
             "args.");
 
         auto ids        = identifier_.template ids<Cs...>();
-        auto sorted_ids = ids;
-        std::sort(sorted_ids.begin(), sorted_ids.end());
+        auto sorted_ids = ordered_typed_ids{ids};
 
         auto opt_ideal_group = find_group_from_ids(sorted_ids);
 
         auto ideal_group = opt_ideal_group ?
                                std::move(opt_ideal_group).value() :
-                               create_group<Cs...>();
+                               create_group(ids);
 
-        ideal_group.template emplace_back<Cs...>(
-            ids, std::forward<TupArgs>(args)...);
+        ideal_group.template emplace_back(ids, std::forward<TupArgs>(args)...);
     }
 
 private:
-    template<typename... Cs>
-    group create_group() noexcept
-    {
-        return create_group_impl<Cs...>(std::index_sequence_for<Cs...>{});
-    }
-
-    template<typename... Cs, std::size_t... Indices>
-    group create_group_impl(std::index_sequence<Indices...>) noexcept(
+    template<typename... Ts>
+    group create_group(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
         (std::is_nothrow_default_constructible_v<
-             matter::component_storage_t<Cs>> &&
+             matter::component_storage_t<typename Ts::type>> &&
          ...))
     {
-        static_assert(sizeof...(Cs) == sizeof...(Indices),
-                      "something went horribly wrong");
+        assert(!find_group_from_ids(ids));
 
-        constexpr auto I          = sizeof...(Cs);
-        auto           ids        = identifier_.template ids<Cs...>();
-        auto           sorted_ids = ids;
-        std::sort(sorted_ids.begin(), sorted_ids.end());
-        assert(!find_group_from_ids(sorted_ids));
-
-        auto& vec = get_group_vector(I);
-
-        auto inserted_group = vec.template emplace<Cs...>(ids);
+        auto& vec            = get_group_vector(ids.size());
+        auto  inserted_group = vec.template emplace(ids);
 
         return inserted_group;
     }
@@ -132,21 +122,20 @@ private:
         return grp_vec;
     }
 
-    template<std::size_t I>
+    template<typename... Ts>
     constexpr std::optional<group>
-    find_group_from_ids(const std::array<id_type, I>& sorted_ids) noexcept
+    find_group_from_ids(const ordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
-        assert(std::is_sorted(sorted_ids.begin(), sorted_ids.end()));
-        auto& vec = get_group_vector(I);
+        auto& vec = get_group_vector(ids.size());
 
-        auto it = std::lower_bound(vec.begin(), vec.end(), sorted_ids);
+        auto it = std::lower_bound(vec.begin(), vec.end(), ids);
 
         if (it == vec.end())
         {
             return std::nullopt;
         }
 
-        if ((*it).contains(sorted_ids))
+        if ((*it).contains(ids))
         {
             return *it;
         }
@@ -155,7 +144,7 @@ private:
     }
 
     template<typename... Cs>
-    std::optional<group> find_group() noexcept
+    constexpr std::optional<group> find_group() noexcept
     {
         auto sorted_ids = identifier_.template sorted_ids<Cs...>();
         return find_group_from_ids(sorted_ids);

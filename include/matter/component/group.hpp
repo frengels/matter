@@ -7,6 +7,7 @@
 #include <cassert>
 
 #include "matter/component/traits.hpp"
+#include "matter/component/typed_id.hpp"
 #include "matter/util/id_erased.hpp"
 
 namespace matter
@@ -79,16 +80,15 @@ public:
         return false;
     }
 
-    template<std::size_t N>
-    constexpr bool operator<(const std::array<id_type, N>& sorted_ids) const
+    template<typename... Ts>
+    constexpr bool operator<(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
     {
-        assert(N == size_);
-        assert(std::is_sorted(sorted_ids.begin(), sorted_ids.end()));
+        assert(ids.size() == size_);
 
         for (std::size_t i = 0; i < size_; ++i)
         {
-            if (ptr_[i] < sorted_ids[i])
+            if (ptr_[i] < ids[i])
             {
                 return true;
             }
@@ -112,16 +112,15 @@ public:
         return false;
     }
 
-    template<std::size_t N>
-    constexpr bool operator>(const std::array<id_type, N>& sorted_ids) const
+    template<typename... Ts>
+    constexpr bool operator>(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
     {
-        assert(N == size_);
-        assert(std::is_sorted(sorted_ids.begin(), sorted_ids.end()));
+        assert(ids.size() == size_);
 
         for (std::size_t i = 0; i < size_; ++i)
         {
-            if (ptr_[i] > sorted_ids[i])
+            if (ptr_[i] > ids[i])
             {
                 return true;
             }
@@ -130,28 +129,29 @@ public:
         return false;
     }
 
-    template<typename... Cs, std::size_t N, typename... TupArgs>
-    void emplace_back(const std::array<id_type, N>& ids,
+    template<typename... Ts, typename... TupArgs>
+    void emplace_back(const unordered_typed_ids<id_type, Ts...>& ids,
                       TupArgs&&... forw_cargs) noexcept
     {
-        static_assert(sizeof...(Cs) == N, "not enough/too many Cs... or ids");
-        static_assert(sizeof...(TupArgs) == N,
-                      "not enough/too many TupArgs... or ids");
+        static_assert(sizeof...(Ts) == sizeof...(TupArgs),
+                      "not enough/too many Ts... or TupArgs...");
         static_assert(
-            (detail::is_constructible_expand_tuple_v<Cs, TupArgs> && ...),
+            (detail::is_constructible_expand_tuple_v<typename Ts::type,
+                                                     TupArgs> &&
+             ...),
             "Cannot construct one of the components from passed args");
 
         // if this isn't true then we're emplacing in the wrong group
-        assert(N == size_);
+        assert(sizeof...(Ts) == size_);
         // if this isn't true then this group doesn't contain the ids
-        assert(contains_unsorted(ids));
+        assert(contains(ids));
 
-        auto storage_tup = storage<Cs...>(ids);
+        auto storage_tup = storage(ids);
 
         std::apply(
             [&](auto&... storage) {
                 (storage.emplace_back(detail::construct_from_tuple(
-                     std::in_place_type_t<Cs>{},
+                     std::in_place_type_t<typename Ts::type>{},
                      std::forward<TupArgs>(forw_cargs))),
                  ...);
             },
@@ -163,27 +163,20 @@ public:
         return size_;
     }
 
-    bool contains(id_type id) const noexcept
+    template<typename C, bool S>
+    bool contains(const typed_id<id_type, C, S>& id) const noexcept
     {
-        auto* it = find_id(id);
-
-        return it == end() ? false : true;
+        auto* ptr = find_id(id);
+        return ptr == end() ? false : true;
     }
 
-    template<std::size_t N>
-    constexpr bool contains(const std::array<id_type, N>& ids) const noexcept
-    {
-        assert(N <= size_);
-        return std::includes(ptr_, ptr_ + size_, ids.begin(), ids.end());
-    }
-
-    template<std::size_t N>
-    constexpr bool contains_unsorted(const std::array<id_type, N>& ids) const
+    template<typename... Ts>
+    constexpr bool contains(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
+
     {
-        auto sorted_ids = ids;
-        std::sort(sorted_ids.begin(), sorted_ids.end());
-        return contains(sorted_ids);
+        assert(ids.size() <= size_);
+        return std::includes(ptr_, ptr_ + size_, ids.begin(), ids.end());
     }
 
     constexpr bool contains(const group& other) const noexcept
@@ -191,72 +184,46 @@ public:
         return *this == other;
     }
 
-    template<typename C>
-    matter::component_storage_t<C>& storage(id_type id) noexcept
+    template<typename C, bool S>
+    matter::component_storage_t<C>&
+    storage(const typed_id<id_type, C, S>& id) noexcept
     {
         assert(contains(id));
 
-        auto it = find_id(id);
-        return it->get<matter::component_storage_t<C>>();
+        auto ptr = find_id(id);
+        return ptr->template get<matter::component_storage_t<C>>();
     }
 
-    template<typename C>
-    const matter::component_storage_t<C>& storage(id_type id) const noexcept
+    template<typename C, bool S>
+    const matter::component_storage_t<C>&
+    storage(const typed_id<id_type, C, S>& id) const noexcept
     {
         assert(contains(id));
 
-        auto it = find_id(id);
-        return it->get<matter::component_storage_t<C>>();
+        auto ptr = find_id(id);
+        return ptr->template get<matter::component_storage_t<C>>();
     }
 
-    // retrieve the storages for the passed ids, assuming that those ids belong
-    // to the passed component types
-    template<typename... Cs, std::size_t N>
-    std::tuple<matter::component_storage_t<Cs>&...>
-    storage(const std::array<id_type, N>& ids) noexcept
+    template<typename... Ts>
+    std::tuple<matter::component_storage_t<typename Ts::type>&...>
+    storage(const unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
-        return storage_impl<Cs...>(std::index_sequence_for<Cs...>{}, ids);
+        assert(contains(ids));
+        assert(ids.size() <= size_);
+
+        return {storage(ids.template get<Ts>())...};
     }
 
-private:
-    template<typename... Cs, std::size_t... Is, std::size_t N>
-    std::tuple<matter::component_storage_t<Cs>&...>
-    storage_impl(std::index_sequence<Is...>,
-                 const std::array<id_type, N>& ids) noexcept
+    template<typename... Ts>
+    std::tuple<const matter::component_storage_t<typename Ts::type>&...>
+    storage(const unordered_typed_ids<id_type, Ts...>& ids) const noexcept
     {
-        static_assert(
-            sizeof...(Cs) == N,
-            "the amount of Cs... and the size of the id array must match");
-        assert(contains_unsorted(ids));
-        assert(N == size_);
+      assert(contains(ids));
+      assert(ids.size() <= size_);
 
-        return {storage<Cs>(ids[Is])...};
+      return {storage(ids.template get<Ts>())...};
     }
 
-public:
-    template<typename... Cs, std::size_t N>
-    std::tuple<const matter::component_storage_t<Cs>&...>
-    storage(const std::array<id_type, N>& ids) const noexcept
-    {
-        return storage_impl<Cs...>(std::index_sequence_for<Cs...>{}, ids);
-    }
-
-private:
-    template<typename... Cs, std::size_t... Is, std::size_t N>
-    std::tuple<const matter::component_storage_t<Cs>&...>
-    storage_impl(std::index_sequence<Is...>,
-                 const std::array<id_type, N>& ids) const noexcept
-    {
-        static_assert(
-            sizeof...(Cs) == N,
-            "the amount of Cs... and the size of the id array must match");
-        assert(contains_unsorted(ids));
-        assert(N < size_);
-
-        return {storage<Cs>(ids[Is])...};
-    }
-
-public:
     friend void swap(group& lhs, group& rhs) noexcept;
 
 private:
@@ -269,7 +236,8 @@ private:
         return std::is_sorted(ptr_, ptr_ + size_);
     }
 
-    matter::id_erased* find_id(id_type id) noexcept
+    template<typename C, bool S>
+    matter::id_erased* find_id(const typed_id<id_type, C, S>& id) noexcept
     {
         auto it = std::lower_bound(begin(), end(), id);
 
@@ -281,7 +249,9 @@ private:
         return it;
     }
 
-    const matter::id_erased* find_id(id_type id) const noexcept
+    template<typename C, bool S>
+    const matter::id_erased* find_id(const typed_id<id_type, C, S>& id) const
+        noexcept
     {
         auto it = std::lower_bound(begin(), end(), id);
 

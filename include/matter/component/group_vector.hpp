@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "matter/component/group.hpp"
+#include "matter/component/typed_id.hpp"
 #include "matter/util/id_erased.hpp"
 #include "matter/util/meta.hpp"
 
@@ -154,49 +155,35 @@ public:
         return size_;
     }
 
-    template<typename... Cs, std::size_t N>
-    group emplace(const std::array<id_type, N>& unsorted_ids) noexcept
+    template<typename... Ts>
+    group emplace(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
+        (std::is_nothrow_default_constructible_v<
+             matter::component_storage_t<typename Ts::type>> &&
+         ...))
     {
-        return emplace_impl<Cs...>(std::index_sequence_for<Cs...>{},
-                                   unsorted_ids);
-    }
+        static_assert((std::is_default_constructible_v<
+                           matter::component_storage_t<typename Ts::type>> &&
+                       ...),
+                      "Component storage for one of the Cs... is not default "
+                      "constructible");
+        assert(size_ == ids.size());
 
-    template<typename... Cs, std::size_t N, std::size_t... Is>
-    group emplace_impl(
-        std::index_sequence<Is...>,
-        const std::array<id_type, N>&
-            unsorted_ids) noexcept((std::
-                                        is_nothrow_default_constructible_v<
-                                            matter::component_storage_t<Cs>> &&
-                                    ...))
-    {
-        static_assert(
-            N == sizeof...(Cs),
-            "The amount of ids doesn't match the amount of components");
-        static_assert(
-            (std::is_default_constructible_v<matter::component_storage_t<Cs>> &&
-             ...),
-            "Component storage for one of the Cs... is not default "
-            "constructible");
-        assert(size_ == N);
-        assert(size_ == sizeof...(Cs));
+        auto ordered_ids = ordered_typed_ids{ids};
 
-        auto sorted_ids = unsorted_ids;
-        std::sort(sorted_ids.begin(), sorted_ids.end());
-
-        auto insertion_point = std::lower_bound(begin(), end(), sorted_ids);
+        auto insertion_point = std::lower_bound(begin(), end(), ordered_ids);
         assert([&]() {
             if (insertion_point != end())
             {
-                return !(*insertion_point).contains(sorted_ids);
+                return !(*insertion_point).contains(ordered_ids);
             }
 
             return true;
         }());
 
-        std::array<matter::id_erased, N> groups{matter::id_erased{
-            unsorted_ids[Is],
-            std::in_place_type_t<matter::component_storage_t<Cs>>{}}...};
+        std::array<matter::id_erased, ids.size()> groups{matter::id_erased{
+            ids.template get<Ts>(),
+            std::in_place_type_t<
+                matter::component_storage_t<typename Ts::type>>{}}...};
 
         auto inserted_at =
             groups_.insert(insertion_point,
