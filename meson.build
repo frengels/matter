@@ -14,6 +14,9 @@ matter_inc = include_directories('include')
 catch2_subproj = subproject('catch2')
 catch2_dep = catch2_subproj.get_variable('catch2_dep')
 
+bench_subproj = subproject('google-benchmark')
+google_benchmark_dep = bench_subproj.get_variable('google_benchmark_dep')
+
 matter = declare_dependency(
   include_directories: matter_inc,
 )
