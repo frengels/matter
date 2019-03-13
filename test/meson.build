@@ -24,3 +24,5 @@ foreach t : tests
   )
   test(t, test_exe)
 endforeach
+
+subdir('bench')
