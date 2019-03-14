@@ -147,7 +147,7 @@ TEST_CASE("component")
         matter::component_identifier<float, int, std::string, empty_component>
             cident;
 
-        static_assert(cident.id_constexpr<float>() == 0);
+        static_assert(cident.id<float>() == 0);
         static_assert(cident.is_constexpr<std::string>());
         static_assert(!cident.is_constexpr<std::string_view>());
         CHECK(cident.template id<float>() == 0);
@@ -177,8 +177,8 @@ TEST_CASE("component")
                 CHECK(metadata1.size == sizeof(empty_component));
                 CHECK(metadata1.align == alignof(empty_component));
 
-                id                    = cident.id<std::string>();
-                const auto& metadata2 = cident.metadata(id);
+                auto        id2       = cident.id<std::string>();
+                const auto& metadata2 = cident.metadata(id2);
 
                 CHECK(!metadata2.name.has_value());
                 CHECK(metadata2.size == sizeof(std::string));
@@ -197,9 +197,9 @@ TEST_CASE("component")
                 CHECK(metadata1.align == alignof(random_component));
 
                 // next has no name
-                id = cident.id<std::string_view>();
+                auto id2 = cident.id<std::string_view>();
 
-                const auto& metadata2 = cident.metadata(id);
+                const auto& metadata2 = cident.metadata(id2);
 
                 CHECK(!metadata2.name.has_value());
                 CHECK(metadata2.size == sizeof(std::string_view));

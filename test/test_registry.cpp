@@ -36,14 +36,14 @@ TEST_CASE("registry")
     {
         auto grp_vec = matter::group_vector{1};
 
-        auto grp =
-            grp_vec.emplace<int_comp>(std::array{reg.component_id<int_comp>()});
+        auto grp = grp_vec.emplace(
+            matter::unordered_typed_ids{reg.component_id<int_comp>()});
 
         CHECK(grp.contains(reg.component_id<int_comp>()));
-        CHECK(!grp.contains(10));
+        CHECK(!grp.contains(reg.component_id<string_comp>()));
         CHECK(!grp.contains(reg.component_id<float_comp>()));
 
-        auto& vector = grp.storage<int_comp>(reg.component_id<int_comp>());
+        auto& vector = grp.storage(reg.component_id<int_comp>());
 
         // just test whether the retrieve vector is correct
         vector.emplace_back(5);
@@ -59,26 +59,26 @@ TEST_CASE("registry")
 
         // ids should roughly be 1, 0, 3 -> 0, 1, 3
         auto grp_vec = matter::group_vector{3};
-        auto grp     = grp_vec.emplace<int_comp, float_comp, std::string>(
-            std::array{reg.component_id<int_comp>(),
-                       reg.component_id<float_comp>(),
-                       reg.component_id<std::string>()});
+        auto grp     = grp_vec.emplace(
+            reg.component_ids<int_comp, float_comp, std::string>());
 
         SECTION("<")
         {
 
+            // 0, 1, 3 < 2, 1, 4
+            CHECK(grp < matter::ordered_typed_ids{
+                            reg.component_ids<float_comp, int_comp, char>()});
             // should be 0, 1, 3 < 0, 1, 4
-            CHECK(grp < std::array{reg.component_id<float_comp>(),
-                                   reg.component_id<int_comp>(),
-                                   reg.component_id<char>()});
+            CHECK(grp < matter::ordered_typed_ids{
+                            reg.component_ids<float_comp, int_comp, char>()});
         }
 
         SECTION("contains")
         {
             // single components
-            CHECK(grp.contains(std::array{reg.component_id<float_comp>()}));
-            CHECK(grp.contains(std::array{reg.component_id<int_comp>()}));
-            CHECK(grp.contains(std::array{reg.component_id<std::string>()}));
+            CHECK(grp.contains(reg.component_id<float_comp>()));
+            CHECK(grp.contains(reg.component_id<int_comp>()));
+            CHECK(grp.contains(reg.component_id<std::string>()));
         }
     }
 

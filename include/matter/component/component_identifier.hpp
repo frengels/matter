@@ -4,14 +4,37 @@
 #pragma once
 
 #include <algorithm>
+#include <sstream>
 #include <unordered_map>
 
 #include "matter/component/identifier.hpp"
 #include "matter/component/metadata.hpp"
 #include "matter/component/traits.hpp"
+#include "matter/component/typed_id.hpp"
 
 namespace matter
 {
+
+struct unregistered_component : std::logic_error
+{
+    template<typename Component>
+    unregistered_component(std::in_place_type_t<Component>)
+        : std::logic_error{[]() {
+              std::stringstream ss;
+              ss << "Component \"";
+              if constexpr (matter::is_component_named_v<Component>)
+              {
+                  ss << matter::component_name_v<Component>;
+              }
+              else
+              {
+                  ss << "unknown";
+              }
+              ss << "\" was not registered";
+              return std::move(ss).str();
+          }()}
+    {}
+};
 
 /// \brief identifies components by an id
 /// Each component must be assigned an id, there is the struct identifier which
@@ -53,7 +76,7 @@ public:
     {}
 
     template<typename Component>
-    constexpr bool is_constexpr() const noexcept
+    static constexpr bool is_constexpr() noexcept
     {
         return detail::type_in_list_v<Component, Components...>;
     }
@@ -92,7 +115,7 @@ public:
     template<typename Component>
     constexpr bool is_registered() const noexcept
     {
-        if (is_constexpr<Component>())
+        if constexpr (is_constexpr<Component>())
         {
             return true;
         }
@@ -101,66 +124,64 @@ public:
         return runtime_ids_.count(id) == 1;
     }
 
-    /// \brief gets the id of the constexpr component
-    /// If the component was registered at compile time this will yield the id,
+    /// \brief retrieve the local id for a component
     template<typename Component>
-    constexpr id_type id_constexpr() const noexcept
+    constexpr typed_id<id_type, Component, is_constexpr<Component>()> id() const
     {
-        static_assert(
-            detail::type_index<Component, Components...>().has_value(),
-            "The Component wasn't defined at compile time");
-        return detail::type_index<Component, Components...>().value();
+        if constexpr (is_constexpr<Component>())
+        {
+            return static_id<Component>();
+        }
+        else
+        {
+            return runtime_id<Component>();
+        }
     }
 
-    /// \brief get the id for a runtime component
-    /// Retrieves the id for a runtime component, components have to be
-    /// registered with register<Component>() first, this function cannot do so
-    /// automatically as it's const qualified.
-    template<typename Component>
-    id_type id_runtime() const noexcept
+    template<typename... Cs>
+    constexpr auto ids() const
+        -> unordered_typed_ids<id_type, decltype(id<Cs>())...>
     {
-        // is_constexpr is for some reason not constexpr, who knew
-        static_assert(!detail::type_in_list_v<Component, Components...>,
-                      "This is a compile time component, use id<Component>() "
-                      "or id_constexpr<Component>().");
+        return {id<Cs>()...};
+    }
+
+    template<typename... Cs>
+    constexpr auto ordered_ids() const
+        -> ordered_typed_ids<id_type, decltype(id<Cs>())...>
+    {
+        return {ids<Cs...>()};
+    }
+
+private:
+    template<typename Component>
+    constexpr typed_id<id_type, Component, true> static_id() const
+    {
+        static_assert(
+            is_constexpr<Component>(),
+            "This component id should be retrieved using runtime_id() instead");
+        constexpr auto res =
+            detail::type_index<Component, Components...>().value();
+        return typed_id<id_type, Component, true>{res};
+    }
+
+    template<typename Component>
+    typed_id<id_type, Component, false> runtime_id() const
+    {
+        static_assert(
+            !is_constexpr<Component>(),
+            "This component id should be retrieve using static_id() instead");
         auto id = identifier_type::template get<Component>();
 
         auto it = runtime_ids_.find(id);
 
-        assert(it != runtime_ids_.end()); // must be registered otherwise die
-        return it->second;
-    }
-
-    /// \brief retrieve the local id for a component
-    template<typename Component>
-    constexpr id_type id() const noexcept
-    {
-        // cannot use is_constexpr because of some weird error, but this works
-        // anyway
-        if constexpr (detail::type_index<Component, Components...>()
-                          .has_value())
+        if (it == runtime_ids_.end())
         {
-            return id_constexpr<Component>();
+            // throw in case of non registered component
+            throw matter::unregistered_component{
+                std::in_place_type_t<Component>{}};
         }
-        else
-        {
-            return id_runtime<Component>();
-        }
-    }
 
-    template<typename... Cs>
-    constexpr std::array<id_type, sizeof...(Cs)> ids()
-    {
-        return std::array<id_type, sizeof...(Cs)>{id<Cs>()...};
-    }
-
-    template<typename... Cs>
-    constexpr std::array<id_type, sizeof...(Cs)> sorted_ids()
-    {
-        auto sorted_ids = ids<Cs...>();
-
-        std::sort(sorted_ids.begin(), sorted_ids.end());
-        return sorted_ids;
+        return typed_id<id_type, Component, false>{it->second};
     }
 };
 } // namespace matter
