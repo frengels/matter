@@ -180,7 +180,7 @@ public:
             return true;
         }());
 
-        std::array<matter::id_erased, ids.size()> groups{matter::id_erased{
+        std::array<matter::id_erased, sizeof...(Ts)> groups{matter::id_erased{
             ids.template get<Ts>(),
             std::in_place_type_t<
                 matter::component_storage_t<typename Ts::type>>{}}...};

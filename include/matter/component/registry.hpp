@@ -85,7 +85,7 @@ private:
              matter::component_storage_t<typename Ts::type>> &&
          ...))
     {
-        assert(!find_group_from_ids(ids));
+        assert(!find_group_from_ids(ordered_typed_ids{ids}));
 
         auto& vec            = get_group_vector(ids.size());
         auto  inserted_group = vec.template emplace(ids);
