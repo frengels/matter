@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "matter/util/algorithm.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
@@ -324,7 +325,7 @@ template<typename T, std::size_t N>
 constexpr std::array<T, N> sort_workaround(const std::array<T, N>& arr) noexcept
 {
     auto sorted = arr;
-    std::sort(sorted.begin(), sorted.end());
+    matter::static_sort(sorted);
     return sorted;
 }
 } // namespace detail
@@ -357,14 +358,16 @@ public:
               {
                   // guarantee evaluation at compile time
                   constexpr std::array arr{Ts::value()...};
-                  return detail::sort_workaround(arr);
+                  constexpr auto       sorted = detail::sort_workaround(arr);
+                  static_assert(
+                      matter::is_sorted(sorted.begin(), sorted.end()));
+                  return sorted;
               }
               else
               {
                   // runtime sorting for runtime typed_ids
                   std::array arr{types.value()...};
-                  std::sort(arr.begin(), arr.end());
-                  return arr;
+                  return detail::sort_workaround(arr);
               }
           }()}
     {}
@@ -381,15 +384,16 @@ public:
               else if constexpr (unordered_type::is_static())
               {
                   // guarantee consteval
-                  constexpr auto arr = unordered_type::as_array();
-                  return detail::sort_workaround(arr);
+                  constexpr auto arr    = unordered_type::as_array();
+                  constexpr auto sorted = detail::sort_workaround(arr);
+                  static_assert(
+                      matter::is_sorted(sorted.begin(), sorted.end()));
+                  return sorted;
               }
               else
-              {
-                  // peasant runtime variables
+              { // peasant runtime variables
                   auto arr = ids.as_array();
-                  std::sort(arr.begin(), arr.end());
-                  return arr;
+                  return detail::sort_workaround(arr);
               }
           }()}
     {}
