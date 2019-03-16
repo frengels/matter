@@ -8,6 +8,7 @@ tests = [
   'util',
   'erased',
   'typed_id',
+  'algorithm',
 ]
 
 catch_lib = static_library(
