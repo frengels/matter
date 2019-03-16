@@ -76,7 +76,7 @@ public:
     {}
 
     template<typename Component>
-    static constexpr bool is_constexpr() noexcept
+    static constexpr bool is_static() noexcept
     {
         return detail::type_in_list_v<Component, Components...>;
     }
@@ -115,7 +115,7 @@ public:
     template<typename Component>
     constexpr bool is_registered() const noexcept
     {
-        if constexpr (is_constexpr<Component>())
+        if constexpr (is_static<Component>())
         {
             return true;
         }
@@ -126,9 +126,9 @@ public:
 
     /// \brief retrieve the local id for a component
     template<typename Component>
-    constexpr typed_id<id_type, Component, is_constexpr<Component>()> id() const
+    constexpr auto id() const
     {
-        if constexpr (is_constexpr<Component>())
+        if constexpr (is_static<Component>())
         {
             return static_id<Component>();
         }
@@ -154,21 +154,21 @@ public:
 
 private:
     template<typename Component>
-    constexpr typed_id<id_type, Component, true> static_id() const
+    constexpr auto static_id() const noexcept
     {
         static_assert(
-            is_constexpr<Component>(),
+            is_static<Component>(),
             "This component id should be retrieved using runtime_id() instead");
         constexpr auto res =
             detail::type_index<Component, Components...>().value();
-        return typed_id<id_type, Component, true>{res};
+        return typed_id<id_type, Component, res>{res};
     }
 
     template<typename Component>
-    typed_id<id_type, Component, false> runtime_id() const
+    constexpr auto runtime_id() const
     {
         static_assert(
-            !is_constexpr<Component>(),
+            !is_static<Component>(),
             "This component id should be retrieve using static_id() instead");
         auto id = identifier_type::template get<Component>();
 
@@ -181,7 +181,9 @@ private:
                 std::in_place_type_t<Component>{}};
         }
 
-        return typed_id<id_type, Component, false>{it->second};
+        return typed_id<id_type,
+                        Component,
+                        std::numeric_limits<id_type>::max()>{it->second};
     }
 };
 } // namespace matter

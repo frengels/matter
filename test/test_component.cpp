@@ -148,9 +148,14 @@ TEST_CASE("component")
             cident;
 
         static_assert(cident.id<float>() == 0);
-        static_assert(cident.is_constexpr<std::string>());
-        static_assert(!cident.is_constexpr<std::string_view>());
+        static_assert(cident.is_static<std::string>());
+        static_assert(!cident.is_static<std::string_view>());
         CHECK(cident.template id<float>() == 0);
+
+        static_assert(
+            matter::is_typed_id_v<decltype(cident.id<std::string>())>);
+
+        static_assert(cident.id<std::string>() == cident.id<std::string>());
 
         // we test whether the global id doesn't affect the local id
         CHECK(!cident.is_registered<std::string_view>()); // this will generate

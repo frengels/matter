@@ -129,9 +129,27 @@ public:
         return false;
     }
 
+    template<typename... Cs,
+             typename... Ts,
+             typename... TupArgs,
+             std::size_t... Is>
+    void
+    _emplace_back_impl(std::tuple<Ts&...> storages, TupArgs&&... tupargs) noexcept(
+        (detail::is_nothrow_constructible_expand_tuple_v<Cs, TupArgs> && ...))
+    {
+        (std::get<Ts&>(storages).emplace_back(
+             detail::construct_from_tuple<Cs>(std::forward<TupArgs>(tupargs))),
+         ...);
+    }
+
     template<typename... Ts, typename... TupArgs>
-    void emplace_back(const unordered_typed_ids<id_type, Ts...>& ids,
-                      TupArgs&&... forw_cargs) noexcept
+    void emplace_back(
+        const unordered_typed_ids<id_type, Ts...>& ids,
+        TupArgs&&... forw_cargs) noexcept((detail::
+                                               is_nothrow_constructible_expand_tuple_v<
+                                                   typename Ts::type,
+                                                   TupArgs> &&
+                                           ...))
     {
         static_assert(sizeof...(Ts) == sizeof...(TupArgs),
                       "not enough/too many Ts... or TupArgs...");
@@ -144,18 +162,26 @@ public:
         // if this isn't true then we're emplacing in the wrong group
         assert(sizeof...(Ts) == size_);
         // if this isn't true then this group doesn't contain the ids
-        assert(contains(ids));
+        assert(contains(ordered_typed_ids{ids}));
 
         auto storage_tup = storage(ids);
 
+        _emplace_back_impl<typename Ts::type...>(
+            storage_tup, std::forward<TupArgs>(forw_cargs)...);
+
+        // prefer this function whenever it decides to work on clang
+        // or also the new lambda template expansion syntax would hopefully work
+        // on clang with ...args = something
+        /*
         std::apply(
             [&](auto&... storage) {
-                (storage.emplace_back(detail::construct_from_tuple(
-                     std::in_place_type_t<typename Ts::type>{},
-                     std::forward<TupArgs>(forw_cargs))),
+                (storage.emplace_back(
+                     detail::construct_from_tuple<typename Ts::type>(
+                         std::forward<TupArgs>(forw_cargs))),
                  ...);
             },
             storage_tup);
+        */
     }
 
     constexpr std::size_t size() const noexcept
@@ -163,8 +189,8 @@ public:
         return size_;
     }
 
-    template<typename C, bool S>
-    bool contains(const typed_id<id_type, C, S>& id) const noexcept
+    template<typename C, id_type V>
+    constexpr bool contains(const typed_id<id_type, C, V>& id) const noexcept
     {
         auto* ptr = find_id(id);
         return ptr == end() ? false : true;
@@ -173,7 +199,6 @@ public:
     template<typename... Ts>
     constexpr bool contains(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
-
     {
         assert(ids.size() <= size_);
         return std::includes(ptr_, ptr_ + size_, ids.begin(), ids.end());
@@ -184,9 +209,9 @@ public:
         return *this == other;
     }
 
-    template<typename C, bool S>
-    matter::component_storage_t<C>&
-    storage(const typed_id<id_type, C, S>& id) noexcept
+    template<typename C, id_type V>
+    constexpr matter::component_storage_t<C>&
+    storage(const typed_id<id_type, C, V>& id) noexcept
     {
         assert(contains(id));
 
@@ -194,9 +219,9 @@ public:
         return ptr->template get<matter::component_storage_t<C>>();
     }
 
-    template<typename C, bool S>
+    template<typename C, id_type V>
     const matter::component_storage_t<C>&
-    storage(const typed_id<id_type, C, S>& id) const noexcept
+    storage(const typed_id<id_type, C, V>& id) const noexcept
     {
         assert(contains(id));
 
@@ -208,7 +233,7 @@ public:
     std::tuple<matter::component_storage_t<typename Ts::type>&...>
     storage(const unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
-        assert(contains(ids));
+        assert(contains(ordered_typed_ids{ids}));
         assert(ids.size() <= size_);
 
         return {storage(ids.template get<Ts>())...};
@@ -218,10 +243,10 @@ public:
     std::tuple<const matter::component_storage_t<typename Ts::type>&...>
     storage(const unordered_typed_ids<id_type, Ts...>& ids) const noexcept
     {
-      assert(contains(ids));
-      assert(ids.size() <= size_);
+        assert(contains(ordered_typed_ids{ids}));
+        assert(ids.size() <= size_);
 
-      return {storage(ids.template get<Ts>())...};
+        return {storage(ids.template get<Ts>())...};
     }
 
     friend void swap(group& lhs, group& rhs) noexcept;
@@ -236,8 +261,8 @@ private:
         return std::is_sorted(ptr_, ptr_ + size_);
     }
 
-    template<typename C, bool S>
-    matter::id_erased* find_id(const typed_id<id_type, C, S>& id) noexcept
+    template<typename C, id_type V>
+    matter::id_erased* find_id(const typed_id<id_type, C, V>& id) noexcept
     {
         auto it = std::lower_bound(begin(), end(), id);
 
@@ -249,8 +274,8 @@ private:
         return it;
     }
 
-    template<typename C, bool S>
-    const matter::id_erased* find_id(const typed_id<id_type, C, S>& id) const
+    template<typename C, id_type V>
+    const matter::id_erased* find_id(const typed_id<id_type, C, V>& id) const
         noexcept
     {
         auto it = std::lower_bound(begin(), end(), id);
