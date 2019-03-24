@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include <string>
+#include <string_view>
 
 #include "matter/component/group_vector.hpp"
 #include "matter/component/registry.hpp"
@@ -26,7 +26,7 @@ struct int_comp
 
 struct string_comp
 {
-    std::string str;
+    std::string_view str;
 };
 
 TEST_CASE("registry")
@@ -55,13 +55,13 @@ TEST_CASE("registry")
     SECTION("group comparison")
     {
 
-        reg.register_component<std::string>();
+        reg.register_component<const char*>();
         reg.register_component<char>();
 
         // ids should roughly be 1, 0, 3 -> 0, 1, 3
         auto grp_vec = matter::group_vector{3};
         auto grp     = grp_vec.emplace(
-            reg.component_ids<int_comp, float_comp, std::string>());
+            reg.component_ids<int_comp, float_comp, const char*>());
 
         SECTION("<")
         {
@@ -79,13 +79,13 @@ TEST_CASE("registry")
             // single components
             CHECK(grp.contains(reg.component_id<float_comp>()));
             CHECK(grp.contains(reg.component_id<int_comp>()));
-            CHECK(grp.contains(reg.component_id<std::string>()));
+            CHECK(grp.contains(reg.component_id<const char*>()));
         }
 
         SECTION("get multiple")
         {
             auto vecs = grp.storage(
-                reg.component_ids<std::string, float_comp, int_comp>());
+                reg.component_ids<const char*, float_comp, int_comp>());
 
             CHECK(std::get<0>(vecs).empty());
             CHECK(std::get<1>(vecs).empty());
@@ -103,22 +103,25 @@ TEST_CASE("registry")
             // now retrieve the arrays in a different order, still not in
             // correct id order
             auto vecs_retrieved = grp.storage(
-                reg.component_ids<float_comp, std::string, int_comp>());
+                reg.component_ids<float_comp, const char*, int_comp>());
 
             CHECK(!std::get<0>(vecs_retrieved).empty());
             CHECK(!std::get<1>(vecs_retrieved).empty());
             CHECK(!std::get<2>(vecs_retrieved).empty());
 
             CHECK(std::get<0>(vecs_retrieved)[0].f == f);
-            CHECK(std::get<1>(vecs_retrieved)[0].compare(str) == 0);
+            CHECK(std::char_traits<char>::compare(
+                      std::get<1>(vecs_retrieved)[0],
+                      str,
+                      std::char_traits<char>::length(str)) == 0);
             CHECK(std::get<2>(vecs_retrieved)[0].i == i);
         }
     }
 
     SECTION("register")
     {
-        reg.register_component<std::string>();
-        reg.create<std::string>(std::forward_as_tuple("Hello world"));
+        reg.register_component<const char*>();
+        reg.create<const char*>(std::forward_as_tuple("Hello world"));
     }
 
     SECTION("create")
