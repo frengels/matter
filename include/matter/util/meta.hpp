@@ -15,7 +15,7 @@ namespace impl
 template<typename T, std::size_t... Is, typename... Args>
 constexpr T construct_from_tuple_impl(
     std::index_sequence<Is...>,
-    std::tuple<Args...>
+    [[maybe_unused]] std::tuple<Args...>
         targs) noexcept(std::is_nothrow_constructible_v<T, Args...>)
 {
     return T(std::forward<Args>(std::get<Is>(targs))...);
