@@ -86,8 +86,7 @@ TEST_CASE("benchmarks")
         {
             timer t{"Iterating over 1000000 single components - const"};
 
-            auto pos_view =
-                matter::registry_view{reg.component_ids<position>(), reg};
+            auto pos_view = reg.view<position>();
 
             pos_view.for_each([](const auto&) {});
         }
@@ -96,8 +95,7 @@ TEST_CASE("benchmarks")
         {
             timer t{"Iterating over 1000000 single components - mut"};
 
-            auto pos_view =
-                matter::registry_view{reg.component_ids<position>(), reg};
+            auto pos_view = reg.view<position>();
 
             pos_view.for_each([](position& pos) { pos.x = {}; });
         }
@@ -117,8 +115,7 @@ TEST_CASE("benchmarks")
         {
             timer t{"Iterating over 1000000 double components - const"};
 
-            auto view = matter::registry_view{
-                reg.component_ids<position, velocity>(), reg};
+            auto view = reg.view<position, velocity>();
 
             view.for_each([](const position&, const velocity&) {});
         }
@@ -127,8 +124,7 @@ TEST_CASE("benchmarks")
         {
             timer t{"Iterating over 1000000 double components - mut"};
 
-            auto view = matter::registry_view{
-                reg.component_ids<position, velocity>(), reg};
+            auto view = reg.view<position, velocity>();
 
             view.for_each([](position& pos, velocity& vel) {
                 pos.x = {};
@@ -154,8 +150,7 @@ TEST_CASE("benchmarks")
             timer t{"Iterating over 1000000 double components, only half "
                     "double - const"};
 
-            auto view = matter::registry_view{
-                reg.component_ids<position, velocity>(), reg};
+            auto view = reg.view<position, velocity>();
 
             view.for_each([](const position&, const velocity&) {});
         }
@@ -165,8 +160,7 @@ TEST_CASE("benchmarks")
             timer t{"Iterating over 1000000 double components, only half "
                     "double - const"};
 
-            auto view = matter::registry_view{
-                reg.component_ids<position, velocity>(), reg};
+            auto view = reg.view<position, velocity>();
 
             view.for_each([](position& pos, velocity& vel) {
                 pos.x = {};
@@ -190,8 +184,7 @@ TEST_CASE("benchmarks")
             timer t{
                 "Iterating over 1000000 components, only one has both - const"};
 
-            auto view = matter::registry_view{
-                reg.component_ids<position, velocity>(), reg};
+            auto view = reg.view<position, velocity>();
             view.for_each([](const position&, const velocity&) {});
         }
 
@@ -200,8 +193,7 @@ TEST_CASE("benchmarks")
             timer t{
                 "Iterating over 1000000 components, only one has both - mut"};
 
-            auto view = matter::registry_view{
-                reg.component_ids<position, velocity>(), reg};
+            auto view = reg.view<position, velocity>();
             view.for_each([](position& pos, velocity& vel) {
                 pos.x = {};
                 vel.x = {};
