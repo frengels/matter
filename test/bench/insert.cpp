@@ -4,11 +4,11 @@
 
 void insert_single_vector(benchmark::State& state)
 {
-  std::vector<int> vec;
+    std::vector<int> vec;
 
-  while(state.KeepRunning())
+    while (state.KeepRunning())
     {
-      vec.emplace_back(42);
+        vec.emplace_back(42);
     }
 }
 
@@ -28,7 +28,7 @@ BENCHMARK(insert_single_first_idx)->Range(1, 1);
 
 void insert_single_dynamic(benchmark::State& state)
 {
-    matter::registry<std::vector<int>, float, char, uint16_t> reg;
+    matter::registry<std::array<int, 16>, float, char, uint16_t> reg;
     reg.register_component<int>();
 
     while (state.KeepRunning())

@@ -37,10 +37,10 @@ struct is_component : std::false_type
 template<typename Component>
 struct is_component<
     Component,
-    std::enable_if_t<(
+    std::enable_if_t<
         !detail::is_specialization_of<Component, std::tuple>::value &&
-        (std::is_nothrow_copy_constructible_v<Component> ||
-         std::is_nothrow_move_constructible_v<Component>) )>> : std::true_type
+        std::is_trivially_copyable_v<Component> &&
+        std::is_trivially_destructible_v<Component>>> : std::true_type
 {};
 
 template<typename Component>
@@ -51,7 +51,8 @@ constexpr bool is_component_v = is_component<Component>::value;
 /// qualify for this constraint will be optimized to not take up any space in
 /// storage.
 template<typename Component>
-struct is_component_empty : std::is_empty<Component>
+struct is_component_empty : std::conjunction<matter::is_component<Component>,
+                                             std::is_empty<Component>>
 {};
 
 template<typename Component>
@@ -67,7 +68,8 @@ struct is_component_storage_defined : std::false_type
 template<typename Component>
 struct is_component_storage_defined<
     Component,
-    detail::is_storage_defined_sfinae<Component>> : std::true_type
+    detail::is_storage_defined_sfinae<Component>>
+    : matter::is_component<Component>
 {};
 
 template<typename Component>
@@ -85,7 +87,7 @@ struct is_component_dependent : std::false_type
 /// It is used for a now obsolete optimization.
 template<typename Component>
 struct is_component_dependent<Component, detail::is_dependent_sfinae<Component>>
-    : std::true_type
+    : matter::is_component<Component>
 {};
 
 template<typename Component>
@@ -134,7 +136,7 @@ struct is_component_variant : std::false_type
 /// variant of each tag present within the entity.
 template<typename Component>
 struct is_component_variant<Component, detail::is_variant_sfinae<Component>>
-    : std::true_type
+    : matter::is_component<Component>
 {};
 
 template<typename Component>
@@ -148,7 +150,8 @@ template<typename Candidate, typename Component>
 struct is_component_variant_of<Candidate,
                                Component,
                                detail::is_variant_sfinae<Candidate>>
-    : std::is_same<typename Candidate::variant_of, Component>
+    : std::conjunction<matter::is_component<Component>,
+                       std::is_same<typename Candidate::variant_of, Component>>
 {};
 
 template<typename Candidate, typename Component>
