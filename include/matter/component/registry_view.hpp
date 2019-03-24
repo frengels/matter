@@ -64,7 +64,7 @@ public:
                         std::for_each(grp_view.begin(),
                                       grp_view.end(),
                                       [f = std::move(f)](auto comp_view) {
-                                          comp_view.invoke(f);
+                                          comp_view.invoke(std::move(f));
                                       });
                     });
             });
