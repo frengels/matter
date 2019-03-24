@@ -9,6 +9,7 @@
 
 #include "matter/component/group_vector.hpp"
 #include "matter/component/range.hpp"
+#include "matter/component/registry_view.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
@@ -33,14 +34,12 @@ private:
 public:
     constexpr registry() = default;
 
-    const auto& group_vectors() const noexcept
+    template<typename... Cs>
+    auto view() noexcept(false)
     {
-        return group_vectors_;
-    }
-
-    auto& group_vectors() noexcept
-    {
-        return group_vectors_;
+        return registry_view{component_ids<Cs...>(),
+                             group_vectors_.begin(),
+                             group_vectors_.end()};
     }
 
     template<typename C>

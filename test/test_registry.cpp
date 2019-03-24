@@ -132,7 +132,7 @@ TEST_CASE("registry")
 
     SECTION("view")
     {
-        auto view = matter::registry_view{reg.component_ids<float_comp>(), reg};
+        auto view = reg.view<float_comp>();
 
         // empty view
         float f{};
@@ -156,8 +156,7 @@ TEST_CASE("registry")
 
             SECTION("read view")
             {
-                auto fview =
-                    matter::registry_view{reg.component_ids<float_comp>(), reg};
+                auto fview = reg.view<float_comp>();
 
                 auto j = 0;
 
@@ -183,8 +182,7 @@ TEST_CASE("registry")
 
             SECTION("check multiple component views")
             {
-                auto fview =
-                    matter::registry_view{reg.component_ids<float_comp>(), reg};
+                auto fview = reg.view<float_comp>();
 
                 auto j = 0;
                 fview.for_each([&](const float_comp&) { ++j; });
@@ -192,8 +190,7 @@ TEST_CASE("registry")
                 // both the single inserted and double inserted should be found
                 CHECK(j == 20000);
 
-                auto ifview = matter::registry_view{
-                    reg.component_ids<int_comp, float_comp>(), reg};
+                auto ifview = reg.view<int_comp, float_comp>();
 
                 j = 0;
                 ifview.for_each(
