@@ -17,11 +17,6 @@ namespace matter
 template<typename... Components>
 class registry {
 public:
-    static constexpr std::size_t component_capacity = 64;
-
-    static_assert(component_capacity > sizeof...(Components));
-
-public:
     using identifier_type = component_identifier<Components...>;
     using id_type         = typename identifier_type::id_type;
 
@@ -58,19 +53,6 @@ public:
     constexpr auto component_ids() const
     {
         return identifier_.template ids<Cs...>();
-    }
-
-    template<typename... Cs>
-    auto range() noexcept
-    {
-        return matter::range<Cs...>{retrieve_all_storage<Cs...>()};
-    }
-
-    template<typename... Cs>
-    constexpr auto begin() noexcept
-    {
-        // vector with tuples of stores
-        auto stores = retrieve_all_storage<Cs...>();
     }
 
     template<typename C>
@@ -150,8 +132,6 @@ private:
     // if it doesn't exist
     group_vector& get_group_vector(std::size_t i) noexcept
     {
-        assert(i < component_capacity);
-
         // allocate if non existant
         for (std::size_t it = group_vectors_.size(); it <= i; ++it)
         {
@@ -167,7 +147,6 @@ private:
     // if it doesn't exist
     const group_vector& get_group_vector(std::size_t i) const noexcept
     {
-        assert(i < component_capacity);
         assert(i < group_vectors_.size());
 
         auto& grp_vec = group_vectors_[i];
@@ -191,45 +170,11 @@ private:
         return find_group_from_ids(sorted_ids);
     }
 
-    template<typename... Cs>
-    std::vector<std::tuple<matter::component_storage_t<Cs>&...>>
-    retrieve_all_storage() noexcept
-    {
-        auto ids        = component_ids<Cs...>();
-        auto sorted_ids = ordered_typed_ids{ids};
-
-        std::vector<std::tuple<matter::component_storage_t<Cs>&...>> res;
-        res.reserve(16);
-
-        for (std::size_t i = sizeof...(Cs); i < component_capacity; ++i)
-        {
-            if (!has_groups_sized(i))
-            {
-                // no bigger will be available
-                break;
-            }
-
-            auto& grp_vec = get_group_vector(i);
-
-            for (auto&& grp : grp_vec)
-            {
-                if (grp.contains(sorted_ids))
-                {
-                    res.emplace_back(grp.template storage(ids));
-                }
-            }
-        }
-
-        return res;
-    }
-
     /// returns true if the vector at this index exists, the group_vector at
     /// this index can be empty. All this query indicates is that the
     /// group_vector was constructed
     bool has_groups_sized(std::size_t group_size) const noexcept
     {
-        assert(group_size < component_capacity);
-
         return group_size < group_vectors_.size();
     }
 };
