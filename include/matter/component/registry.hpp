@@ -42,6 +42,12 @@ public:
                              group_vectors_.end()};
     }
 
+    template<typename... TIds>
+    auto view(const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
+    {
+        return registry_view{ids, group_vectors_.begin(), group_vectors_.end()};
+    }
+
     template<typename C>
     constexpr auto component_id() const
     {

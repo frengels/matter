@@ -132,7 +132,8 @@ TEST_CASE("registry")
 
     SECTION("view")
     {
-        auto view = reg.view<float_comp>();
+        auto ids  = reg.component_ids<float_comp>();
+        auto view = reg.view(ids);
 
         // empty view
         float f{};
