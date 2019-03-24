@@ -1,5 +1,5 @@
 tests = [
-  'benching',
+  'entt',
   'registry',
   'component',
   'storage',
