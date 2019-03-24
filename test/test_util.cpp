@@ -49,4 +49,10 @@ TEST_CASE("util")
                 type_index<float, int, short, char, float, std::tuple<float>>()
                     .value() == 3);
     }
+
+    SECTION("index range")
+    {
+        static_assert(std::is_same_v<matter::detail::make_index_range<5, 10>,
+                                     std::index_sequence<5, 6, 7, 8, 9>>);
+    }
 }

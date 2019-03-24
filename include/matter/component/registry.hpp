@@ -8,6 +8,7 @@
 #include "component_identifier.hpp"
 
 #include "matter/component/group_vector.hpp"
+#include "matter/component/range.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
@@ -32,6 +33,16 @@ private:
 public:
     constexpr registry() = default;
 
+    const auto& group_vectors() const noexcept
+    {
+        return group_vectors_;
+    }
+
+    auto& group_vectors() noexcept
+    {
+        return group_vectors_;
+    }
+
     template<typename C>
     constexpr auto component_id() const
     {
@@ -42,6 +53,19 @@ public:
     constexpr auto component_ids() const
     {
         return identifier_.template ids<Cs...>();
+    }
+
+    template<typename... Cs>
+    auto range() noexcept
+    {
+        return matter::range<Cs...>{retrieve_all_storage<Cs...>()};
+    }
+
+    template<typename... Cs>
+    constexpr auto begin() noexcept
+    {
+        // vector with tuples of stores
+        auto stores = retrieve_all_storage<Cs...>();
     }
 
     template<typename C>
@@ -76,6 +100,30 @@ public:
                                create_group(ids);
 
         ideal_group.template emplace_back(ids, std::forward<TupArgs>(args)...);
+    }
+
+    template<typename... InputIts>
+    void insert(std::pair<InputIts, InputIts>... its) noexcept(
+        (std::is_nothrow_move_constructible_v<typename InputIts::value_type> &&
+         ...))
+    {
+        static_assert(
+            (matter::is_component_v<typename InputIts::value_type> && ...),
+            "Not all passed values are components");
+
+        // all iterators must have the same amount of elements
+        assert((std::distance(its.first, its.second) == ...));
+
+        auto ids = identifier_.template ids<typename InputIts::value_type...>();
+        auto ordered_ids = ordered_typed_ids{ids};
+
+        auto opt_ideal_group = find_group_from_ids(ordered_ids);
+
+        auto ideal_group = opt_ideal_group ?
+                               std::move(opt_ideal_group).value() :
+                               create_group(ids);
+
+        ideal_group.insert_back(ids, its...);
     }
 
 private:
@@ -128,19 +176,7 @@ private:
     {
         auto& vec = get_group_vector(ids.size());
 
-        auto it = std::lower_bound(vec.begin(), vec.end(), ids);
-
-        if (it == vec.end())
-        {
-            return std::nullopt;
-        }
-
-        if ((*it).contains(ids))
-        {
-            return *it;
-        }
-
-        return std::nullopt;
+        return vec.find_group(ids);
     }
 
     template<typename... Cs>
@@ -149,8 +185,60 @@ private:
         auto sorted_ids = identifier_.template sorted_ids<Cs...>();
         return find_group_from_ids(sorted_ids);
     }
+
+    template<typename... Cs>
+    std::vector<std::tuple<matter::component_storage_t<Cs>&...>>
+    retrieve_all_storage() noexcept
+    {
+        auto ids        = component_ids<Cs...>();
+        auto sorted_ids = ordered_typed_ids{ids};
+
+        std::vector<std::tuple<matter::component_storage_t<Cs>&...>> res;
+        res.reserve(16);
+
+        for (std::size_t i = sizeof...(Cs); i < component_capacity; ++i)
+        {
+            if (!has_groups_sized(i))
+            {
+                // no bigger will be available
+                break;
+            }
+
+            auto& grp_vec = get_group_vector(i);
+
+            for (auto&& grp : grp_vec)
+            {
+                if (grp.contains(sorted_ids))
+                {
+                    res.emplace_back(grp.template storage(ids));
+                }
+            }
+        }
+
+        return res;
+    }
+
+    /// returns true if the vector at this index exists, the group_vector at
+    /// this index can be empty. All this query indicates is that the
+    /// group_vector was constructed
+    bool has_groups_sized(std::size_t group_size) const noexcept
+    {
+        assert(group_size < component_capacity);
+
+        return group_size < group_vectors_.size();
+    }
 };
 
+template<typename T>
+struct is_registry : std::false_type
+{};
+
+template<typename... Cs>
+struct is_registry<matter::registry<Cs...>> : std::true_type
+{};
+
+template<typename T>
+static constexpr auto is_registry_v = is_registry<T>::value;
 } // namespace matter
 
 #endif

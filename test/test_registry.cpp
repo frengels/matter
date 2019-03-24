@@ -4,6 +4,7 @@
 
 #include "matter/component/group_vector.hpp"
 #include "matter/component/registry.hpp"
+#include "matter/component/registry_view.hpp"
 #include "matter/component/traits.hpp"
 #include "matter/util/erased.hpp"
 
@@ -80,6 +81,38 @@ TEST_CASE("registry")
             CHECK(grp.contains(reg.component_id<int_comp>()));
             CHECK(grp.contains(reg.component_id<std::string>()));
         }
+
+        SECTION("get multiple")
+        {
+            auto vecs = grp.storage(
+                reg.component_ids<std::string, float_comp, int_comp>());
+
+            CHECK(std::get<0>(vecs).empty());
+            CHECK(std::get<1>(vecs).empty());
+            CHECK(std::get<2>(vecs).empty());
+
+            auto str = "hello_world";
+            auto f   = 5.0f;
+            auto i   = 500;
+
+            // emplace some things
+            std::get<0>(vecs).emplace_back(str);
+            std::get<1>(vecs).emplace_back(f);
+            std::get<2>(vecs).emplace_back(i);
+
+            // now retrieve the arrays in a different order, still not in
+            // correct id order
+            auto vecs_retrieved = grp.storage(
+                reg.component_ids<float_comp, std::string, int_comp>());
+
+            CHECK(!std::get<0>(vecs_retrieved).empty());
+            CHECK(!std::get<1>(vecs_retrieved).empty());
+            CHECK(!std::get<2>(vecs_retrieved).empty());
+
+            CHECK(std::get<0>(vecs_retrieved)[0].f == f);
+            CHECK(std::get<1>(vecs_retrieved)[0].compare(str) == 0);
+            CHECK(std::get<2>(vecs_retrieved)[0].i == i);
+        }
     }
 
     SECTION("register")
@@ -92,5 +125,78 @@ TEST_CASE("registry")
     {
         reg.create<float_comp, int_comp>(std::forward_as_tuple(5.0f),
                                          std::forward_as_tuple(5));
+    }
+
+    SECTION("view")
+    {
+        auto view = matter::registry_view{reg.component_ids<float_comp>(), reg};
+
+        // empty view
+        float f{};
+        view.for_each([&](const auto& fcomp) { f += fcomp.f; });
+
+        CHECK(f == 0.0f);
+
+        SECTION("fill view")
+        {
+            float                   f1{};
+            std::vector<float_comp> fvec;
+            fvec.reserve(10000);
+
+            for (auto i = 0; i < 10000; ++i)
+            {
+                f1 = i;
+                fvec.emplace_back(f1);
+            }
+
+            reg.insert(std::pair{fvec.begin(), fvec.end()});
+
+            SECTION("read view")
+            {
+                auto fview =
+                    matter::registry_view{reg.component_ids<float_comp>(), reg};
+
+                auto j = 0;
+
+                fview.for_each([&](const auto& fcomp) {
+                    CHECK(fcomp.f == j);
+                    ++j;
+                });
+            }
+
+            std::vector<float_comp> fvec2;
+            fvec2.reserve(10000);
+            std::vector<int_comp> ivec;
+            ivec.reserve(10000);
+
+            for (auto i = 0; i < 10000; ++i)
+            {
+                fvec2.emplace_back(1.0f);
+                ivec.emplace_back(1);
+            }
+
+            reg.insert(std::pair{fvec2.begin(), fvec2.end()},
+                       std::pair{ivec.begin(), ivec.end()});
+
+            SECTION("check multiple component views")
+            {
+                auto fview =
+                    matter::registry_view{reg.component_ids<float_comp>(), reg};
+
+                auto j = 0;
+                fview.for_each([&](const float_comp&) { ++j; });
+
+                // both the single inserted and double inserted should be found
+                CHECK(j == 20000);
+
+                auto ifview = matter::registry_view{
+                    reg.component_ids<int_comp, float_comp>(), reg};
+
+                j = 0;
+                ifview.for_each(
+                    [&](const int_comp&, const float_comp&) { ++j; });
+                CHECK(j == 10000);
+            }
+        }
     }
 }

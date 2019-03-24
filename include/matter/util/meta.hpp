@@ -174,6 +174,22 @@ struct is_nothrow_constructible_expand_tuple<T, std::tuple<Args...>>
 template<typename T, typename TupArgs>
 constexpr auto is_nothrow_constructible_expand_tuple_v =
     is_nothrow_constructible_expand_tuple<T, TupArgs>::value;
+
+namespace impl
+{
+template<std::size_t Cur, std::size_t End, std::size_t... Is>
+struct make_index_range_impl : make_index_range_impl<Cur + 1, End, Is..., Cur>
+{};
+
+template<std::size_t End, std::size_t... Is>
+struct make_index_range_impl<End, End, Is...>
+{
+    using type = std::index_sequence<Is...>;
+};
+} // namespace impl
+
+template<std::size_t Begin, std::size_t End>
+using make_index_range = typename impl::make_index_range_impl<Begin, End>::type;
 } // namespace detail
 } // namespace matter
 
