@@ -131,6 +131,42 @@ public:
         : stores_{grp.storage(ids)}
     {}
 
+    template<typename Id>
+    constexpr group_view(const exact_group<Id, Cs...>& grp) noexcept
+        : stores_{grp.stores_}
+    {}
+
+    template<typename Id>
+    constexpr auto operator==(const exact_group<Id, Cs...>& grp) const noexcept
+    {
+        // compare address instead of comparison the full vector, if the address
+        // isn't the same then they're not the same even if the contained
+        // elements are the same.
+        return ((std::addressof(get<Cs>()) ==
+                 std::addressof(grp.template get<Cs>())) &&
+                ...);
+    }
+
+    template<typename Id>
+    constexpr auto operator!=(const exact_group<Id, Cs...>& grp) const noexcept
+    {
+        return !(*this == grp);
+    }
+
+    template<typename Id>
+    friend constexpr auto operator==(const exact_group<Id, Cs...>& grp,
+                                     const group_view<Cs...>& grp_view) noexcept
+    {
+        return grp_view == grp;
+    }
+
+    template<typename Id>
+    friend constexpr auto operator!=(const exact_group<Id, Cs...>& grp,
+                                     const group_view<Cs...>& grp_view) noexcept
+    {
+        return grp_view != grp;
+    }
+
     constexpr component_view<Cs...> operator[](std::size_t index) noexcept
     {
         return std::apply([index](auto&... stores) {
@@ -151,8 +187,6 @@ public:
     template<typename T>
     constexpr const matter::component_storage_t<T>& get() const noexcept
     {
-        static_assert(detail::type_in_list_v<T, Cs...>,
-                      "T is not a valid component type for this view.");
         return std::get<std::reference_wrapper<matter::component_storage_t<T>>>(
                    stores_)
             .get();
@@ -200,6 +234,10 @@ public:
 template<typename Id, typename... TIds>
 group_view(const unordered_typed_ids<Id, TIds...>& ids,
            group& grp) noexcept->group_view<typename TIds::type...>;
+
+template<typename Id, typename... Cs>
+group_view(const exact_group<Id, Cs...>& grp) noexcept->group_view<Cs...>;
+
 } // namespace matter
 
 #endif

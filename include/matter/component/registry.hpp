@@ -78,15 +78,14 @@ public:
             "args.");
 
         auto ids        = identifier_.template ids<Cs...>();
-        auto sorted_ids = ordered_typed_ids{ids};
 
-        auto opt_ideal_group = find_group_from_ids(sorted_ids);
+        auto opt_ideal_group = find_group_from_ids(ids);
 
         auto ideal_group = opt_ideal_group ?
                                std::move(opt_ideal_group).value() :
                                create_group(ids);
 
-        ideal_group.template emplace_back(ids, std::forward<TupArgs>(args)...);
+        ideal_group.template emplace_back(std::forward<TupArgs>(args)...);
     }
 
     template<typename... InputIts>
@@ -102,25 +101,25 @@ public:
         assert((std::distance(its.first, its.second) == ...));
 
         auto ids = identifier_.template ids<typename InputIts::value_type...>();
-        auto ordered_ids = ordered_typed_ids{ids};
 
-        auto opt_ideal_group = find_group_from_ids(ordered_ids);
+        auto opt_ideal_group = find_group_from_ids(ids);
 
         auto ideal_group = opt_ideal_group ?
                                std::move(opt_ideal_group).value() :
                                create_group(ids);
 
-        ideal_group.insert_back(ids, its...);
+        ideal_group.insert_back(its...);
     }
 
 private:
     template<typename... Ts>
-    group create_group(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
+    exact_group<id_type, typename Ts::type...>
+    create_group(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
         (std::is_nothrow_default_constructible_v<
              matter::component_storage_t<typename Ts::type>> &&
          ...))
     {
-        assert(!find_group_from_ids(ordered_typed_ids{ids}));
+        assert(!find_group_from_ids(ids));
 
         auto& vec            = get_group_vector(ids.size());
         auto  inserted_group = vec.template emplace(ids);
@@ -155,19 +154,28 @@ private:
     }
 
     template<typename... Ts>
-    constexpr std::optional<group>
-    find_group_from_ids(const ordered_typed_ids<id_type, Ts...>& ids) noexcept
+    constexpr std::optional<exact_group<id_type, typename Ts::type...>>
+    find_group_from_ids(
+        const unordered_typed_ids<id_type, Ts...>& ids,
+        const ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
     {
         auto& vec = get_group_vector(ids.size());
+        return vec.find_group(ids, ordered_ids);
+    }
 
-        return vec.find_group(ids);
+    template<typename... Ts>
+    constexpr std::optional<exact_group<id_type, typename Ts::type...>>
+    find_group_from_ids(const unordered_typed_ids<id_type, Ts...>& ids) noexcept
+    {
+        return find_group_from_ids(ids, ordered_typed_ids{ids});
     }
 
     template<typename... Cs>
-    constexpr std::optional<group> find_group() noexcept
+    constexpr std::optional<exact_group<id_type, Cs...>> find_group() noexcept
     {
-        auto sorted_ids = identifier_.template sorted_ids<Cs...>();
-        return find_group_from_ids(sorted_ids);
+        auto ids         = component_ids<Cs...>();
+        auto ordered_ids = identifier_.template sorted_ids<Cs...>();
+        return find_group_from_ids(ids, ordered_ids);
     }
 
     /// returns true if the vector at this index exists, the group_vector at
