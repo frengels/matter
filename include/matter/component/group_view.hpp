@@ -131,8 +131,7 @@ public:
         : stores_{grp.storage(ids)}
     {}
 
-    template<typename Id>
-    constexpr group_view(const group<Id, Cs...>& grp) noexcept
+    constexpr group_view(const group<Cs...>& grp) noexcept
         : stores_{grp.stores_}
     {}
 
@@ -235,8 +234,8 @@ template<typename Id, typename... TIds>
 group_view(const unordered_typed_ids<Id, TIds...>& ids,
            any_group& grp) noexcept->group_view<typename TIds::type...>;
 
-template<typename Id, typename... Cs>
-group_view(const group<Id, Cs...>& grp) noexcept->group_view<Cs...>;
+template<typename... Cs>
+group_view(const group<Cs...>& grp) noexcept->group_view<Cs...>;
 
 } // namespace matter
 

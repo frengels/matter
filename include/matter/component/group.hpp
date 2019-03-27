@@ -17,7 +17,7 @@
 
 namespace matter
 {
-template<typename Id, typename... Cs>
+template<typename... Cs>
 struct group
 {
 public:
@@ -144,12 +144,10 @@ public:
 
     using reverse_iterator = std::reverse_iterator<iterator>;
 
-    using id_type = Id;
-
     template<typename... Ts>
     friend class group_view;
 
-    template<typename Id_, typename... Ts>
+    template<typename... Ts>
     friend struct group;
 
 private:
@@ -157,7 +155,7 @@ private:
         stores_;
 
 public:
-    template<typename... TIds>
+    template<typename Id, typename... TIds>
     constexpr group(const matter::unordered_typed_ids<Id, TIds...>& unordered,
                     any_group& grp) noexcept
         : stores_{grp.storage(unordered)}
@@ -167,7 +165,7 @@ public:
     }
 
     template<typename... OtherCs>
-    constexpr group(const matter::group<id_type, OtherCs...>& other) noexcept
+    constexpr group(const matter::group<OtherCs...>& other) noexcept
         : stores_{
               std::get<std::reference_wrapper<matter::component_storage_t<Cs>>>(
                   other.stores_)...}
@@ -199,17 +197,16 @@ public:
         return contains<typename TId::type>();
     }
 
-    template<typename... TIds>
+    template<typename Id, typename... TIds>
     constexpr auto
-    contains(const matter::unordered_typed_ids<id_type, TIds...>&) const
-        noexcept
+    contains(const matter::unordered_typed_ids<Id, TIds...>&) const noexcept
     {
         return (contains<typename TIds::type>() && ...);
     }
 
-    template<typename... TIds>
-    constexpr auto
-    contains(const matter::ordered_typed_ids<id_type, TIds...>&) const noexcept
+    template<typename Id, typename... TIds>
+    constexpr auto contains(const matter::ordered_typed_ids<Id, TIds...>&) const
+        noexcept
     {
         return (contains<typename TIds::type>() && ...);
     }
@@ -339,7 +336,7 @@ private:
 
 template<typename Id, typename... TIds>
 group(const matter::unordered_typed_ids<Id, TIds...>&,
-      any_group&) noexcept->group<Id, typename TIds::type...>;
+      any_group&) noexcept->group<typename TIds::type...>;
 
 } // namespace matter
 

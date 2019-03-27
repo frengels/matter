@@ -252,7 +252,7 @@ public:
     }
 
     template<typename... Ts>
-    group<id_type, typename Ts::type...>
+    group<typename Ts::type...>
     emplace(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
         (std::is_nothrow_default_constructible_v<
              matter::component_storage_t<typename Ts::type>> &&
@@ -313,7 +313,7 @@ public:
     }
 
     template<typename... TIds>
-    std::optional<group<id_type, typename TIds::type...>> find_group(
+    std::optional<group<typename TIds::type...>> find_group(
         const matter::unordered_typed_ids<id_type, TIds...>& ids,
         const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
     {
@@ -329,7 +329,7 @@ public:
     }
 
     template<typename... TIds>
-    std::optional<group<id_type, typename TIds::type...>> find_group(
+    std::optional<group<typename TIds::type...>> find_group(
         const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
     {
         return find_group(ids, ordered_typed_ids{ids});
