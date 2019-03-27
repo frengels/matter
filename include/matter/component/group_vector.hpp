@@ -252,7 +252,7 @@ public:
     }
 
     template<typename... Ts>
-    exact_group<id_type, typename Ts::type...>
+    group<typename Ts::type...>
     emplace(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
         (std::is_nothrow_default_constructible_v<
              matter::component_storage_t<typename Ts::type>> &&
@@ -270,8 +270,8 @@ public:
         auto insertion_point = lower_bound(ordered_ids);
 
         auto inserted_at = emplace_at(insertion_point, ids);
-        auto grp         = group{std::addressof(*inserted_at), size_};
-        return exact_group{ids, grp};
+        auto grp         = any_group{std::addressof(*inserted_at), size_};
+        return group{ids, grp};
     }
 
     template<typename... TIds>
@@ -287,7 +287,7 @@ public:
             return it;
         }
 
-        auto grp = const_group{*it, group_size()};
+        auto grp = const_any_group{*it, group_size()};
         return grp == ids ? it : end();
     }
 
@@ -308,12 +308,12 @@ public:
             return it;
         }
 
-        auto grp = const_group{*it, group_size()};
+        auto grp = const_any_group{*it, group_size()};
         return grp == ids ? it : end();
     }
 
     template<typename... TIds>
-    std::optional<exact_group<id_type, typename TIds::type...>> find_group(
+    std::optional<group<typename TIds::type...>> find_group(
         const matter::unordered_typed_ids<id_type, TIds...>& ids,
         const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
     {
@@ -324,12 +324,12 @@ public:
             return {};
         }
 
-        auto grp = group{*it, group_size()};
-        return exact_group{ids, grp};
+        auto grp = any_group{*it, group_size()};
+        return group{ids, grp};
     }
 
     template<typename... TIds>
-    std::optional<exact_group<id_type, typename TIds::type...>> find_group(
+    std::optional<group<typename TIds::type...>> find_group(
         const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
     {
         return find_group(ids, ordered_typed_ids{ids});
@@ -349,7 +349,7 @@ public:
         {
             return emplace_at(it, unordered_ids);
         }
-        else if (auto grp = const_group{*it, group_size()};
+        else if (auto grp = const_any_group{*it, group_size()};
                  !grp.contains(ordered_ids))
         {
             return emplace_at(it, unordered_ids);
@@ -369,16 +369,16 @@ public:
     }
 
     template<typename... TIds>
-    group find_emplace_group(
+    any_group find_emplace_group(
         const matter::unordered_typed_ids<id_type, TIds...>& unordered_ids,
         const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
     {
         auto it = find_emplace(unordered_ids, ordered_ids);
-        return group{*it, group_size()};
+        return any_group{*it, group_size()};
     }
 
     template<typename... TIds>
-    group
+    any_group
     find_emplace_group(const matter::unordered_typed_ids<id_type, TIds...>&
                            unordered_ids) noexcept
     {
@@ -386,10 +386,10 @@ public:
                                   matter::ordered_typed_ids{unordered_ids});
     }
 
-    group operator[](std::size_t index) noexcept
+    any_group operator[](std::size_t index) noexcept
     {
         assert(index <= size());
-        return group{std::addressof(groups_[size_ * index]), size_};
+        return any_group{std::addressof(groups_[size_ * index]), size_};
     }
 
     std::size_t size() const noexcept
@@ -417,7 +417,7 @@ private:
         assert(([&]() {
             if (pos != end())
             {
-                auto grp = const_group{*pos, size_};
+                auto grp = const_any_group{*pos, size_};
                 return !grp.contains(matter::ordered_typed_ids{unordered_ids});
             }
             return true;
@@ -447,7 +447,7 @@ private:
             end(),
             ids,
             [size = group_size()](const auto& erased, const auto& ids) {
-                auto grp = const_group{erased, size};
+                auto grp = const_any_group{erased, size};
                 return grp < ids;
             });
     }
@@ -461,7 +461,7 @@ private:
             end(),
             ids,
             [size = group_size()](const auto& erased, const auto& ids) {
-                auto grp = const_group{erased, size};
+                auto grp = const_any_group{erased, size};
                 return grp < ids;
             });
     }

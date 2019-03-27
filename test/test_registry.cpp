@@ -55,9 +55,8 @@ TEST_CASE("registry")
         SECTION("get multiple")
         {
             // copy group in wrong order
-            auto other_grp = matter::
-                exact_group<std::size_t, float_comp, const char*, int_comp>{
-                    grp};
+            auto other_grp =
+                matter::group<float_comp, const char*, int_comp>{grp};
             CHECK(other_grp.empty());
             CHECK(grp.empty());
 
