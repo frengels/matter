@@ -252,7 +252,7 @@ public:
     }
 
     template<typename... Ts>
-    exact_group<id_type, typename Ts::type...>
+    group<id_type, typename Ts::type...>
     emplace(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
         (std::is_nothrow_default_constructible_v<
              matter::component_storage_t<typename Ts::type>> &&
@@ -271,7 +271,7 @@ public:
 
         auto inserted_at = emplace_at(insertion_point, ids);
         auto grp         = any_group{std::addressof(*inserted_at), size_};
-        return exact_group{ids, grp};
+        return group{ids, grp};
     }
 
     template<typename... TIds>
@@ -313,7 +313,7 @@ public:
     }
 
     template<typename... TIds>
-    std::optional<exact_group<id_type, typename TIds::type...>> find_group(
+    std::optional<group<id_type, typename TIds::type...>> find_group(
         const matter::unordered_typed_ids<id_type, TIds...>& ids,
         const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
     {
@@ -325,11 +325,11 @@ public:
         }
 
         auto grp = any_group{*it, group_size()};
-        return exact_group{ids, grp};
+        return group{ids, grp};
     }
 
     template<typename... TIds>
-    std::optional<exact_group<id_type, typename TIds::type...>> find_group(
+    std::optional<group<id_type, typename TIds::type...>> find_group(
         const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
     {
         return find_group(ids, ordered_typed_ids{ids});

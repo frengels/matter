@@ -18,7 +18,7 @@
 namespace matter
 {
 template<typename Id, typename... Cs>
-struct exact_group
+struct group
 {
 public:
     struct iterator
@@ -150,7 +150,7 @@ public:
     friend class group_view;
 
     template<typename Id_, typename... Ts>
-    friend struct exact_group;
+    friend struct group;
 
 private:
     std::tuple<std::reference_wrapper<matter::component_storage_t<Cs>>...>
@@ -158,9 +158,8 @@ private:
 
 public:
     template<typename... TIds>
-    constexpr exact_group(
-        const matter::unordered_typed_ids<Id, TIds...>& unordered,
-        any_group&                                          grp) noexcept
+    constexpr group(const matter::unordered_typed_ids<Id, TIds...>& unordered,
+                    any_group& grp) noexcept
         : stores_{grp.storage(unordered)}
     {
         // require exact match and not just contains being satisfied
@@ -168,8 +167,7 @@ public:
     }
 
     template<typename... OtherCs>
-    constexpr exact_group(
-        const matter::exact_group<id_type, OtherCs...>& other) noexcept
+    constexpr group(const matter::group<id_type, OtherCs...>& other) noexcept
         : stores_{
               std::get<std::reference_wrapper<matter::component_storage_t<Cs>>>(
                   other.stores_)...}
@@ -178,13 +176,13 @@ public:
                       "Incompatible components, cannot construct");
     }
 
-    constexpr auto operator==(const exact_group&) const noexcept
+    constexpr auto operator==(const group&) const noexcept
     {
         // there can only ever be one group of a certain type in existence
         return true;
     }
 
-    constexpr auto operator!=(const exact_group& other) const noexcept
+    constexpr auto operator!=(const group& other) const noexcept
     {
         return !(*this == other);
     }
@@ -340,8 +338,8 @@ private:
 };
 
 template<typename Id, typename... TIds>
-exact_group(const matter::unordered_typed_ids<Id, TIds...>&,
-            any_group&) noexcept->exact_group<Id, typename TIds::type...>;
+group(const matter::unordered_typed_ids<Id, TIds...>&,
+      any_group&) noexcept->group<Id, typename TIds::type...>;
 
 } // namespace matter
 

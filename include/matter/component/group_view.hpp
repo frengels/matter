@@ -127,17 +127,17 @@ private:
 public:
     template<typename Id, typename... TIds>
     constexpr group_view(const unordered_typed_ids<Id, TIds...>& ids,
-                         any_group&                                  grp) noexcept
+                         any_group&                              grp) noexcept
         : stores_{grp.storage(ids)}
     {}
 
     template<typename Id>
-    constexpr group_view(const exact_group<Id, Cs...>& grp) noexcept
+    constexpr group_view(const group<Id, Cs...>& grp) noexcept
         : stores_{grp.stores_}
     {}
 
     template<typename Id>
-    constexpr auto operator==(const exact_group<Id, Cs...>& grp) const noexcept
+    constexpr auto operator==(const group<Id, Cs...>& grp) const noexcept
     {
         // compare address instead of comparison the full vector, if the address
         // isn't the same then they're not the same even if the contained
@@ -148,20 +148,20 @@ public:
     }
 
     template<typename Id>
-    constexpr auto operator!=(const exact_group<Id, Cs...>& grp) const noexcept
+    constexpr auto operator!=(const group<Id, Cs...>& grp) const noexcept
     {
         return !(*this == grp);
     }
 
     template<typename Id>
-    friend constexpr auto operator==(const exact_group<Id, Cs...>& grp,
+    friend constexpr auto operator==(const group<Id, Cs...>&  grp,
                                      const group_view<Cs...>& grp_view) noexcept
     {
         return grp_view == grp;
     }
 
     template<typename Id>
-    friend constexpr auto operator!=(const exact_group<Id, Cs...>& grp,
+    friend constexpr auto operator!=(const group<Id, Cs...>&  grp,
                                      const group_view<Cs...>& grp_view) noexcept
     {
         return grp_view != grp;
@@ -236,7 +236,7 @@ group_view(const unordered_typed_ids<Id, TIds...>& ids,
            any_group& grp) noexcept->group_view<typename TIds::type...>;
 
 template<typename Id, typename... Cs>
-group_view(const exact_group<Id, Cs...>& grp) noexcept->group_view<Cs...>;
+group_view(const group<Id, Cs...>& grp) noexcept->group_view<Cs...>;
 
 } // namespace matter
 

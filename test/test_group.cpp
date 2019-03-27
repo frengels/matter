@@ -52,7 +52,7 @@ TEST_CASE("group_vector")
 
             SECTION("group_vector size 2")
             {
-                auto                it = grpvec2.begin();
+                auto                    it = grpvec2.begin();
                 matter::const_any_group grp{*it, 2};
                 CHECK(grp == ident.ordered_ids<float, int>());
                 ++it;
@@ -64,7 +64,7 @@ TEST_CASE("group_vector")
 
             SECTION("group_vector size 3")
             {
-                auto                it = grpvec3.begin();
+                auto                    it = grpvec3.begin();
                 matter::const_any_group grp{*it, 3};
                 CHECK(grp == ident.ordered_ids<int, float, short>());
                 ++it;
@@ -79,8 +79,8 @@ TEST_CASE("group_vector")
 
                 SECTION("exact groups")
                 {
-                    auto exact_grp = matter::exact_group(
-                        ident.ids<short, char, float>(), mut_grp);
+                    auto exact_grp =
+                        matter::group(ident.ids<short, char, float>(), mut_grp);
 
                     auto comp_view =
                         exact_grp.emplace_back(std::forward_as_tuple(5),
@@ -113,7 +113,7 @@ TEST_CASE("group_vector")
 
             SECTION("group_vector size 2")
             {
-                auto                it = grpvec2.rbegin();
+                auto                    it = grpvec2.rbegin();
                 matter::const_any_group grp{*it, 2};
                 CHECK(grp == ident.ordered_ids<short, char>());
                 ++it;
@@ -125,7 +125,7 @@ TEST_CASE("group_vector")
 
             SECTION("group_vector size 3")
             {
-                auto                it = grpvec3.rbegin();
+                auto                    it = grpvec3.rbegin();
                 matter::const_any_group grp{*it, 3};
                 CHECK(grp == ident.ordered_ids<float, short, char>());
                 ++it;

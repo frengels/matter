@@ -77,7 +77,7 @@ public:
             "One of the components cannot be constructed from the provided "
             "args.");
 
-        auto ids        = identifier_.template ids<Cs...>();
+        auto ids = identifier_.template ids<Cs...>();
 
         auto opt_ideal_group = find_group_from_ids(ids);
 
@@ -113,7 +113,7 @@ public:
 
 private:
     template<typename... Ts>
-    exact_group<id_type, typename Ts::type...>
+    group<id_type, typename Ts::type...>
     create_group(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
         (std::is_nothrow_default_constructible_v<
              matter::component_storage_t<typename Ts::type>> &&
@@ -154,7 +154,7 @@ private:
     }
 
     template<typename... Ts>
-    constexpr std::optional<exact_group<id_type, typename Ts::type...>>
+    constexpr std::optional<group<id_type, typename Ts::type...>>
     find_group_from_ids(
         const unordered_typed_ids<id_type, Ts...>& ids,
         const ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
@@ -164,14 +164,14 @@ private:
     }
 
     template<typename... Ts>
-    constexpr std::optional<exact_group<id_type, typename Ts::type...>>
+    constexpr std::optional<group<id_type, typename Ts::type...>>
     find_group_from_ids(const unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
         return find_group_from_ids(ids, ordered_typed_ids{ids});
     }
 
     template<typename... Cs>
-    constexpr std::optional<exact_group<id_type, Cs...>> find_group() noexcept
+    constexpr std::optional<group<id_type, Cs...>> find_group() noexcept
     {
         auto ids         = component_ids<Cs...>();
         auto ordered_ids = identifier_.template sorted_ids<Cs...>();
