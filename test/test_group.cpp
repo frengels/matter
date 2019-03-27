@@ -53,10 +53,10 @@ TEST_CASE("group_vector")
             SECTION("group_vector size 2")
             {
                 auto                it = grpvec2.begin();
-                matter::const_group grp{*it, 2};
+                matter::const_any_group grp{*it, 2};
                 CHECK(grp == ident.ordered_ids<float, int>());
                 ++it;
-                grp = matter::const_group{*it, 2};
+                grp = matter::const_any_group{*it, 2};
                 CHECK(grp == ident.ordered_ids<short, char>());
                 ++it;
                 CHECK(it == grpvec2.end());
@@ -65,14 +65,14 @@ TEST_CASE("group_vector")
             SECTION("group_vector size 3")
             {
                 auto                it = grpvec3.begin();
-                matter::const_group grp{*it, 3};
+                matter::const_any_group grp{*it, 3};
                 CHECK(grp == ident.ordered_ids<int, float, short>());
                 ++it;
-                grp = matter::const_group{*it, 3};
+                grp = matter::const_any_group{*it, 3};
                 CHECK(grp == ident.ordered_ids<int, char, short>());
                 ++it;
-                grp          = matter::const_group{*it, 3};
-                auto mut_grp = matter::group{*it, 3};
+                grp          = matter::const_any_group{*it, 3};
+                auto mut_grp = matter::any_group{*it, 3};
                 CHECK(grp == ident.ordered_ids<float, short, char>());
                 ++it;
                 CHECK(it == grpvec3.end());
@@ -114,10 +114,10 @@ TEST_CASE("group_vector")
             SECTION("group_vector size 2")
             {
                 auto                it = grpvec2.rbegin();
-                matter::const_group grp{*it, 2};
+                matter::const_any_group grp{*it, 2};
                 CHECK(grp == ident.ordered_ids<short, char>());
                 ++it;
-                grp = matter::const_group{*it, 2};
+                grp = matter::const_any_group{*it, 2};
                 CHECK(grp == ident.ordered_ids<float, int>());
                 ++it;
                 CHECK(it == grpvec2.rend());
@@ -126,13 +126,13 @@ TEST_CASE("group_vector")
             SECTION("group_vector size 3")
             {
                 auto                it = grpvec3.rbegin();
-                matter::const_group grp{*it, 3};
+                matter::const_any_group grp{*it, 3};
                 CHECK(grp == ident.ordered_ids<float, short, char>());
                 ++it;
-                grp = matter::const_group{*it, 3};
+                grp = matter::const_any_group{*it, 3};
                 CHECK(grp == ident.ordered_ids<int, char, short>());
                 ++it;
-                grp = matter::const_group{*it, 3};
+                grp = matter::const_any_group{*it, 3};
                 CHECK(grp == ident.ordered_ids<int, float, short>());
                 ++it;
                 CHECK(it == grpvec3.rend());

@@ -204,7 +204,7 @@ private:
     private:
         constexpr auto is_valid() const noexcept
         {
-            auto grp = const_group{*it_, it_.group_size()};
+            auto grp = const_any_group{*it_, it_.group_size()};
             return grp.contains(ordered_ids_);
         }
     };
