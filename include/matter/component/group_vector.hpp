@@ -252,7 +252,8 @@ public:
     }
 
     template<typename... Ts>
-    group emplace(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
+    exact_group<id_type, typename Ts::type...>
+    emplace(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
         (std::is_nothrow_default_constructible_v<
              matter::component_storage_t<typename Ts::type>> &&
          ...))
@@ -269,7 +270,8 @@ public:
         auto insertion_point = lower_bound(ordered_ids);
 
         auto inserted_at = emplace_at(insertion_point, ids);
-        return group{std::addressof(*inserted_at), size_};
+        auto grp         = group{std::addressof(*inserted_at), size_};
+        return exact_group{ids, grp};
     }
 
     template<typename... TIds>
@@ -311,32 +313,26 @@ public:
     }
 
     template<typename... TIds>
-    std::optional<const_group>
-    find_group(const matter::ordered_typed_ids<id_type, TIds...>& ids) const
-        noexcept
+    std::optional<exact_group<id_type, typename TIds::type...>> find_group(
+        const matter::unordered_typed_ids<id_type, TIds...>& ids,
+        const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
     {
-        auto it = find(ids);
+        auto it = find(ordered_ids);
 
         if (it == end())
         {
             return {};
         }
 
-        return const_group{*it, group_size()};
+        auto grp = group{*it, group_size()};
+        return exact_group{ids, grp};
     }
 
     template<typename... TIds>
-    std::optional<group>
-    find_group(const matter::ordered_typed_ids<id_type, TIds...>& ids) noexcept
+    std::optional<exact_group<id_type, typename TIds::type...>> find_group(
+        const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
     {
-        auto it = find(ids);
-
-        if (it == end())
-        {
-            return {};
-        }
-
-        return group{*it, group_size()};
+        return find_group(ids, ordered_typed_ids{ids});
     }
 
     /// \brief same as find, but emplaces the group if not found

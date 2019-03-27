@@ -71,10 +71,27 @@ TEST_CASE("group_vector")
                 grp = matter::const_group{*it, 3};
                 CHECK(grp == ident.ordered_ids<int, char, short>());
                 ++it;
-                grp = matter::const_group{*it, 3};
+                grp          = matter::const_group{*it, 3};
+                auto mut_grp = matter::group{*it, 3};
                 CHECK(grp == ident.ordered_ids<float, short, char>());
                 ++it;
                 CHECK(it == grpvec3.end());
+
+                SECTION("exact groups")
+                {
+                    auto exact_grp = matter::exact_group(
+                        ident.ids<short, char, float>(), mut_grp);
+
+                    auto comp_view =
+                        exact_grp.emplace_back(std::forward_as_tuple(5),
+                                               std::forward_as_tuple('n'),
+                                               std::forward_as_tuple(5.0f));
+
+                    auto [s, c, f] = comp_view;
+                    CHECK(s == 5);
+                    CHECK(c == 'n');
+                    CHECK(f == 5.0f);
+                }
             }
         }
 
@@ -128,15 +145,14 @@ TEST_CASE("group_vector")
 
             auto it = grpvec1.find(ident.ordered_ids<uint8_t>());
             CHECK(it == grpvec1.end());
-            CHECK(
-                !grpvec1.find_group(ident.ordered_ids<uint8_t>()).has_value());
+            CHECK(!grpvec1.find_group(ident.ids<uint8_t>()).has_value());
 
             auto grp = grpvec1.find_emplace_group(ident.ids<uint8_t>());
             CHECK(grp == ident.ordered_ids<uint8_t>());
 
             it = grpvec1.find(ident.ordered_ids<float>());
             CHECK(it != grpvec1.end());
-            CHECK(grpvec1.find_group(ident.ordered_ids<float>()).has_value());
+            CHECK(grpvec1.find_group(ident.ids<float>()).has_value());
         }
 
         SECTION("view")
@@ -167,6 +183,7 @@ TEST_CASE("group_vector")
                     matter::group_vector_view{ident.ids<int>(), grpvec3};
                 auto find_grp_it =
                     grpvec3.find(ident.ordered_ids<int, short, char>());
+                CHECK(find_grp_it != grpvec3.end());
                 auto view_it = grp_view.rbegin();
 
                 CHECK(*find_grp_it == *view_it);
@@ -185,8 +202,7 @@ TEST_CASE("group_vector")
         SECTION("insert_back")
         {
             auto grp =
-                grpvec3.find_group(ident.ordered_ids<float, int, short>())
-                    .value();
+                grpvec3.find_group(ident.ids<float, int, short>()).value();
             std::vector<float> fvec;
             std::vector<int>   ivec;
             std::vector<short> svec;
@@ -198,12 +214,11 @@ TEST_CASE("group_vector")
                 svec.push_back(i);
             }
 
-            grp.insert_back(ident.ids<float, int, short>(),
-                            std::pair{fvec.begin(), fvec.end()},
+            grp.insert_back(std::pair{fvec.begin(), fvec.end()},
                             std::pair{ivec.begin(), ivec.end()},
                             std::pair{svec.begin(), svec.end()});
 
-            auto view = matter::group_view{ident.ids<float, int, short>(), grp};
+            auto view = matter::group_view{grp};
 
             auto i = 0;
             std::for_each(view.begin(), view.end(), [&](auto comp_view) {

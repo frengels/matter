@@ -33,25 +33,6 @@ TEST_CASE("registry")
 {
     matter::registry<float_comp, int_comp, string_comp> reg;
 
-    SECTION("group")
-    {
-        auto grp_vec = matter::group_vector{1};
-
-        auto grp = grp_vec.emplace(
-            matter::unordered_typed_ids{reg.component_id<int_comp>()});
-
-        CHECK(grp.contains(reg.component_id<int_comp>()));
-        CHECK(!grp.contains(reg.component_id<string_comp>()));
-        CHECK(!grp.contains(reg.component_id<float_comp>()));
-
-        auto& vector = grp.storage(reg.component_id<int_comp>());
-
-        // just test whether the retrieve vector is correct
-        vector.emplace_back(5);
-        CHECK(vector.size() == 1);
-        CHECK(vector[0].i == 5);
-    }
-
     SECTION("group comparison")
     {
 
@@ -63,17 +44,6 @@ TEST_CASE("registry")
         auto grp     = grp_vec.emplace(
             reg.component_ids<int_comp, float_comp, const char*>());
 
-        SECTION("<")
-        {
-
-            // 0, 1, 3 < 2, 1, 4
-            CHECK(grp < matter::ordered_typed_ids{
-                            reg.component_ids<float_comp, int_comp, char>()});
-            // should be 0, 1, 3 < 0, 1, 4
-            CHECK(grp < matter::ordered_typed_ids{
-                            reg.component_ids<float_comp, int_comp, char>()});
-        }
-
         SECTION("contains")
         {
             // single components
@@ -84,37 +54,31 @@ TEST_CASE("registry")
 
         SECTION("get multiple")
         {
-            auto vecs = grp.storage(
-                reg.component_ids<const char*, float_comp, int_comp>());
-
-            CHECK(std::get<0>(vecs).empty());
-            CHECK(std::get<1>(vecs).empty());
-            CHECK(std::get<2>(vecs).empty());
+            // copy group in wrong order
+            auto other_grp = matter::
+                exact_group<std::size_t, float_comp, const char*, int_comp>{
+                    grp};
+            CHECK(other_grp.empty());
+            CHECK(grp.empty());
 
             auto str = "hello_world";
             auto f   = 5.0f;
             auto i   = 500;
 
             // emplace some things
-            std::get<0>(vecs).emplace_back(str);
-            std::get<1>(vecs).emplace_back(f);
-            std::get<2>(vecs).emplace_back(i);
+            other_grp.emplace_back(std::forward_as_tuple(f),
+                                   std::forward_as_tuple(str),
+                                   std::forward_as_tuple(i));
 
-            // now retrieve the arrays in a different order, still not in
-            // correct id order
-            auto vecs_retrieved = grp.storage(
-                reg.component_ids<float_comp, const char*, int_comp>());
+            CHECK(!other_grp.empty());
+            CHECK(!grp.empty());
 
-            CHECK(!std::get<0>(vecs_retrieved).empty());
-            CHECK(!std::get<1>(vecs_retrieved).empty());
-            CHECK(!std::get<2>(vecs_retrieved).empty());
+            auto&& [fcomp, cstr, icomp] = other_grp[0];
 
-            CHECK(std::get<0>(vecs_retrieved)[0].f == f);
+            CHECK(fcomp.f == f);
             CHECK(std::char_traits<char>::compare(
-                      std::get<1>(vecs_retrieved)[0],
-                      str,
-                      std::char_traits<char>::length(str)) == 0);
-            CHECK(std::get<2>(vecs_retrieved)[0].i == i);
+                      cstr, str, std::char_traits<char>::length(cstr)) == 0);
+            CHECK(icomp.i == i);
         }
     }
 
