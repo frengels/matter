@@ -25,6 +25,9 @@ private:
     using erased_type_ref = std::
         conditional_t<is_const, const matter::id_erased&, matter::id_erased&>;
 
+    template<bool _Const>
+    friend class any_group;
+
 public:
     using id_type = typename matter::id_erased::id_type;
 
@@ -48,6 +51,10 @@ public:
 
     constexpr any_group(erased_type_ref ref, std::size_t size) noexcept
         : any_group{std::addressof(ref), size}
+    {}
+
+    constexpr any_group(const any_group<false>& mutable_grp)
+        : ptr_{mutable_grp.ptr_}, size_{mutable_grp.size_}
     {}
 
     iterator begin() noexcept

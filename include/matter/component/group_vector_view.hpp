@@ -4,17 +4,18 @@
 #pragma once
 
 #include "matter/component/group_vector.hpp"
+#include "matter/component/group_view.hpp"
 
 namespace matter
 {
 template<typename UnorderedTypedIds>
-struct group_vector_view
-{
-    static_assert(matter::is_unordered_typed_ids_v<UnorderedTypedIds>,
-                  "UnorderedTypedsIds is not of type unordered_typed_ids");
+struct group_vector_view;
 
+template<typename Id, typename... TIds>
+struct group_vector_view<matter::unordered_typed_ids<Id, TIds...>>
+{
 public:
-    using typed_ids_type = UnorderedTypedIds;
+    using typed_ids_type = matter::unordered_typed_ids<Id, TIds...>;
     using id_type        = typename typed_ids_type::id_type;
     using ordered_ids_type =
         decltype(matter::ordered_typed_ids{std::declval<typed_ids_type>()});
@@ -39,16 +40,19 @@ private:
         struct end_tag_
         {};
 
-        using value_type = std::
-            conditional_t<Const, const matter::id_erased, matter::id_erased>;
-        using reference         = value_type&;
-        using pointer           = value_type*;
+        using value_type =
+            std::conditional_t<Const,
+                               const group_view<typename TIds::type...>,
+                               group_view<typename TIds::type...>>;
+        using reference         = value_type;
+        using pointer           = void;
         using iterator_category = std::bidirectional_iterator_tag;
         using difference_type   = typename std::iterator_traits<
             group_vector_iterator_type>::difference_type;
 
     private:
         group_vector_iterator_type it_;
+        typed_ids_type             ids_;
         ordered_ids_type           ordered_ids_;
 
         group_vector_base_iterator_type begin_;
@@ -56,16 +60,18 @@ private:
 
     public:
         constexpr iterator_(group_vector_iterator_type it,
-                            const ordered_ids_type&    ids,
+                            const typed_ids_type&      ids,
                             const group_vector&        vec) noexcept
-            : it_{it}, ordered_ids_{ids}, begin_{vec.begin()}, end_{vec.end()}
+            : it_{it}, ids_{ids}, ordered_ids_{matter::ordered_typed_ids{ids_}},
+              begin_{vec.begin()}, end_{vec.end()}
         {}
 
         constexpr iterator_(begin_tag_,
-                            const ordered_ids_type& ids,
-                            const group_vector&     vec) noexcept
-            : it_{vec.begin()},
-              ordered_ids_{ids}, begin_{vec.begin()}, end_{vec.end()}
+                            const typed_ids_type& ids,
+                            const group_vector&   vec) noexcept
+            : it_{vec.begin()}, ids_{ids},
+              ordered_ids_{matter::ordered_typed_ids{ids_}},
+              begin_{vec.begin()}, end_{vec.end()}
         {
             while (!is_valid())
             {
@@ -74,10 +80,11 @@ private:
         }
 
         constexpr iterator_(begin_tag_,
-                            const ordered_ids_type& ids,
-                            group_vector&           vec) noexcept
-            : it_{vec.begin()},
-              ordered_ids_{ids}, begin_{vec.begin()}, end_{vec.end()}
+                            const typed_ids_type& ids,
+                            group_vector&         vec) noexcept
+            : it_{vec.begin()}, ids_{ids},
+              ordered_ids_{matter::ordered_typed_ids{ids_}},
+              begin_{vec.begin()}, end_{vec.end()}
         {
             while (!is_valid())
             {
@@ -86,21 +93,23 @@ private:
         }
 
         constexpr iterator_(end_tag_,
-                            const ordered_ids_type& ids,
-                            const group_vector&     vec) noexcept
-            : it_{vec.end()},
-              ordered_ids_{ids}, begin_{vec.begin()}, end_{vec.end()}
+                            const typed_ids_type& ids,
+                            const group_vector&   vec) noexcept
+            : it_{vec.end()}, ids_{ids}, ordered_ids_{matter::ordered_typed_ids{
+                                             ids_}},
+              begin_{vec.begin()}, end_{vec.end()}
         {}
 
         constexpr iterator_(end_tag_,
-                            const ordered_ids_type& ids,
-                            group_vector&           vec) noexcept
-            : it_{vec.end()},
-              ordered_ids_{ids}, begin_{vec.begin()}, end_{vec.end()}
+                            const typed_ids_type& ids,
+                            group_vector&         vec) noexcept
+            : it_{vec.end()}, ids_{ids}, ordered_ids_{matter::ordered_typed_ids{
+                                             ids_}},
+              begin_{vec.begin()}, end_{vec.end()}
         {}
 
         constexpr iterator_(const iterator_<false>& it) noexcept
-            : it_{it.it_},
+            : it_{it.it_}, ids_{it.ids_},
               ordered_ids_{it.ordered_ids_}, begin_{it.begin_}, end_{it.end_}
         {}
 
@@ -183,28 +192,22 @@ private:
 
         constexpr reference operator*() noexcept
         {
-            return *it_;
+            // bind the group to pass it to the constructor
+            auto grp = *it_;
+            return group_view{ids_, grp};
         }
 
-        constexpr const matter::id_erased& operator*() const noexcept
+        constexpr const group_view<typename TIds::type...> operator*() const
+            noexcept
         {
-            return *it_;
-        }
-
-        constexpr pointer operator->() noexcept
-        {
-            return it_.operator->();
-        }
-
-        constexpr const matter::id_erased* operator->() const noexcept
-        {
-            return it_.operator->();
+            auto grp = *it_;
+            return group_view{ids_, grp};
         }
 
     private:
         constexpr auto is_valid() const noexcept
         {
-            auto grp = const_any_group{*it_, it_.group_size()};
+            auto grp = *it_;
             return grp.contains(ordered_ids_);
         }
     };
@@ -231,14 +234,12 @@ public:
 
     constexpr iterator begin() noexcept
     {
-        return iterator{
-            typename iterator::begin_tag_{}, ordered_ids_, group_vec_};
+        return iterator{typename iterator::begin_tag_{}, ids_, group_vec_};
     }
 
     constexpr iterator end() noexcept
     {
-        return iterator{
-            typename iterator::end_tag_{}, ordered_ids_, group_vec_};
+        return iterator{typename iterator::end_tag_{}, ids_, group_vec_};
     }
 
     constexpr const_iterator begin() const noexcept
