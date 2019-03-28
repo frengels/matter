@@ -21,6 +21,20 @@ class component_identifier;
 template<typename Id, typename... Ts>
 class unordered_typed_ids;
 
+template<typename T, typename Id, typename = void>
+struct has_same_id_type : std::false_type
+{};
+
+template<typename T, typename Id>
+struct has_same_id_type<
+    T,
+    Id,
+    std::enable_if_t<std::is_same_v<typename T::id_type, Id>>> : std::true_type
+{};
+
+template<typename TId, typename Id>
+constexpr auto has_same_id_type_v = has_same_id_type<TId, Id>::value;
+
 template<typename T, typename = void>
 struct is_typed_id : std::false_type
 {};
@@ -52,17 +66,9 @@ struct is_typed_id<
             std::is_same_v<bool,
                            decltype(
                                std::declval<const typename TId::id_type>() >
-                               std::declval<const typename TId::id_type>())> &&
-            std::conditional_t<
-                TId::is_static,
-                std::is_constructible<
-                    TId,
-                    std::integral_constant<typename TId::id_type, 0>>,
-
-                std::is_constructible<TId, typename TId::id_type>>::value,
-        std::void_t<typename TId::id_type,
-                    typename TId::type,
-                    decltype(TId::is_static)>>> : std::true_type
+                               std::declval<const typename TId::id_type>())>,
+        std::void_t<typename TId::id_type, typename TId::type>>>
+    : std::true_type
 {};
 
 template<typename T>
@@ -74,18 +80,21 @@ struct static_id
     using id_type = Id;
     using type    = C;
 
-    static constexpr auto is_static = true;
-
 private:
     static constexpr auto value_ = Val;
 
 public:
-    constexpr static_id(std::integral_constant<Id, Val>) noexcept
+    constexpr static_id() noexcept
     {}
 
     constexpr auto value() const noexcept
     {
         return value_;
+    }
+
+    constexpr operator id_type() const noexcept
+    {
+        return value();
     }
 };
 
@@ -94,8 +103,6 @@ struct runtime_id
 {
     using id_type = Id;
     using type    = C;
-
-    static constexpr auto is_static = false;
 
 private:
     id_type value_;
@@ -108,216 +115,18 @@ public:
     {
         return value_;
     }
-};
-
-namespace detail
-{
-template<typename Id, Id Val>
-struct typed_id_empty
-{
-protected:
-    using id_type = Id;
-
-public:
-    constexpr typed_id_empty() noexcept = default;
-    constexpr typed_id_empty(id_type id) noexcept
-    {
-        (void) id;
-    }
-    constexpr typed_id_empty(std::integral_constant<id_type, Val>) noexcept
-    {}
-
-public:
-    static constexpr auto value() noexcept
-    {
-        return Val;
-    }
-};
-
-template<typename Id, Id Val>
-typed_id_empty(
-    std::integral_constant<Id, Val>) noexcept->typed_id_empty<Id, Val>;
-
-template<typename Id>
-struct typed_id_base
-{
-protected:
-    using id_type = Id;
-
-    id_type id_;
-
-public:
-    constexpr typed_id_base(id_type id) noexcept : id_{id}
-    {}
-
-public:
-    constexpr auto value() const noexcept
-    {
-        return id_;
-    }
-};
-} // namespace detail
-
-template<typename Id, typename C, Id Val>
-struct typed_id
-    : public std::conditional_t<Val == std::numeric_limits<Id>::max(),
-                                detail::typed_id_base<Id>,
-                                detail::typed_id_empty<Id, Val>>
-{
-    template<typename... Cs>
-    friend class component_identifier;
-
-    template<typename Id2, typename... Ts>
-    friend class unordered_typed_ids;
-
-    static constexpr auto _value = Val;
-
-    using _base_type = std::conditional_t<Val == std::numeric_limits<Id>::max(),
-                                          detail::typed_id_base<Id>,
-                                          detail::typed_id_empty<Id, Val>>;
-
-    static constexpr bool is_static = Val != std::numeric_limits<Id>::max();
-
-    using id_type = typename _base_type::id_type;
-    using type    = C;
-
-public:
-    using _base_type::_base_type;
-
-public:
-    constexpr typed_id(const typed_id& other) noexcept = default;
-    constexpr typed_id& operator=(const typed_id& other) noexcept = default;
-
-    constexpr bool operator==(const typed_id& other) const noexcept
-    {
-        (void) other;
-        return true;
-    }
-
-    constexpr bool operator!=(const typed_id& other) const noexcept
-    {
-        return !(*this == other);
-    }
-
-    template<typename UId, typename U, UId V>
-    constexpr bool operator==(const typed_id<UId, U, V>& other) const noexcept
-    {
-        (void) other;
-        return false;
-    }
-
-    template<typename UId, typename U, UId V>
-    constexpr bool operator!=(const typed_id<UId, U, V>& other) const noexcept
-    {
-        return !(*this == other);
-    }
-
-    template<typename U>
-    constexpr std::enable_if_t<
-        std::is_convertible_v<U, id_type> &&
-            !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>,
-                            typed_id<id_type, type, _value>>,
-        bool>
-    operator==(U&& id) const noexcept
-    {
-        return this->value() == static_cast<id_type>(std::forward<U>(id));
-    }
-
-    template<typename U>
-    friend constexpr std::enable_if_t<
-        std::is_convertible_v<U, id_type> &&
-            !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>,
-                            typed_id<id_type, type, _value>>,
-        bool>
-    operator==(U&& lhs, const typed_id& rhs) noexcept
-    {
-        return static_cast<id_type>(std::forward<U>(lhs)) == rhs.value();
-    }
-
-    template<typename U>
-    constexpr std::enable_if_t<
-        std::is_convertible_v<U, id_type> &&
-            !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>,
-                            typed_id<id_type, type, _value>>,
-        bool>
-    operator!=(U&& id) const noexcept
-    {
-        return !(*this == std::forward<U>(id));
-    }
-
-    template<typename U>
-    friend constexpr std::enable_if_t<
-        std::is_convertible_v<U, id_type> &&
-            !std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>,
-                            typed_id<id_type, type, _value>>,
-        bool>
-    operator!=(U&& lhs, const typed_id& rhs) noexcept
-    {
-        return !(std::forward<U>(lhs) == rhs);
-    }
 
     constexpr operator id_type() const noexcept
     {
-        return this->value();
+        return value();
     }
 };
 
 template<typename Id, typename... Ts>
 class ordered_typed_ids;
 
-namespace detail
-{
-template<typename Id, bool S, typename... Ts>
-struct unordered_typed_ids_base
-{
-    static_assert(!(Ts::is_static && ...),
-                  "All Ts... must be runtime typed_ids.");
-    // assume all Ts... are already valid `typed_id`, verification happens in
-    // the derived class
-
-    using id_type = Id;
-
-protected:
-    const std::tuple<Ts...> ids_;
-
-    constexpr unordered_typed_ids_base(Ts... tids) noexcept : ids_{tids...}
-    {}
-
-protected:
-    constexpr std::array<id_type, sizeof...(Ts)> as_array() const noexcept
-    {
-        return std::apply(
-            [](auto... tids) -> std::array<id_type, sizeof...(Ts)> {
-                return {tids.value()...};
-            },
-            ids_);
-    }
-};
-
 template<typename Id, typename... Ts>
-struct unordered_typed_ids_base<Id, true, Ts...>
-{
-    static_assert((Ts::is_static && ...),
-                  "All Ts... must be static typed_ids.");
-
-    using id_type = Id;
-
-protected:
-    constexpr unordered_typed_ids_base(Ts...) noexcept
-    {}
-
-protected:
-    static constexpr std::array<id_type, sizeof...(Ts)> as_array() noexcept
-    {
-        return {Ts::value()...};
-    }
-};
-} // namespace detail
-
-template<typename Id, typename... Ts>
-class unordered_typed_ids
-    : public detail::
-          unordered_typed_ids_base<Id, (Ts::is_static && ...), Ts...> {
+class unordered_typed_ids {
     static_assert(sizeof...(Ts) >= 1, "Must hold at least one typed_id.");
     static_assert((is_typed_id_v<Ts> && ...),
                   "All Ts... must be of type 'typed_id'.");
@@ -328,17 +137,14 @@ class unordered_typed_ids
 
     static constexpr auto _size = sizeof...(Ts);
 
-    using _base_type =
-        detail::unordered_typed_ids_base<Id, (Ts::is_static && ...), Ts...>;
+public:
+    using id_type = Id;
+
+private:
+    std::tuple<Ts...> ids_;
 
 public:
-    static constexpr auto is_static = (Ts::is_static && ...);
-
-public:
-    using id_type = typename _base_type::id_type;
-
-public:
-    constexpr unordered_typed_ids(Ts... tids) noexcept : _base_type{tids...}
+    constexpr unordered_typed_ids(Ts... tids) noexcept : ids_{tids...}
     {}
 
     static constexpr auto size() noexcept
@@ -361,15 +167,13 @@ public:
     constexpr auto get() const noexcept
     {
         static_assert(I < size(), "I is out of bounds.");
-        using return_type = detail::nth_t<I, Ts...>;
-        if constexpr (return_type::is_static)
-        {
-            return return_type{return_type::value()};
-        }
-        else
-        {
-            return return_type{std::get<I>(this->ids_)};
-        }
+        return std::get<I>(this->ids_);
+    }
+
+    constexpr auto as_array() const noexcept
+    {
+        return std::apply(
+            [](auto... ids) { return std::array{ids.value()...}; }, ids_);
     }
 };
 
@@ -390,19 +194,6 @@ template<typename T>
 static constexpr auto is_unordered_typed_ids_v =
     is_unordered_typed_ids<T>::value;
 
-namespace detail
-{
-/// we can't directly sort constexpr objects, so use this function to sort it
-/// instead.
-template<typename T, std::size_t N>
-constexpr std::array<T, N> sort_workaround(const std::array<T, N>& arr) noexcept
-{
-    auto sorted = arr;
-    matter::static_sort(sorted);
-    return sorted;
-}
-} // namespace detail
-
 template<typename Id, typename... Ts>
 class ordered_typed_ids {
     static_assert(sizeof...(Ts) >= 1, "Must hold at least one typed_id.");
@@ -416,8 +207,6 @@ public:
 
     static constexpr auto _size = sizeof...(Ts);
 
-    static constexpr auto is_static = (Ts::is_static && ...);
-
 private:
     const std::array<Id, _size> ordered_ids_;
 
@@ -429,20 +218,12 @@ public:
               {
                   return {types...};
               }
-              else if constexpr ((Ts::is_static && ...))
-              {
-                  // guarantee evaluation at compile time
-                  constexpr std::array arr{Ts::value()...};
-                  constexpr auto       sorted = detail::sort_workaround(arr);
-                  static_assert(
-                      matter::is_sorted(sorted.begin(), sorted.end()));
-                  return sorted;
-              }
               else
               {
                   // runtime sorting for runtime typed_ids
                   std::array arr{types.value()...};
-                  return detail::sort_workaround(arr);
+                  matter::static_sort(arr);
+                  return arr;
               }
           }()}
     {}
@@ -450,25 +231,16 @@ public:
     constexpr ordered_typed_ids(
         const unordered_typed_ids<id_type, Ts...>& ids) noexcept
         : ordered_ids_{[&]() -> std::array<id_type, _size> {
-              using unordered_type = unordered_typed_ids<id_type, Ts...>;
               if constexpr (size() == 1)
               {
                   // single element case doesn't require sorting
                   return {ids.template get<0>()};
               }
-              else if constexpr (unordered_type::is_static)
-              {
-                  // guarantee consteval
-                  constexpr auto arr    = unordered_type::as_array();
-                  constexpr auto sorted = detail::sort_workaround(arr);
-                  static_assert(
-                      matter::is_sorted(sorted.begin(), sorted.end()));
-                  return sorted;
-              }
               else
               { // peasant runtime variables
                   auto arr = ids.as_array();
-                  return detail::sort_workaround(arr);
+                  matter::static_sort(arr);
+                  return arr;
               }
           }()}
     {}

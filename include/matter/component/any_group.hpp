@@ -348,9 +348,11 @@ public:
         return size_;
     }
 
-    template<typename C, id_type V>
-    constexpr bool contains(const typed_id<id_type, C, V>& id) const noexcept
+    template<typename TId>
+    constexpr std::enable_if_t<matter::is_typed_id_v<TId>, bool>
+    contains(const TId& id) const noexcept
     {
+        static_assert(matter::has_same_id_type_v<TId, id_type>);
         auto* ptr = find_id(id);
         return ptr == end() ? false : true;
     }
@@ -368,24 +370,30 @@ public:
         return *this == other;
     }
 
-    template<typename C, id_type V>
-    constexpr matter::component_storage_t<C>&
-    storage(const typed_id<id_type, C, V>& id) noexcept
+    template<typename TId>
+    constexpr std::enable_if_t<matter::is_typed_id_v<TId> &&
+                                   matter::has_same_id_type_v<TId, id_type>,
+                               matter::component_storage_t<typename TId::type>&>
+    storage(const TId& id) noexcept
     {
         assert(contains(id));
 
         auto ptr = find_id(id);
-        return ptr->template get<matter::component_storage_t<C>>();
+        return ptr
+            ->template get<matter::component_storage_t<typename TId::type>>();
     }
 
-    template<typename C, id_type V>
-    const matter::component_storage_t<C>&
-    storage(const typed_id<id_type, C, V>& id) const noexcept
+    template<typename TId>
+    constexpr std::enable_if_t<
+        matter::is_typed_id_v<TId> && matter::has_same_id_type_v<TId, id_type>,
+        const matter::component_storage_t<typename TId::type>&>
+    storage(const TId& id) const noexcept
     {
         assert(contains(id));
 
         auto ptr = find_id(id);
-        return ptr->template get<matter::component_storage_t<C>>();
+        return ptr
+            ->template get<matter::component_storage_t<typename TId::type>>();
     }
 
     template<typename... Ts>
@@ -425,9 +433,11 @@ private:
         return std::is_sorted(ptr_, ptr_ + size_);
     }
 
-    template<typename C, id_type V>
-    matter::id_erased* find_id(const typed_id<id_type, C, V>& id) noexcept
+    template<typename TId>
+    constexpr std::enable_if_t<matter::is_typed_id_v<TId>, matter::id_erased*>
+    find_id(const TId& id) noexcept
     {
+        static_assert(matter::has_same_id_type_v<TId, id_type>);
         auto it = std::lower_bound(begin(), end(), id);
 
         if (it == end() || it->id() != id)
@@ -438,10 +448,12 @@ private:
         return it;
     }
 
-    template<typename C, id_type V>
-    const matter::id_erased* find_id(const typed_id<id_type, C, V>& id) const
-        noexcept
+    template<typename TId>
+    constexpr std::enable_if_t<matter::is_typed_id_v<TId>,
+                               const matter::id_erased*>
+    find_id(const TId& id) const noexcept
     {
+        static_assert(matter::has_same_id_type_v<TId, id_type>);
         auto it = std::lower_bound(begin(), end(), id);
 
         if (it == end() || it->id() != id)

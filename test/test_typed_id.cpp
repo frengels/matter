@@ -4,11 +4,10 @@
 #include "matter/component/typed_id.hpp"
 
 template<typename T, std::size_t Id = 0>
-using static_typed_id = matter::typed_id<std::size_t, T, Id>;
+using static_typed_id = matter::static_id<std::size_t, T, Id>;
 
 template<typename T>
-using runtime_typed_id =
-    matter::typed_id<std::size_t, T, std::numeric_limits<std::size_t>::max()>;
+using runtime_typed_id = matter::runtime_id<std::size_t, T>;
 
 TEST_CASE("typed_id")
 {
@@ -17,10 +16,6 @@ TEST_CASE("typed_id")
         // do typed_ids get identified correctly
         static_assert(matter::is_typed_id_v<static_typed_id<int>>);
         static_assert(matter::is_typed_id_v<runtime_typed_id<int>>);
-
-        // is static and runtime correct
-        static_assert(static_typed_id<float>::is_static);
-        static_assert(!runtime_typed_id<float>::is_static);
     }
 
     SECTION("contains")
