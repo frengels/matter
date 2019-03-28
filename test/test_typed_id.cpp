@@ -19,8 +19,8 @@ TEST_CASE("typed_id")
         static_assert(matter::is_typed_id_v<runtime_typed_id<int>>);
 
         // is static and runtime correct
-        static_assert(static_typed_id<float>::is_static());
-        static_assert(!runtime_typed_id<float>::is_static());
+        static_assert(static_typed_id<float>::is_static);
+        static_assert(!runtime_typed_id<float>::is_static);
     }
 
     SECTION("contains")
