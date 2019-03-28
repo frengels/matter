@@ -36,11 +36,9 @@ private:
             typename std::vector<matter::id_erased>::iterator>;
 
         using value_type =
-            typename std::iterator_traits<vector_iterator_type>::value_type;
-        using pointer =
-            typename std::iterator_traits<vector_iterator_type>::pointer;
-        using reference =
-            typename std::iterator_traits<vector_iterator_type>::reference;
+            std::conditional_t<Const, const_any_group, any_group>;
+        using reference         = value_type;
+        using pointer           = void;
         using iterator_category = typename std::iterator_traits<
             vector_iterator_type>::iterator_category;
         using difference_type = typename std::iterator_traits<
@@ -147,24 +145,14 @@ private:
             return (it_ - other.it_) / size_;
         }
 
-        matter::id_erased* operator->() noexcept
+        reference operator*() noexcept
         {
-            return it_.operator->();
+            return {*it_, size_};
         }
 
-        const matter::id_erased* operator->() const noexcept
+        const_any_group operator*() const noexcept
         {
-            return it_.operator->();
-        }
-
-        matter::id_erased& operator*() noexcept
-        {
-            return *it_;
-        }
-
-        const matter::id_erased& operator*() const noexcept
-        {
-            return *it_;
+            return {*it_, size_};
         }
     };
 
@@ -270,7 +258,7 @@ public:
         auto insertion_point = lower_bound(ordered_ids);
 
         auto inserted_at = emplace_at(insertion_point, ids);
-        auto grp         = any_group{std::addressof(*inserted_at), size_};
+        auto grp         = *inserted_at;
         return group{ids, grp};
     }
 
@@ -287,7 +275,7 @@ public:
             return it;
         }
 
-        auto grp = const_any_group{*it, group_size()};
+        auto grp = *it;
         return grp == ids ? it : end();
     }
 
@@ -308,7 +296,7 @@ public:
             return it;
         }
 
-        auto grp = const_any_group{*it, group_size()};
+        auto grp = *it;
         return grp == ids ? it : end();
     }
 
@@ -324,7 +312,7 @@ public:
             return {};
         }
 
-        auto grp = any_group{*it, group_size()};
+        auto grp = *it;
         return group{ids, grp};
     }
 
@@ -349,8 +337,7 @@ public:
         {
             return emplace_at(it, unordered_ids);
         }
-        else if (auto grp = const_any_group{*it, group_size()};
-                 !grp.contains(ordered_ids))
+        else if (auto grp = *it; !grp.contains(ordered_ids))
         {
             return emplace_at(it, unordered_ids);
         }
@@ -374,7 +361,7 @@ public:
         const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
     {
         auto it = find_emplace(unordered_ids, ordered_ids);
-        return any_group{*it, group_size()};
+        return *it;
     }
 
     template<typename... TIds>
@@ -417,7 +404,7 @@ private:
         assert(([&]() {
             if (pos != end())
             {
-                auto grp = const_any_group{*pos, size_};
+                auto grp = *pos;
                 return !grp.contains(matter::ordered_typed_ids{unordered_ids});
             }
             return true;
@@ -442,28 +429,14 @@ private:
     lower_bound(const matter::ordered_typed_ids<id_type, TIds...>& ids) const
         noexcept
     {
-        return std::lower_bound(
-            begin(),
-            end(),
-            ids,
-            [size = group_size()](const auto& erased, const auto& ids) {
-                auto grp = const_any_group{erased, size};
-                return grp < ids;
-            });
+        return std::lower_bound(begin(), end(), ids);
     }
 
     template<typename... TIds>
     iterator
     lower_bound(const matter::ordered_typed_ids<id_type, TIds...>& ids) noexcept
     {
-        return std::lower_bound(
-            begin(),
-            end(),
-            ids,
-            [size = group_size()](const auto& erased, const auto& ids) {
-                auto grp = const_any_group{erased, size};
-                return grp < ids;
-            });
+        return std::lower_bound(begin(), end(), ids);
     }
 };
 } // namespace matter

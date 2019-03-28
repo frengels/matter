@@ -19,8 +19,8 @@ public:
     {
         using difference_type   = int;
         using value_type        = component_view<Cs...>;
-        using pointer           = component_view<Cs...>;
         using reference         = component_view<Cs...>;
+        using pointer           = void;
         using iterator_category = std::random_access_iterator_tag;
 
     private:

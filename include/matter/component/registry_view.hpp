@@ -50,10 +50,7 @@ public:
                     view.begin(),
                     view.end(),
                     [f = std::move(f), size = grp_vec.group_size(), ids](
-                        auto& erased) {
-                        auto grp      = any_group{erased, size};
-                        auto grp_view = matter::group_view{ids, grp};
-
+                        auto grp_view) {
                         std::for_each(grp_view.begin(),
                                       grp_view.end(),
                                       [f = std::move(f)](auto comp_view) {
