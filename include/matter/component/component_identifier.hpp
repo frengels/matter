@@ -161,7 +161,7 @@ private:
             "This component id should be retrieved using runtime_id() instead");
         constexpr auto res =
             detail::type_index<Component, Components...>().value();
-        return typed_id<id_type, Component, res>{res};
+        return matter::static_id<id_type, Component, res>{};
     }
 
     template<typename Component>
@@ -181,9 +181,7 @@ private:
                 std::in_place_type_t<Component>{}};
         }
 
-        return typed_id<id_type,
-                        Component,
-                        std::numeric_limits<id_type>::max()>{it->second};
+        return matter::runtime_id<id_type, Component>{it->second};
     }
 };
 } // namespace matter
