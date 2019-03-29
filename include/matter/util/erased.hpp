@@ -73,16 +73,26 @@ public:
         }
     }
 
+    constexpr void* get_void() noexcept
+    {
+        return obj_;
+    }
+
+    constexpr const void* get_void() const noexcept
+    {
+        return obj_;
+    }
+
     template<typename T>
     constexpr T& get() noexcept
     {
-        return *static_cast<T*>(obj_);
+        return *static_cast<T*>(get_void());
     }
 
     template<typename T>
     constexpr const T& get() const noexcept
     {
-        return *static_cast<T*>(obj_);
+        return *static_cast<T*>(get_void());
     }
 
     friend void swap(erased& lhs, erased& rhs) noexcept;
