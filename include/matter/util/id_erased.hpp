@@ -52,6 +52,16 @@ public:
         erased_.clear();
     }
 
+    constexpr void* get_void() noexcept
+    {
+        return erased_.get_void();
+    }
+
+    constexpr const void* get_void() const noexcept
+    {
+        return erased_.get_void();
+    }
+
     template<typename T>
     constexpr T& get() noexcept
     {
@@ -66,12 +76,12 @@ public:
 
     constexpr bool operator==(const id_erased& other) const noexcept
     {
-        return id_ == other.id_;
+        return id_ == other.id_ && get_void() == other.get_void();
     }
 
     constexpr bool operator!=(const id_erased& other) const noexcept
     {
-        return id_ != other.id_;
+        return !(*this == other);
     }
 
     constexpr bool operator<(const id_erased& other) const noexcept
@@ -125,61 +135,48 @@ public:
     }
 
     friend constexpr bool operator==(id_type          id,
-                                     const id_erased& erased) noexcept;
+                                     const id_erased& erased) noexcept
+    {
+        return id == erased.id_;
+    }
+
     friend constexpr bool operator!=(id_type          id,
-                                     const id_erased& erased) noexcept;
+                                     const id_erased& erased) noexcept
+    {
+        return id != erased.id_;
+    }
+
     friend constexpr bool operator<(id_type          id,
-                                    const id_erased& erased) noexcept;
+                                    const id_erased& erased) noexcept
+    {
+        return id < erased.id_;
+    }
+
     friend constexpr bool operator>(id_type          id,
-                                    const id_erased& erased) noexcept;
+                                    const id_erased& erased) noexcept
+    {
+        return id > erased.id_;
+    }
+
     friend constexpr bool operator<=(id_type          id,
-                                     const id_erased& erased) noexcept;
+                                     const id_erased& erased) noexcept
+    {
+        return id <= erased.id_;
+    }
+
     friend constexpr bool operator>=(id_type          id,
-                                     const id_erased& erased) noexcept;
-    friend void           swap(id_erased& lhs, id_erased& rhs) noexcept;
+                                     const id_erased& erased) noexcept
+    {
+        return id >= erased.id_;
+    }
+
+    friend void swap(id_erased& lhs, id_erased& rhs) noexcept
+    {
+        using std::swap;
+        swap(lhs.id_, rhs.id_);
+        swap(lhs.erased_, rhs.erased_);
+    }
 };
-constexpr bool operator==(id_erased::id_type id,
-                          const id_erased&   erased) noexcept
-{
-    return id == erased.id_;
-}
-
-constexpr bool operator!=(id_erased::id_type id,
-                          const id_erased&   erased) noexcept
-{
-    return id != erased.id_;
-}
-
-constexpr bool operator<(id_erased::id_type id,
-                         const id_erased&   erased) noexcept
-{
-    return id < erased.id_;
-}
-
-constexpr bool operator>(id_erased::id_type id,
-                         const id_erased&   erased) noexcept
-{
-    return id > erased.id_;
-}
-
-constexpr bool operator<=(id_erased::id_type id,
-                          const id_erased&   erased) noexcept
-{
-    return id <= erased.id_;
-}
-
-constexpr bool operator>=(id_erased::id_type id,
-                          const id_erased&   erased) noexcept
-{
-    return id >= erased.id_;
-}
-
-void swap(id_erased& lhs, id_erased& rhs) noexcept
-{
-    using std::swap;
-    swap(lhs.id_, rhs.id_);
-    swap(lhs.erased_, rhs.erased_);
-}
 } // namespace matter
 
 #endif

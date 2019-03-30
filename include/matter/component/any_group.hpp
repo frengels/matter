@@ -5,7 +5,7 @@
 
 #include "matter/component/traits.hpp"
 #include "matter/component/typed_id.hpp"
-#include "matter/util/id_erased.hpp"
+#include "matter/storage/erased_storage.hpp"
 
 namespace matter
 {
@@ -13,27 +13,29 @@ namespace detail
 {
 /// \brief a group describes the containers for a tuple of components
 /// A group is a lightweight construct which represents a slice of a
-/// `group_vector`, the `id_erased` contained in the group represent a container
-/// for components identified by the `id` within `id_erased`.
+/// `group_vector`, the `erased_storage` contained in the group represent a
+/// container for components identified by the `id` within `erased_storage`.
 template<bool Const = false>
 class any_group {
 private:
     static constexpr auto is_const = Const;
 
-    using erased_type = std::
-        conditional_t<is_const, const matter::id_erased*, matter::id_erased*>;
-    using erased_type_ref = std::
-        conditional_t<is_const, const matter::id_erased&, matter::id_erased&>;
+    using erased_type     = std::conditional_t<is_const,
+                                           const matter::erased_storage*,
+                                           matter::erased_storage*>;
+    using erased_type_ref = std::conditional_t<is_const,
+                                               const matter::erased_storage&,
+                                               matter::erased_storage&>;
 
     template<bool _Const>
     friend class any_group;
 
 public:
-    using id_type = typename matter::id_erased::id_type;
+    using id_type = typename matter::erased_storage::id_type;
 
-    using const_iterator = const matter::id_erased*;
+    using const_iterator = const matter::erased_storage*;
     using iterator =
-        std::conditional_t<is_const, const_iterator, matter::id_erased*>;
+        std::conditional_t<is_const, const_iterator, matter::erased_storage*>;
 
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
     using reverse_iterator       = std::reverse_iterator<iterator>;
@@ -122,7 +124,7 @@ public:
         return ptr_;
     }
 
-    constexpr const matter::id_erased* data() const noexcept
+    constexpr const matter::erased_storage* data() const noexcept
     {
         return ptr_;
     }
@@ -379,8 +381,7 @@ public:
         assert(contains(id));
 
         auto ptr = find_id(id);
-        return ptr
-            ->template get<matter::component_storage_t<typename TId::type>>();
+        return ptr->template get<typename TId::type>();
     }
 
     template<typename TId>
@@ -392,8 +393,7 @@ public:
         assert(contains(id));
 
         auto ptr = find_id(id);
-        return ptr
-            ->template get<matter::component_storage_t<typename TId::type>>();
+        return ptr->template get<typename TId::type>();
     }
 
     template<typename... Ts>
@@ -426,7 +426,7 @@ public:
 private:
     /// \brief elements in a group must always be sorted
     /// this function is a precondition for most operations to ensure all
-    /// `id_erased` are always sorted, this is required for `std::includes`
+    /// `erased_storage` are always sorted, this is required for `std::includes`
     /// and to efficiently check whether ids are contained within this group
     bool is_sorted() const noexcept
     {
@@ -434,7 +434,8 @@ private:
     }
 
     template<typename TId>
-    constexpr std::enable_if_t<matter::is_typed_id_v<TId>, matter::id_erased*>
+    constexpr std::enable_if_t<matter::is_typed_id_v<TId>,
+                               matter::erased_storage*>
     find_id(const TId& id) noexcept
     {
         static_assert(matter::has_same_id_type_v<TId, id_type>);
@@ -450,7 +451,7 @@ private:
 
     template<typename TId>
     constexpr std::enable_if_t<matter::is_typed_id_v<TId>,
-                               const matter::id_erased*>
+                               const matter::erased_storage*>
     find_id(const TId& id) const noexcept
     {
         static_assert(matter::has_same_id_type_v<TId, id_type>);

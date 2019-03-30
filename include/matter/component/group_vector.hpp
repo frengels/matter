@@ -9,7 +9,7 @@
 
 #include "matter/component/group.hpp"
 #include "matter/component/typed_id.hpp"
-#include "matter/util/id_erased.hpp"
+#include "matter/storage/erased_storage.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
@@ -32,8 +32,8 @@ private:
 
         using vector_iterator_type = std::conditional_t<
             Const,
-            typename std::vector<matter::id_erased>::const_iterator,
-            typename std::vector<matter::id_erased>::iterator>;
+            typename std::vector<matter::erased_storage>::const_iterator,
+            typename std::vector<matter::erased_storage>::iterator>;
 
         using value_type =
             std::conditional_t<Const, const_any_group, any_group>;
@@ -157,7 +157,7 @@ private:
     };
 
 public:
-    using id_type = typename matter::id_erased::id_type;
+    using id_type = typename matter::erased_storage::id_type;
 
     using const_iterator = iterator_<true>;
     using iterator       = iterator_<false>;
@@ -167,8 +167,8 @@ public:
 
 private:
     /// the number of components each group stores
-    const std::size_t              size_;
-    std::vector<matter::id_erased> groups_{};
+    const std::size_t                   size_;
+    std::vector<matter::erased_storage> groups_{};
 
 public:
     explicit group_vector(std::size_t size) : size_{size}
@@ -410,10 +410,8 @@ private:
             return true;
         }()));
 
-        std::array<matter::id_erased, sizeof...(TIds)> stores{matter::id_erased{
-            unordered_ids.template get<TIds>(),
-            std::in_place_type_t<
-                matter::component_storage_t<typename TIds::type>>{}}...};
+        std::array<matter::erased_storage, sizeof...(TIds)> stores{
+            matter::erased_storage{unordered_ids.template get<TIds>()}...};
 
         auto inserted_at =
             groups_.insert(pos.it_,
