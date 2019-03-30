@@ -2,7 +2,23 @@
 
 #include <string>
 
+#include "matter/component/component_identifier.hpp"
+#include "matter/storage/erased_storage.hpp"
 #include "matter/util/erased.hpp"
+
+struct int_comp
+{
+    int i;
+    constexpr int_comp(int i) : i{i}
+    {}
+};
+
+struct float_comp
+{
+    float f;
+    constexpr float_comp(float f) : f{f}
+    {}
+};
 
 struct our_test
 {
@@ -81,5 +97,51 @@ TEST_CASE("erased")
         CHECK(er_move_con.empty());
 
         CHECK(er.get<std::string>().compare("hello world") == 0);
+    }
+}
+
+TEST_CASE("erased_storage")
+{
+    matter::component_identifier<> ident;
+    ident.register_type<int_comp>();
+    ident.register_type<float_comp>();
+
+    matter::erased_storage store{ident.id<int_comp>()};
+
+    SECTION("push back")
+    {
+        int_comp icomp1{50};
+
+        store.push_back(
+            matter::erased_component{ident.id<int_comp>().value(), &icomp1});
+
+        auto  er_comp    = store[0];
+        auto& icomp1_ref = *static_cast<int_comp*>(er_comp.get());
+        // check insertion went well
+        CHECK(icomp1_ref.i == 50);
+
+        int_comp icomp2{42};
+
+        store.push_back(
+            matter::erased_component{ident.id<int_comp>().value(), &icomp2});
+
+        er_comp                = store[0];
+        auto& icomp1_ref_again = *static_cast<int_comp*>(er_comp.get());
+        // check it's still at first position
+        CHECK(icomp1_ref_again.i == 50);
+
+        er_comp          = store[1];
+        auto& icomp2_ref = *static_cast<int_comp*>(er_comp.get());
+        // check icomp2 was copied inserted correctly
+        CHECK(icomp2_ref.i == 42);
+
+        SECTION("erase")
+        {
+            store.erase(0);
+
+            er_comp                = store[0];
+            auto& icomp2_ref_again = *static_cast<int_comp*>(er_comp.get());
+            CHECK(icomp2_ref_again.i == 42);
+        }
     }
 }
