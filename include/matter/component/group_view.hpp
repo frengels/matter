@@ -5,6 +5,7 @@
 
 #include "matter/component/component_view.hpp"
 #include "matter/component/group.hpp"
+#include "matter/util/iterator.hpp"
 
 namespace matter
 {
@@ -26,7 +27,7 @@ public:
     private:
         template<typename C>
         using storage_iterator_type =
-            typename matter::component_storage_t<C>::iterator;
+            matter::iterator_t<typename matter::component_storage_t<C>>;
 
     private:
         std::tuple<storage_iterator_type<Cs>...> its_;
