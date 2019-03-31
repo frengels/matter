@@ -37,6 +37,10 @@ TEST_CASE("group_vector")
         {
             SECTION("group_vector size 1")
             {
+                auto start = grpvec1.begin();
+                auto end   = grpvec1.end();
+                CHECK((end - start) == 4);
+
                 // all the emplaced stores should be correctly sorted now
                 auto it = grpvec1.begin();
                 CHECK((*it).contains(ident.id<int>()));
@@ -52,6 +56,11 @@ TEST_CASE("group_vector")
 
             SECTION("group_vector size 2")
             {
+                // check for sizedrange
+                auto start = grpvec2.begin();
+                auto end   = grpvec2.end();
+                CHECK((end - start) == 2);
+
                 auto                    it  = grpvec2.begin();
                 matter::const_any_group grp = *it;
                 CHECK(grp == ident.ordered_ids<float, int>());
@@ -64,6 +73,10 @@ TEST_CASE("group_vector")
 
             SECTION("group_vector size 3")
             {
+                auto start = grpvec3.begin();
+                auto end   = grpvec3.end();
+                CHECK((end - start) == 3);
+
                 auto                    it = grpvec3.begin();
                 matter::const_any_group grp{*it};
                 CHECK(grp == ident.ordered_ids<int, float, short>());
@@ -99,6 +112,11 @@ TEST_CASE("group_vector")
         {
             SECTION("group_vector size 1")
             {
+                auto start = grpvec1.rbegin();
+                auto end   = grpvec1.rend();
+                CHECK((end - start) == 4);
+                CHECK(grpvec1.size() == 4);
+
                 auto rit = grpvec1.rbegin();
                 CHECK((*rit).contains(ident.id<char>()));
                 ++rit;
@@ -113,6 +131,11 @@ TEST_CASE("group_vector")
 
             SECTION("group_vector size 2")
             {
+                auto start = grpvec2.rbegin();
+                auto end   = grpvec2.rend();
+                CHECK((end - start) == 2);
+                CHECK(grpvec2.size() == 2);
+
                 auto                    it = grpvec2.rbegin();
                 matter::const_any_group grp{*it};
                 CHECK(grp == ident.ordered_ids<short, char>());
@@ -125,6 +148,11 @@ TEST_CASE("group_vector")
 
             SECTION("group_vector size 3")
             {
+                auto start = grpvec3.rbegin();
+                auto end   = grpvec3.rend();
+                CHECK((end - start) == 3);
+                CHECK(grpvec3.size() == 3);
+
                 auto                    it = grpvec3.rbegin();
                 matter::const_any_group grp{*it};
                 CHECK(grp == ident.ordered_ids<float, short, char>());
@@ -171,6 +199,7 @@ TEST_CASE("group_vector")
                 ++it;
                 find_grp_it =
                     grpvec3.find(ident.ordered_ids<short, char, float>());
+                CHECK(it != grp_view.end());
 
                 // CHECK(*find_grp_it == *it);
 
@@ -182,20 +211,12 @@ TEST_CASE("group_vector")
             {
                 auto grp_view =
                     matter::group_vector_view{ident.ids<int>(), grpvec3};
-                auto find_grp_it =
-                    grpvec3.find(ident.ordered_ids<int, short, char>());
-                CHECK(find_grp_it != grpvec3.end());
-                auto view_it = grp_view.rbegin();
+                auto view_it = grp_view.rbegin(); // int, short, char
 
-                // CHECK(*find_grp_it == *view_it);
+                ++view_it; // float, int, short
+                CHECK(view_it != grp_view.rend());
 
-                ++view_it;
-                find_grp_it =
-                    grpvec3.find(ident.ordered_ids<int, float, short>());
-
-                // CHECK(*find_grp_it == *view_it);
-
-                ++view_it;
+                ++view_it; // 1 past the end
                 CHECK(view_it == grp_view.rend());
             }
         }
