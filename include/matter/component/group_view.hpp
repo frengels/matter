@@ -119,6 +119,77 @@ public:
                 [](auto... its) { return component_view<Cs...>{*its...}; },
                 its_);
         }
+
+        template<std::size_t N>
+        constexpr auto get() const noexcept
+        {
+            return std::get<N>(its_);
+        }
+
+        template<typename C>
+        constexpr auto get() const noexcept
+        {
+            return std::get<storage_iterator_type<C>>(its_);
+        }
+    };
+
+    struct sentinel
+    {
+    private:
+#ifdef NDEBUG
+        using sentinel_type = matter::sentinel_t<
+            matter::component_storage_t<detail::nth_t<0, Cs...>>>;
+#else
+        using sentinel_type =
+            std::tuple<matter::sentinel_t<matter::component_storage_t<Cs>>...>;
+#endif
+
+    private:
+        sentinel_type sents_;
+
+    public:
+        template<typename... S>
+        constexpr sentinel(S&&... sents) noexcept
+            :
+#ifdef NDEBUG
+              sents_
+        {
+            std::get<0>(std::make_tuple(std::forward<S>(sents)...))
+        }
+#else
+              sents_
+        {
+            std::forward<S>(sents)...
+        }
+#endif
+        {}
+
+        constexpr bool operator==(const iterator& it) const noexcept
+        {
+#ifndef NDEBUG
+            if (it.template get<0>() ==
+                std::get<matter::sentinel_t<
+                    matter::component_storage_t<detail::nth_t<0, Cs...>>>>(
+                    sents_))
+            {
+                assert(
+                    ((it.template get<Cs>() ==
+                      std::get<
+                          matter::sentinel_t<matter::component_storage_t<Cs>>>(
+                          sents_)) &&
+                     ...));
+                return true;
+            }
+            return false;
+#else
+            return it.template get<0>() == sents_;
+#endif
+        }
+
+        constexpr bool operator!=(const iterator& it) const noexcept
+        {
+            return !(*this == it);
+        }
     };
 
 private:
@@ -213,10 +284,10 @@ public:
             stores_);
     }
 
-    constexpr iterator end() noexcept
+    constexpr auto end() noexcept
     {
         return std::apply(
-            [](auto... stores) { return iterator{stores.get().end()...}; },
+            [](auto&&... stores) { return sentinel{stores.get().end()...}; },
             stores_);
     }
 

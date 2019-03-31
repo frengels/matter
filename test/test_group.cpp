@@ -222,7 +222,7 @@ TEST_CASE("group_vector")
             auto view = matter::group_view{grp};
 
             auto i = 0;
-            std::for_each(view.begin(), view.end(), [&](auto comp_view) {
+            matter::for_each(view.begin(), view.end(), [&](auto comp_view) {
                 auto [fcomp, icomp, scomp] = comp_view;
                 CHECK(fcomp == i);
                 CHECK(icomp == i);
