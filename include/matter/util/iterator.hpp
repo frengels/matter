@@ -30,6 +30,9 @@ using reverse_sentinel_t = decltype(std::declval<T>().rend());
 
 template<typename T>
 using const_reverse_sentinel_t = decltype(std::declval<T>().crend());
+
+template<typename Iter>
+using iter_reference_t = decltype(*std::declval<Iter>());
 } // namespace matter
 
 #endif
