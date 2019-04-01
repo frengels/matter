@@ -6,6 +6,7 @@
 #include "matter/component/component_view.hpp"
 #include "matter/component/group.hpp"
 #include "matter/util/iterator.hpp"
+#include "matter/util/traits.hpp"
 
 namespace matter
 {
@@ -27,7 +28,7 @@ public:
     private:
         template<typename C>
         using storage_iterator_type =
-            matter::iterator_t<typename matter::component_storage_t<C>>;
+            matter::iterator_t<matter::component_storage_t<C>>;
 
     private:
         std::tuple<storage_iterator_type<Cs>...> its_;
@@ -49,14 +50,14 @@ public:
 
         constexpr iterator& operator+=(int movement) noexcept
         {
-            std::apply([movement](auto&... its) { ((its += movement), ...); },
+            std::apply([movement](auto&&... its) { ((its += movement), ...); },
                        its_);
             return *this;
         }
 
         constexpr iterator& operator-=(int movement) noexcept
         {
-            std::apply([movement](auto&... its) { ((its -= movement), ...); },
+            std::apply([movement](auto&&... its) { ((its -= movement), ...); },
                        its_);
             return *this;
         }
@@ -82,7 +83,7 @@ public:
 
         constexpr iterator& operator++() noexcept
         {
-            std::apply([](auto&... its) { (++its, ...); }, its_);
+            std::apply([](auto&&... its) { (++its, ...); }, its_);
             return *this;
         }
 
@@ -95,7 +96,7 @@ public:
 
         constexpr iterator& operator--() noexcept
         {
-            std::apply([](auto&... its) { (--its, ...); }, its_);
+            std::apply([](auto&&... its) { (--its, ...); }, its_);
             return *this;
         }
 
@@ -109,14 +110,14 @@ public:
         constexpr component_view<Cs...> operator*() noexcept
         {
             return std::apply(
-                [](auto... its) { return component_view<Cs...>{*its...}; },
+                [](auto&&... its) { return component_view<Cs...>{*its...}; },
                 its_);
         }
 
         constexpr const component_view<Cs...> operator*() const noexcept
         {
             return std::apply(
-                [](auto... its) { return component_view<Cs...>{*its...}; },
+                [](auto&&... its) { return component_view<Cs...>{*its...}; },
                 its_);
         }
 
@@ -136,59 +137,67 @@ public:
     struct sentinel
     {
     private:
-#ifdef NDEBUG
-        using sentinel_type = matter::sentinel_t<
-            matter::component_storage_t<detail::nth_t<0, Cs...>>>;
-#else
-        using sentinel_type =
-            std::tuple<matter::sentinel_t<matter::component_storage_t<Cs>>...>;
-#endif
+        template<typename C>
+        using storage_sentinel_type =
+            matter::sentinel_t<matter::component_storage_t<C>>;
 
     private:
-        sentinel_type sents_;
+        storage_sentinel_type<detail::nth_t<0, Cs...>> sent_;
 
     public:
-        template<typename... S>
-        constexpr sentinel(S&&... sents) noexcept
-            :
-#ifdef NDEBUG
-              sents_
-        {
-            std::get<0>(std::make_tuple(std::forward<S>(sents)...))
-        }
-#else
-              sents_
-        {
-            std::forward<S>(sents)...
-        }
-#endif
+        sentinel() noexcept : sent_{}
         {}
 
-        constexpr bool operator==(const iterator& it) const noexcept
+        sentinel(storage_sentinel_type<Cs>... sents) noexcept
+            : sent_{std::get<0>(std::make_tuple(sents...))}
+        {}
+
+        constexpr auto operator==(const iterator& it) const noexcept
         {
-#ifndef NDEBUG
-            if (it.template get<0>() ==
-                std::get<matter::sentinel_t<
-                    matter::component_storage_t<detail::nth_t<0, Cs...>>>>(
-                    sents_))
-            {
-                assert(
-                    ((it.template get<Cs>() ==
-                      std::get<
-                          matter::sentinel_t<matter::component_storage_t<Cs>>>(
-                          sents_)) &&
-                     ...));
-                return true;
-            }
-            return false;
-#else
-            return it.template get<0>() == sents_;
-#endif
+            return sent_ == it.template get<0>();
         }
 
-        constexpr bool operator!=(const iterator& it) const noexcept
+        constexpr auto operator!=(const iterator& it) const noexcept
         {
             return !(*this == it);
+        }
+
+        constexpr auto
+        operator==(const std::reverse_iterator<iterator>& it) const noexcept
+        {
+            return sent_ == it.base().template get<0>();
+        }
+
+        constexpr auto
+        operator!=(const std::reverse_iterator<iterator>& it) const noexcept
+        {
+            return !(*this == it);
+        }
+
+        constexpr friend auto operator==(const iterator& it,
+                                         const sentinel& sent) noexcept
+        {
+            return sent == it;
+        }
+
+        constexpr friend auto operator!=(const iterator& it,
+                                         const sentinel& sent) noexcept
+        {
+            return !(sent == it);
+        }
+
+        constexpr friend auto
+        operator==(const std::reverse_iterator<iterator>& rit,
+                   const sentinel&                        sent) noexcept
+        {
+            return sent == rit;
+        }
+
+        constexpr friend auto
+        operator!=(const std::reverse_iterator<iterator>& rit,
+                   const sentinel&                        sent) noexcept
+        {
+            return !(sent == rit);
         }
     };
 
@@ -279,16 +288,12 @@ public:
 
     constexpr iterator begin() noexcept
     {
-        return std::apply(
-            [](auto... stores) { return iterator{stores.get().begin()...}; },
-            stores_);
+        return iterator{get<Cs>().begin()...};
     }
 
     constexpr auto end() noexcept
     {
-        return std::apply(
-            [](auto&&... stores) { return sentinel{stores.get().end()...}; },
-            stores_);
+        return sentinel{get<Cs>().end()...};
     }
 
     constexpr auto size() const noexcept
