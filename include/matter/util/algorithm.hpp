@@ -160,11 +160,14 @@ constexpr auto distance(Iterator first, Sentinel last) noexcept
 template<typename ForwardIt,
          typename Sentinel,
          typename T,
-         typename Compare = std::less<T>>
-constexpr ForwardIt upper_bound(ForwardIt first,
-                                Sentinel  last,
-                                const T&  value,
-                                Compare   comp = std::less<T>{}) noexcept
+         typename Compare =
+             matter::less<T, std::decay_t<matter::iter_reference_t<ForwardIt>>>>
+constexpr ForwardIt upper_bound(
+    ForwardIt first,
+    Sentinel  last,
+    const T&  value,
+    Compare   comp = matter::
+        less<T, std::decay_t<matter::iter_reference_t<ForwardIt>>>{}) noexcept
 {
     auto it    = first;
     auto count = matter::distance(first, last);
@@ -192,20 +195,20 @@ constexpr ForwardIt upper_bound(ForwardIt first,
 template<typename ForwardIt,
          typename Sentinel,
          typename T,
-         typename Compare = std::less<T>>
+         typename Compare =
+             matter::less<std::decay_t<matter::iter_reference_t<ForwardIt>>, T>>
 constexpr ForwardIt lower_bound(ForwardIt first,
                                 Sentinel  last,
                                 const T&  value,
-                                Compare   comp = std::less<T>{}) noexcept
+                                Compare   comp = Compare{}) noexcept
 {
-    ForwardIt it;
-    auto      count = matter::distance(first, last);
-    auto      step  = count / 2;
+    auto count = matter::distance(first, last);
+    auto step  = count / 2;
 
     while (count > 0)
     {
-        it   = first;
-        step = count / 2;
+        auto it = first;
+        step    = count / 2;
         std::advance(it, step);
         if (comp(*it, value))
         {
@@ -221,8 +224,8 @@ constexpr ForwardIt lower_bound(ForwardIt first,
     return first;
 }
 
-template<typename ForwardIt>
-constexpr void insertion_sort(ForwardIt begin, ForwardIt last) noexcept
+template<typename ForwardIt, typename Sentinel>
+constexpr void insertion_sort(ForwardIt begin, Sentinel last) noexcept
 {
     for (auto it = begin; it != last; ++it)
     {
