@@ -5,6 +5,8 @@
 
 #include "matter/component/component_view.hpp"
 #include "matter/component/group.hpp"
+#include "matter/util/iterator.hpp"
+#include "matter/util/traits.hpp"
 
 namespace matter
 {
@@ -26,7 +28,7 @@ public:
     private:
         template<typename C>
         using storage_iterator_type =
-            typename matter::component_storage_t<C>::iterator;
+            matter::iterator_t<matter::component_storage_t<C>>;
 
     private:
         std::tuple<storage_iterator_type<Cs>...> its_;
@@ -48,14 +50,14 @@ public:
 
         constexpr iterator& operator+=(int movement) noexcept
         {
-            std::apply([movement](auto&... its) { ((its += movement), ...); },
+            std::apply([movement](auto&&... its) { ((its += movement), ...); },
                        its_);
             return *this;
         }
 
         constexpr iterator& operator-=(int movement) noexcept
         {
-            std::apply([movement](auto&... its) { ((its -= movement), ...); },
+            std::apply([movement](auto&&... its) { ((its -= movement), ...); },
                        its_);
             return *this;
         }
@@ -81,7 +83,7 @@ public:
 
         constexpr iterator& operator++() noexcept
         {
-            std::apply([](auto&... its) { (++its, ...); }, its_);
+            std::apply([](auto&&... its) { (++its, ...); }, its_);
             return *this;
         }
 
@@ -94,7 +96,7 @@ public:
 
         constexpr iterator& operator--() noexcept
         {
-            std::apply([](auto&... its) { (--its, ...); }, its_);
+            std::apply([](auto&&... its) { (--its, ...); }, its_);
             return *this;
         }
 
@@ -108,15 +110,94 @@ public:
         constexpr component_view<Cs...> operator*() noexcept
         {
             return std::apply(
-                [](auto... its) { return component_view<Cs...>{*its...}; },
+                [](auto&&... its) { return component_view<Cs...>{*its...}; },
                 its_);
         }
 
         constexpr const component_view<Cs...> operator*() const noexcept
         {
             return std::apply(
-                [](auto... its) { return component_view<Cs...>{*its...}; },
+                [](auto&&... its) { return component_view<Cs...>{*its...}; },
                 its_);
+        }
+
+        template<std::size_t N>
+        constexpr auto get() const noexcept
+        {
+            return std::get<N>(its_);
+        }
+
+        template<typename C>
+        constexpr auto get() const noexcept
+        {
+            return std::get<storage_iterator_type<C>>(its_);
+        }
+    };
+
+    struct sentinel
+    {
+    private:
+        template<typename C>
+        using storage_sentinel_type =
+            matter::sentinel_t<matter::component_storage_t<C>>;
+
+    private:
+        storage_sentinel_type<detail::nth_t<0, Cs...>> sent_;
+
+    public:
+        sentinel() noexcept : sent_{}
+        {}
+
+        sentinel(storage_sentinel_type<Cs>... sents) noexcept
+            : sent_{std::get<0>(std::make_tuple(sents...))}
+        {}
+
+        constexpr auto operator==(const iterator& it) const noexcept
+        {
+            return sent_ == it.template get<0>();
+        }
+
+        constexpr auto operator!=(const iterator& it) const noexcept
+        {
+            return !(*this == it);
+        }
+
+        constexpr auto
+        operator==(const std::reverse_iterator<iterator>& it) const noexcept
+        {
+            return sent_ == it.base().template get<0>();
+        }
+
+        constexpr auto
+        operator!=(const std::reverse_iterator<iterator>& it) const noexcept
+        {
+            return !(*this == it);
+        }
+
+        constexpr friend auto operator==(const iterator& it,
+                                         const sentinel& sent) noexcept
+        {
+            return sent == it;
+        }
+
+        constexpr friend auto operator!=(const iterator& it,
+                                         const sentinel& sent) noexcept
+        {
+            return !(sent == it);
+        }
+
+        constexpr friend auto
+        operator==(const std::reverse_iterator<iterator>& rit,
+                   const sentinel&                        sent) noexcept
+        {
+            return sent == rit;
+        }
+
+        constexpr friend auto
+        operator!=(const std::reverse_iterator<iterator>& rit,
+                   const sentinel&                        sent) noexcept
+        {
+            return !(sent == rit);
         }
     };
 
@@ -207,16 +288,12 @@ public:
 
     constexpr iterator begin() noexcept
     {
-        return std::apply(
-            [](auto... stores) { return iterator{stores.get().begin()...}; },
-            stores_);
+        return iterator{get<Cs>().begin()...};
     }
 
-    constexpr iterator end() noexcept
+    constexpr auto end() noexcept
     {
-        return std::apply(
-            [](auto... stores) { return iterator{stores.get().end()...}; },
-            stores_);
+        return sentinel{get<Cs>().end()...};
     }
 
     constexpr auto size() const noexcept

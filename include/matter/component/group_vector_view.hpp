@@ -5,6 +5,7 @@
 
 #include "matter/component/group_vector.hpp"
 #include "matter/component/group_view.hpp"
+#include "matter/util/iterator.hpp"
 
 namespace matter
 {
@@ -20,30 +21,18 @@ public:
     using ordered_ids_type =
         decltype(matter::ordered_typed_ids{std::declval<typed_ids_type>()});
 
-private:
-    template<bool Const>
-    struct iterator_
+    struct iterator
     {
     private:
-        using group_vector_iterator_type =
-            std::conditional_t<Const,
-                               typename group_vector::const_iterator,
-                               typename group_vector::iterator>;
-        using group_vector_base_iterator_type = std::conditional_t<
-            Const,
-            typename group_vector::const_iterator::vector_iterator_type,
-            typename group_vector::iterator::vector_iterator_type>;
+        using group_vector_iterator_type = matter::iterator_t<group_vector>;
+
+        using group_vector_base_iterator_type =
+            decltype(std::declval<group_vector_iterator_type>().base());
+
+        using group_vector_sentinel_type = matter::sentinel_t<group_vector>;
 
     public:
-        struct begin_tag_
-        {};
-        struct end_tag_
-        {};
-
-        using value_type =
-            std::conditional_t<Const,
-                               const group_view<typename TIds::type...>,
-                               group_view<typename TIds::type...>>;
+        using value_type        = group_view<typename TIds::type...>;
         using reference         = value_type;
         using pointer           = void;
         using iterator_category = std::bidirectional_iterator_tag;
@@ -56,78 +45,40 @@ private:
         ordered_ids_type           ordered_ids_;
 
         group_vector_base_iterator_type begin_;
-        group_vector_base_iterator_type end_;
+        group_vector_sentinel_type      end_;
 
     public:
-        constexpr iterator_(group_vector_iterator_type it,
-                            const typed_ids_type&      ids,
-                            const group_vector&        vec) noexcept
-            : it_{it}, ids_{ids}, ordered_ids_{matter::ordered_typed_ids{ids_}},
-              begin_{vec.begin()}, end_{vec.end()}
-        {}
-
-        constexpr iterator_(begin_tag_,
-                            const typed_ids_type& ids,
-                            const group_vector&   vec) noexcept
-            : it_{vec.begin()}, ids_{ids},
-              ordered_ids_{matter::ordered_typed_ids{ids_}},
-              begin_{vec.begin()}, end_{vec.end()}
+        constexpr iterator(const typed_ids_type&      ids,
+                           const ordered_ids_type&    ordered_ids,
+                           group_vector_iterator_type it,
+                           group_vector_sentinel_type range_end) noexcept
+            : it_{it}, ids_{ids},
+              ordered_ids_{ordered_ids}, begin_{it_.base()}, end_{range_end}
         {
-            while (!is_valid())
+            if (!is_valid_end())
             {
-                ++it_;
+                ++(*this);
             }
         }
 
-        constexpr iterator_(begin_tag_,
-                            const typed_ids_type& ids,
-                            group_vector&         vec) noexcept
-            : it_{vec.begin()}, ids_{ids},
-              ordered_ids_{matter::ordered_typed_ids{ids_}},
-              begin_{vec.begin()}, end_{vec.end()}
+        constexpr auto base() const noexcept
         {
-            while (!is_valid())
-            {
-                ++it_;
-            }
+            return it_;
         }
-
-        constexpr iterator_(end_tag_,
-                            const typed_ids_type& ids,
-                            const group_vector&   vec) noexcept
-            : it_{vec.end()}, ids_{ids}, ordered_ids_{matter::ordered_typed_ids{
-                                             ids_}},
-              begin_{vec.begin()}, end_{vec.end()}
-        {}
-
-        constexpr iterator_(end_tag_,
-                            const typed_ids_type& ids,
-                            group_vector&         vec) noexcept
-            : it_{vec.end()}, ids_{ids}, ordered_ids_{matter::ordered_typed_ids{
-                                             ids_}},
-              begin_{vec.begin()}, end_{vec.end()}
-        {}
-
-        constexpr iterator_(const iterator_<false>& it) noexcept
-            : it_{it.it_}, ids_{it.ids_},
-              ordered_ids_{it.ordered_ids_}, begin_{it.begin_}, end_{it.end_}
-        {}
 
         constexpr auto group_size() const noexcept
         {
-            return it_.group_size();
+            return base().group_size();
         }
 
-        template<bool _Const>
-        constexpr auto operator==(const iterator_<_Const>& other) const noexcept
+        constexpr auto operator==(const iterator& other) const noexcept
         {
             // other checks can be omitted because they're impossible to be
             // unequal if this is equal
-            return it_ == other.it_;
+            return base() == other.base();
         }
 
-        template<bool _Const>
-        constexpr auto operator!=(const iterator_<_Const>& other) const noexcept
+        constexpr auto operator!=(const iterator& other) const noexcept
         {
             return !(*this == other);
         }
@@ -135,7 +86,7 @@ private:
         constexpr auto operator==(const group_vector_iterator_type& other) const
             noexcept
         {
-            return it_ == other;
+            return base() == other;
         }
 
         constexpr auto operator!=(const group_vector_iterator_type& other) const
@@ -145,78 +96,295 @@ private:
         }
 
         constexpr friend auto operator==(const group_vector_iterator_type& lhs,
-                                         const iterator_& rhs) noexcept
+                                         const iterator& rhs) noexcept
         {
             return rhs == lhs;
         }
 
         constexpr friend auto operator!=(const group_vector_iterator_type& lhs,
-                                         const iterator_& rhs) noexcept
+                                         const iterator& rhs) noexcept
         {
             return !(lhs == rhs);
         }
 
-        constexpr iterator_& operator++() noexcept
+        constexpr iterator& operator++() noexcept
         {
             do
             {
                 ++it_;
-            } while (it_ != end_ && !is_valid());
+            } while (!is_valid_end());
 
             return *this;
         }
 
-        constexpr iterator_& operator--() noexcept
+        constexpr iterator& operator--() noexcept
         {
             do
             {
                 --it_;
-            } while (it_ != begin_ && !is_valid());
+            } while (!is_valid_begin());
 
             return *this;
         }
 
-        constexpr iterator_ operator++(int) noexcept
+        constexpr iterator operator++(int) noexcept
         {
             auto tmp = *this;
             ++(*this);
             return tmp;
         }
 
-        constexpr iterator_ operator--(int) noexcept
+        constexpr iterator operator--(int) noexcept
         {
             auto tmp = *this;
             --(*this);
             return tmp;
         }
 
-        constexpr reference operator*() noexcept
+        constexpr reference operator*() const noexcept
         {
-            // bind the group to pass it to the constructor
+            assert(is_valid());
             auto grp = *it_;
             return group_view{ids_, grp};
         }
 
-        constexpr const group_view<typename TIds::type...> operator*() const
-            noexcept
+        constexpr auto is_end() const noexcept
         {
-            auto grp = *it_;
-            return group_view{ids_, grp};
+            return it_ == end_;
         }
 
-    private:
+        constexpr auto is_begin() const noexcept
+        {
+            return it_ == begin_;
+        }
+
         constexpr auto is_valid() const noexcept
         {
-            auto grp = *it_;
-            return grp.contains(ordered_ids_);
+            return (*it_).contains(ordered_ids_);
+        }
+
+        constexpr auto is_valid_end() const noexcept
+        {
+            return is_end() || is_valid();
+        }
+
+        constexpr auto is_valid_begin() const noexcept
+        {
+            return is_begin() || is_valid();
         }
     };
 
-public:
-    using iterator               = iterator_<false>;
-    using const_iterator         = iterator_<true>;
-    using reverse_iterator       = std::reverse_iterator<iterator>;
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    struct reverse_iterator
+    {
+    private:
+        using group_vector_reverse_iterator_type =
+            matter::reverse_iterator_t<group_vector>;
+
+        using group_vector_base_reverse_iterator_type =
+            decltype(std::declval<group_vector_reverse_iterator_type>().base());
+
+        using group_vector_reverse_sentinel_type =
+            matter::reverse_sentinel_t<group_vector>;
+
+    public:
+        using value_type        = group_view<typename TIds::type...>;
+        using reference         = value_type;
+        using pointer           = void;
+        using iterator_category = std::bidirectional_iterator_tag;
+        using difference_type   = typename std::iterator_traits<
+            group_vector_reverse_iterator_type>::difference_type;
+
+    private:
+        group_vector_reverse_iterator_type it_;
+        typed_ids_type                     ids_;
+        ordered_ids_type                   ordered_ids_;
+
+        group_vector_base_reverse_iterator_type begin_;
+        group_vector_reverse_sentinel_type      end_;
+
+    public:
+        constexpr reverse_iterator(
+            const typed_ids_type&              ids,
+            const ordered_ids_type&            ordered_ids,
+            group_vector_reverse_iterator_type it,
+            group_vector_reverse_sentinel_type range_end) noexcept
+            : it_{it}, ids_{ids},
+              ordered_ids_{ordered_ids}, begin_{it_.base()}, end_{range_end}
+        {
+            if (!is_valid_end())
+            {
+                ++(*this);
+            }
+        }
+
+        constexpr auto base() const noexcept
+        {
+            return it_;
+        }
+
+        constexpr auto group_size() const noexcept
+        {
+            return base().group_size();
+        }
+
+        constexpr auto operator==(const reverse_iterator& other) const noexcept
+        {
+            return base() == other.base();
+        }
+
+        constexpr auto operator!=(const reverse_iterator& other) const noexcept
+        {
+            return !(*this == other);
+        }
+
+        constexpr auto
+        operator==(const group_vector_reverse_iterator_type& other) const
+            noexcept
+        {
+            return base() == other;
+        }
+
+        constexpr auto
+        operator!=(const group_vector_reverse_iterator_type other) const
+            noexcept
+        {
+            return !(*this == other);
+        }
+
+        constexpr friend auto
+        operator==(const group_vector_reverse_iterator_type& lhs,
+                   const reverse_iterator&                   rhs) noexcept
+        {
+            return rhs == lhs;
+        }
+
+        constexpr friend auto
+        operator!=(const group_vector_reverse_iterator_type& lhs,
+                   const reverse_iterator&                   rhs) noexcept
+        {
+            return !(lhs == rhs);
+        }
+
+        constexpr reverse_iterator& operator++() noexcept
+        {
+            do
+            {
+                ++it_;
+            } while (!is_valid_end());
+
+            return *this;
+        }
+
+        constexpr reverse_iterator& operator--() noexcept
+        {
+            do
+            {
+                --it_;
+            } while (!is_valid_begin());
+
+            return *this;
+        }
+
+        constexpr reverse_iterator operator++(int) noexcept
+        {
+            auto tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        constexpr reverse_iterator operator--(int) noexcept
+        {
+            auto tmp = *this;
+            --(*this);
+            return tmp;
+        }
+
+        constexpr reference operator*() const noexcept
+        {
+            assert(is_valid());
+            auto grp = *it_;
+            return group_view{ids_, grp};
+        }
+
+        constexpr auto is_end() const noexcept
+        {
+            return it_ == end_;
+        }
+
+        constexpr auto is_begin() const noexcept
+        {
+            return it_ == begin_;
+        }
+
+        constexpr auto is_valid() const noexcept
+        {
+            return (*it_).contains(ordered_ids_);
+        }
+
+        constexpr auto is_valid_begin() const noexcept
+        {
+            return is_begin() || is_valid();
+        }
+
+        constexpr auto is_valid_end() const noexcept
+        {
+            return is_end() || is_valid();
+        }
+    };
+
+    struct sentinel
+    {
+        constexpr sentinel() noexcept = default;
+
+        constexpr auto operator==(const iterator& it) const noexcept
+        {
+            return it.is_end();
+        }
+
+        constexpr friend auto operator==(const iterator& it,
+                                         const sentinel& sent) noexcept
+        {
+            return sent == it;
+        }
+
+        constexpr auto operator!=(const iterator& it) const noexcept
+        {
+            return !(*this == it);
+        }
+
+        constexpr friend auto operator!=(const iterator& it,
+                                         const sentinel& sent) noexcept
+        {
+            return !(it == sent);
+        }
+    };
+
+    struct reverse_sentinel
+    {
+        constexpr reverse_sentinel() noexcept = default;
+
+        constexpr auto operator==(const reverse_iterator& rit) const noexcept
+        {
+            return rit.is_end();
+        }
+
+        constexpr friend auto operator==(const reverse_iterator& rit,
+                                         const reverse_sentinel& sent) noexcept
+        {
+            return sent == rit;
+        }
+
+        constexpr auto operator!=(const reverse_iterator& rit) const noexcept
+        {
+            return !(*this == rit);
+        }
+
+        constexpr friend auto operator!=(const reverse_iterator& rit,
+                                         const reverse_sentinel& sent) noexcept
+        {
+            return sent != rit;
+        }
+    };
 
 private:
     typed_ids_type                       ids_;
@@ -234,62 +402,28 @@ public:
 
     constexpr iterator begin() noexcept
     {
-        return iterator{typename iterator::begin_tag_{}, ids_, group_vec_};
+        return iterator{ids_,
+                        ordered_ids_,
+                        group_vec_.get().begin(),
+                        group_vec_.get().end()};
     }
 
-    constexpr iterator end() noexcept
+    constexpr auto end() const noexcept
     {
-        return iterator{typename iterator::end_tag_{}, ids_, group_vec_};
-    }
-
-    constexpr const_iterator begin() const noexcept
-    {
-        return begin();
-    }
-
-    constexpr const_iterator end() const noexcept
-    {
-        return end();
-    }
-
-    constexpr const_iterator cbegin() const noexcept
-    {
-        return begin();
-    }
-
-    constexpr const_iterator cend() const noexcept
-    {
-        return end();
+        return sentinel{};
     }
 
     constexpr reverse_iterator rbegin() noexcept
     {
-        return reverse_iterator{end()};
+        return reverse_iterator{ids_,
+                                ordered_ids_,
+                                group_vec_.get().rbegin(),
+                                group_vec_.get().rend()};
     }
 
-    constexpr reverse_iterator rend() noexcept
+    constexpr auto rend() const noexcept
     {
-        return reverse_iterator{begin()};
-    }
-
-    constexpr const_reverse_iterator rbegin() const noexcept
-    {
-        return const_reverse_iterator{end()};
-    }
-
-    constexpr const_reverse_iterator rend() const noexcept
-    {
-        return const_reverse_iterator{begin()};
-    }
-
-    constexpr const_reverse_iterator crbegin() const noexcept
-    {
-        return const_reverse_iterator{cend()};
-    }
-
-    constexpr const_reverse_iterator crend() const noexcept
-    {
-        return const_reverse_iterator{cbegin()};
+        return reverse_sentinel{};
     }
 };
 

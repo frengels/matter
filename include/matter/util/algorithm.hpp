@@ -8,8 +8,45 @@
 #include <iterator>
 #include <utility>
 
+#include "matter/util/iterator.hpp"
+#include "matter/util/traits.hpp"
+
 namespace matter
 {
+
+template<typename T, typename U = T>
+struct less
+{
+    constexpr less() noexcept = default;
+
+    constexpr bool operator()(const T& lhs, const U& rhs) const
+    {
+        return lhs < rhs;
+    }
+};
+
+template<typename T, typename U = T>
+struct greater
+{
+    constexpr greater() noexcept = default;
+
+    constexpr bool operator()(const T& lhs, const U& rhs) const
+    {
+        return lhs > rhs;
+    }
+};
+
+template<typename ForwardIt, typename Sentinel, typename UnaryFunction>
+constexpr void
+for_each(ForwardIt first, Sentinel last, UnaryFunction f) noexcept(
+    std::is_nothrow_invocable_v<UnaryFunction, typename ForwardIt::reference>)
+{
+    for (; last != first; ++first)
+    {
+        f(*first);
+    }
+}
+
 namespace detail
 {
 // used to have constexpr property until c++20
@@ -100,19 +137,41 @@ rotate(ForwardIt first, ForwardIt n_first, ForwardIt last) noexcept
     return write;
 }
 
-template<typename ForwardIt, typename T, typename Compare = std::less<T>>
-constexpr ForwardIt upper_bound(ForwardIt first,
-                                ForwardIt last,
-                                const T&  value,
-                                Compare   comp = std::less<T>{}) noexcept
+template<typename Iterator, typename Sentinel>
+constexpr auto distance(Iterator first, Sentinel last) noexcept
 {
-    ForwardIt                                                 it = first;
-    typename std::iterator_traits<ForwardIt>::difference_type count =
-                                                                  std::distance(
-                                                                      first,
-                                                                      last),
-                                                              step = count / 2;
-    count = std::distance(first, last);
+    if constexpr (matter::is_sized_v<Iterator, Sentinel>)
+    {
+        return last - first;
+    }
+    else
+    {
+        auto dist = 0;
+        while (first != last)
+        {
+            ++first;
+            ++dist;
+        }
+
+        return dist;
+    }
+}
+
+template<typename ForwardIt,
+         typename Sentinel,
+         typename T,
+         typename Compare =
+             matter::less<T, std::decay_t<matter::iter_reference_t<ForwardIt>>>>
+constexpr ForwardIt upper_bound(
+    ForwardIt first,
+    Sentinel  last,
+    const T&  value,
+    Compare   comp = matter::
+        less<T, std::decay_t<matter::iter_reference_t<ForwardIt>>>{}) noexcept
+{
+    auto it    = first;
+    auto count = matter::distance(first, last);
+    auto step  = count / 2;
 
     while (count > 0)
     {
@@ -133,8 +192,40 @@ constexpr ForwardIt upper_bound(ForwardIt first,
     return first;
 }
 
-template<typename ForwardIt>
-constexpr void insertion_sort(ForwardIt begin, ForwardIt last) noexcept
+template<typename ForwardIt,
+         typename Sentinel,
+         typename T,
+         typename Compare =
+             matter::less<std::decay_t<matter::iter_reference_t<ForwardIt>>, T>>
+constexpr ForwardIt lower_bound(ForwardIt first,
+                                Sentinel  last,
+                                const T&  value,
+                                Compare   comp = Compare{}) noexcept
+{
+    auto count = matter::distance(first, last);
+    auto step  = count / 2;
+
+    while (count > 0)
+    {
+        auto it = first;
+        step    = count / 2;
+        std::advance(it, step);
+        if (comp(*it, value))
+        {
+            first = ++it;
+            count -= step + 1;
+        }
+        else
+        {
+            count = step;
+        }
+    }
+
+    return first;
+}
+
+template<typename ForwardIt, typename Sentinel>
+constexpr void insertion_sort(ForwardIt begin, Sentinel last) noexcept
 {
     for (auto it = begin; it != last; ++it)
     {

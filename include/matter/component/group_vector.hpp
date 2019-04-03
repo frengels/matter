@@ -10,6 +10,7 @@
 #include "matter/component/group.hpp"
 #include "matter/component/typed_id.hpp"
 #include "matter/storage/erased_storage.hpp"
+#include "matter/util/iterator.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
@@ -25,18 +26,13 @@ private:
     template<typename UnorderedTypedIds>
     friend struct group_vector_view;
 
-    template<bool Const>
-    class iterator_ {
-    public:
-        friend class group_vector;
+public:
+    struct iterator
+    {
+        using vector_iterator_type =
+            matter::iterator_t<std::vector<matter::erased_storage>>;
 
-        using vector_iterator_type = std::conditional_t<
-            Const,
-            typename std::vector<matter::erased_storage>::const_iterator,
-            typename std::vector<matter::erased_storage>::iterator>;
-
-        using value_type =
-            std::conditional_t<Const, const_any_group, any_group>;
+        using value_type        = any_group;
         using reference         = value_type;
         using pointer           = void;
         using iterator_category = typename std::iterator_traits<
@@ -48,30 +44,31 @@ private:
         vector_iterator_type it_;
         std::size_t          size_;
 
-    private:
-        constexpr iterator_(vector_iterator_type it, std::size_t size)
+    public:
+        iterator() noexcept = default;
+
+        constexpr iterator(vector_iterator_type it, std::size_t size) noexcept
             : it_{it}, size_{size}
         {}
 
-    public:
+        auto base() const noexcept
+        {
+            return it_;
+        }
+
         auto group_size() const noexcept
         {
             return size_;
         }
 
-        constexpr operator vector_iterator_type() const noexcept
-        {
-            return it_;
-        }
-
-        bool operator==(const iterator_& other) const noexcept
+        bool operator==(const iterator& other) const noexcept
         {
             // it's impossible to iterate with a different size on the same
             // iterator so disregard checking for equality there
             return it_ == other.it_;
         }
 
-        bool operator!=(const iterator_& other) const noexcept
+        bool operator!=(const iterator& other) const noexcept
         {
             return !(*this == other);
         }
@@ -86,84 +83,555 @@ private:
             return !(*this == it);
         }
 
-        iterator_& operator++() noexcept
+        iterator& operator++() noexcept
         {
             it_ += size_;
             return *this;
         }
 
-        iterator_& operator--() noexcept
+        iterator& operator--() noexcept
         {
             it_ -= size_;
             return *this;
         }
 
-        iterator_ operator++(int) noexcept
+        iterator operator++(int) noexcept
         {
             auto tmp = *this;
             ++(*this);
             return tmp;
         }
 
-        iterator_ operator--(int) noexcept
+        iterator operator--(int) noexcept
         {
             auto tmp = *this;
             --(*this);
             return tmp;
         }
 
-        iterator_& operator+=(ssize_t movement) noexcept
+        iterator& operator+=(difference_type movement) noexcept
         {
             it_ += (movement * size_);
             return *this;
         }
 
-        iterator_& operator-=(ssize_t movement) noexcept
+        iterator& operator-=(difference_type movement) noexcept
         {
             it_ -= (movement * size_);
             return *this;
         }
 
-        iterator_ operator+(ssize_t movement) const noexcept
+        iterator operator+(difference_type movement) const noexcept
         {
             auto r = *this;
             r += movement;
             return r;
         }
 
-        iterator_ operator-(ssize_t movement) const noexcept
+        iterator operator-(difference_type movement) const noexcept
         {
             auto r = *this;
             r -= movement;
             return r;
         }
 
-        difference_type operator-(const iterator_& other) const noexcept
+        difference_type operator-(const iterator& other) const noexcept
         {
             assert(size_ == other.size_);
             assert((it_ - other.it_) % size_ == 0);
             return (it_ - other.it_) / size_;
         }
 
-        reference operator*() noexcept
-        {
-            return {*it_, size_};
-        }
-
-        const_any_group operator*() const noexcept
+        reference operator*() const noexcept
         {
             return {*it_, size_};
         }
     };
 
+    struct const_iterator
+    {
+        using vector_const_iterator_type =
+            matter::const_iterator_t<std::vector<matter::erased_storage>>;
+
+        using value_type        = const_any_group;
+        using reference         = value_type;
+        using pointer           = void;
+        using iterator_category = typename std::iterator_traits<
+            vector_const_iterator_type>::iterator_category;
+        using difference_type = typename std::iterator_traits<
+            vector_const_iterator_type>::difference_type;
+
+    private:
+        vector_const_iterator_type it_;
+        std::size_t                size_;
+
+    public:
+        const_iterator() noexcept = default;
+
+        constexpr const_iterator(vector_const_iterator_type it,
+                                 std::size_t                size) noexcept
+            : it_{it}, size_{size}
+        {}
+
+        const_iterator(const iterator& it) noexcept
+            : it_{it.base()}, size_{it.group_size()}
+        {}
+
+        const_iterator& operator=(const iterator& it) noexcept
+        {
+            it_   = it.base();
+            size_ = it.group_size();
+
+            return *this;
+        }
+
+        auto base() const noexcept
+        {
+            return it_;
+        }
+
+        auto group_size() const noexcept
+        {
+            return size_;
+        }
+
+        auto operator==(const const_iterator& other) const noexcept
+        {
+            return base() == other.base();
+        }
+
+        friend auto operator==(const iterator&       lhs,
+                               const const_iterator& rhs) noexcept
+        {
+            return lhs.base() == rhs.base();
+        }
+
+        auto operator!=(const const_iterator& other) const noexcept
+        {
+            return !(*this == other);
+        }
+
+        friend auto operator!=(const iterator&       lhs,
+                               const const_iterator& rhs) noexcept
+        {
+            return lhs.base() != rhs.base();
+        }
+
+        const_iterator& operator++() noexcept
+        {
+            it_ += size_;
+            return *this;
+        }
+
+        const_iterator& operator--() noexcept
+        {
+            it_ -= size_;
+            return *this;
+        }
+
+        const_iterator operator++(int) noexcept
+        {
+            auto tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        const_iterator operator--(int) noexcept
+        {
+            auto tmp = *this;
+            --(*this);
+            return tmp;
+        }
+
+        const_iterator& operator+=(difference_type movement) noexcept
+        {
+            it_ += (movement * size_);
+            return *this;
+        }
+
+        const_iterator& operator-=(difference_type movement) noexcept
+        {
+            it_ -= (movement * size_);
+            return *this;
+        }
+
+        const_iterator operator+(difference_type movement) const noexcept
+        {
+            auto r = *this;
+            r += movement;
+            return r;
+        }
+
+        const_iterator operator-(difference_type movement) const noexcept
+        {
+            auto r = *this;
+            r -= movement;
+            return r;
+        }
+
+        difference_type operator-(const const_iterator& other) const noexcept
+        {
+            assert(group_size() == other.group_size());
+            assert((base() - other.base()) % group_size() == 0);
+            return (base() - other.base()) / group_size();
+        }
+
+        reference operator*() const noexcept
+        {
+            return {*it_, size_};
+        }
+    };
+
+    struct reverse_iterator
+    {
+        using vector_reverse_iterator_type =
+            matter::reverse_iterator_t<std::vector<matter::erased_storage>>;
+
+        using value_type        = any_group;
+        using reference         = value_type;
+        using pointer           = void;
+        using iterator_category = typename std::iterator_traits<
+            vector_reverse_iterator_type>::iterator_category;
+        using difference_type = typename std::iterator_traits<
+            vector_reverse_iterator_type>::difference_type;
+
+    private:
+        vector_reverse_iterator_type it_;
+        std::size_t                  size_;
+
+    public:
+        reverse_iterator() = default;
+
+        constexpr reverse_iterator(vector_reverse_iterator_type it,
+                                   std::size_t                  size) noexcept
+            : it_{it}, size_{size}
+        {}
+
+        auto base() const noexcept
+        {
+            return it_;
+        }
+
+        auto group_size() const noexcept
+        {
+            return size_;
+        }
+
+        constexpr auto operator==(const reverse_iterator& other) const noexcept
+        {
+            return it_ == other.it_;
+        }
+
+        constexpr auto operator!=(const reverse_iterator& other) const noexcept
+        {
+            return !(*this == other);
+        }
+
+        constexpr auto operator==(const vector_reverse_iterator_type& it) const
+            noexcept
+        {
+            return it_ == it;
+        }
+
+        constexpr auto operator!=(const vector_reverse_iterator_type& it) const
+            noexcept
+        {
+            return !(*this == it);
+        }
+
+        reverse_iterator& operator++() noexcept
+        {
+            it_ += size_;
+            return *this;
+        }
+
+        reverse_iterator& operator--() noexcept
+        {
+            it_ -= size_;
+            return *this;
+        }
+
+        reverse_iterator operator++(int) noexcept
+        {
+            auto tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        reverse_iterator operator--(int) noexcept
+        {
+            auto tmp = *this;
+            --(*this);
+            return tmp;
+        }
+
+        reverse_iterator& operator+=(difference_type movement) noexcept
+        {
+            it_ += (movement * size_);
+            return *this;
+        }
+
+        reverse_iterator& operator-=(difference_type movement) noexcept
+        {
+            it_ -= (movement * size_);
+            return *this;
+        }
+
+        difference_type operator-(const reverse_iterator& other) const noexcept
+        {
+            assert(size_ == other.size_);
+            assert((it_ - other.it_) % size_ == 0);
+
+            return (it_ - other.it_) / size_;
+        }
+
+        reference operator*() const noexcept
+        {
+            return {*it_, size_};
+        }
+    };
+
+    struct const_reverse_iterator
+    {
+        using vector_const_reverse_iterator_type =
+            matter::const_reverse_iterator_t<
+                std::vector<matter::erased_storage>>;
+
+        using value_type        = const_any_group;
+        using reference         = value_type;
+        using pointer           = void;
+        using iterator_category = typename std::iterator_traits<
+            vector_const_reverse_iterator_type>::iterator_category;
+        using difference_type = typename std::iterator_traits<
+            vector_const_reverse_iterator_type>::difference_type;
+
+    private:
+        vector_const_reverse_iterator_type it_;
+        std::size_t                        size_;
+
+    public:
+        const_reverse_iterator() = default;
+
+        constexpr const_reverse_iterator(vector_const_reverse_iterator_type it,
+                                         std::size_t size) noexcept
+            : it_{it}, size_{size}
+        {}
+
+        const_reverse_iterator(const reverse_iterator& rit) noexcept
+            : it_{rit.base()}, size_{rit.group_size()}
+        {}
+
+        const_reverse_iterator& operator=(const reverse_iterator& rit) noexcept
+        {
+            it_   = rit.base();
+            size_ = rit.group_size();
+
+            return *this;
+        }
+
+        auto base() const noexcept
+        {
+            return it_;
+        }
+
+        auto group_size() const noexcept
+        {
+            return size_;
+        }
+
+        auto operator==(const const_reverse_iterator& other) const noexcept
+        {
+            return base() == other.base();
+        }
+
+        friend auto operator==(const reverse_iterator&       lhs,
+                               const const_reverse_iterator& rhs) noexcept
+        {
+            return lhs.base() == rhs.base();
+        }
+
+        auto operator!=(const const_reverse_iterator& other) const noexcept
+        {
+            return !(*this == other);
+        }
+
+        friend auto operator!=(const reverse_iterator&       lhs,
+                               const const_reverse_iterator& rhs) noexcept
+        {
+            return lhs.base() != rhs.base();
+        }
+
+        const_reverse_iterator& operator++() noexcept
+        {
+            it_ += size_;
+            return *this;
+        }
+
+        const_reverse_iterator& operator--() noexcept
+        {
+            it_ -= size_;
+            return *this;
+        }
+
+        const_reverse_iterator operator++(int) noexcept
+        {
+            auto tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        const_reverse_iterator operator--(int) noexcept
+        {
+            auto tmp = *this;
+            --(*this);
+            return tmp;
+        }
+
+        const_reverse_iterator& operator+=(difference_type movement) noexcept
+        {
+            it_ += (movement * size_);
+            return *this;
+        }
+
+        const_reverse_iterator& operator-=(difference_type movement) noexcept
+        {
+            it_ -= (movement * size_);
+            return *this;
+        }
+
+        const_reverse_iterator operator+(difference_type movement) const
+            noexcept
+        {
+            auto r = *this;
+            r += movement;
+            return r;
+        }
+
+        const_reverse_iterator operator-(difference_type movement) const
+            noexcept
+        {
+            auto r = *this;
+            r -= movement;
+            return r;
+        }
+
+        difference_type operator-(const const_reverse_iterator& other) const
+            noexcept
+        {
+            assert(group_size() == other.group_size());
+            assert((base() - other.base()) % group_size() == 0);
+
+            return (base() - other.base()) / group_size();
+        }
+
+        reference operator*() const noexcept
+        {
+            return {*it_, size_};
+        }
+    };
+
+    struct sentinel
+    {
+        using vector_const_sentinel_type =
+            matter::const_sentinel_t<std::vector<matter::erased_storage>>;
+
+    private:
+        vector_const_sentinel_type sent_;
+
+    public:
+        constexpr sentinel() noexcept = default;
+
+        constexpr sentinel(vector_const_sentinel_type sent) noexcept
+            : sent_{sent}
+        {}
+
+        auto operator==(const const_iterator& cit) const noexcept
+        {
+            return sent_ == cit.base();
+        }
+
+        auto operator!=(const const_iterator& cit) const noexcept
+        {
+            return !(*this == cit);
+        }
+
+        friend auto operator==(const const_iterator& it,
+                               const sentinel&       sent) noexcept
+        {
+            return it.base() == sent.sent_;
+        }
+
+        friend auto operator!=(const const_iterator& it,
+                               const sentinel&       sent) noexcept
+        {
+            return !(it == sent);
+        }
+
+        auto operator-(const const_iterator& it) const noexcept
+        {
+            return (sent_ - it.base()) / it.group_size();
+        }
+
+        friend auto operator-(const const_iterator& it,
+                              const sentinel&       sent) noexcept
+        {
+            return (it.base() - sent.sent_) / it.group_size();
+        }
+    };
+
+    struct reverse_sentinel
+    {
+        using vector_const_reverse_sentinel_type =
+            matter::const_reverse_sentinel_t<
+                std::vector<matter::erased_storage>>;
+
+    private:
+        vector_const_reverse_sentinel_type sent_;
+
+    public:
+        constexpr reverse_sentinel() = default;
+
+        constexpr reverse_sentinel(
+            vector_const_reverse_sentinel_type sent) noexcept
+            : sent_{sent}
+        {}
+
+        auto operator==(const reverse_iterator& rit) const noexcept
+        {
+            return sent_ == rit.base();
+        }
+
+        auto operator!=(const reverse_iterator& rit) const noexcept
+        {
+            return !(*this == rit);
+        }
+
+        friend auto operator==(const reverse_iterator& rit,
+                               const reverse_sentinel& sent) noexcept
+        {
+            return sent == rit;
+        }
+
+        friend auto operator!=(const reverse_iterator& rit,
+                               const reverse_sentinel& sent) noexcept
+        {
+            return !(rit == sent);
+        }
+
+        auto operator-(const reverse_iterator& rit) const noexcept
+        {
+            return (sent_ - rit.base()) / rit.group_size();
+        }
+
+        friend auto operator-(const reverse_iterator& rit,
+                              const reverse_sentinel& sent) noexcept
+        {
+            return (rit.base() - sent.sent_) / rit.group_size();
+        }
+    };
+
 public:
     using id_type = typename matter::erased_storage::id_type;
-
-    using const_iterator = iterator_<true>;
-    using iterator       = iterator_<false>;
-
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-    using reverse_iterator       = std::reverse_iterator<iterator>;
 
 private:
     /// the number of components each group stores
@@ -176,62 +644,28 @@ public:
 
     iterator begin() noexcept
     {
-        return {groups_.begin(), size_};
-    }
-
-    iterator end() noexcept
-    {
-        return {groups_.end(), size_};
+        return {groups_.begin(), group_size()};
     }
 
     const_iterator begin() const noexcept
     {
-        return {groups_.begin(), size_};
+        return {groups_.begin(), group_size()};
     }
 
-    const_iterator end() const noexcept
+    auto end() const noexcept
     {
-        return {groups_.end(), size_};
-    }
-
-    const_iterator cbegin() const noexcept
-    {
-        return {groups_.cbegin(), size_};
-    }
-
-    const_iterator cend() const noexcept
-    {
-        return {groups_.cend(), size_};
+        return sentinel{groups_.cend()};
     }
 
     reverse_iterator rbegin() noexcept
     {
-        return reverse_iterator{end()};
+        return reverse_iterator{groups_.rbegin() + (group_size() - 1),
+                                group_size()};
     }
 
-    reverse_iterator rend() noexcept
+    auto rend() const noexcept
     {
-        return reverse_iterator{begin()};
-    }
-
-    const_reverse_iterator rbegin() const noexcept
-    {
-        return const_reverse_iterator{end()};
-    }
-
-    const_reverse_iterator rend() const noexcept
-    {
-        return const_reverse_iterator{begin()};
-    }
-
-    const_reverse_iterator crbegin() const noexcept
-    {
-        return const_reverse_iterator{cend()};
-    }
-
-    const_reverse_iterator crend() const noexcept
-    {
-        return const_reverse_iterator{cbegin()};
+        return reverse_sentinel{groups_.crend() + (group_size() - 1)};
     }
 
     std::size_t group_size() const noexcept
@@ -276,7 +710,7 @@ public:
         }
 
         auto grp = *it;
-        return grp == ids ? it : end();
+        return grp == ids ? it : const_iterator{groups_.end(), group_size()};
     }
 
     /// \brief finds an exact match for the ids, otherwise end()
@@ -297,7 +731,7 @@ public:
         }
 
         auto grp = *it;
-        return grp == ids ? it : end();
+        return grp == ids ? it : iterator{groups_.end(), group_size()};
     }
 
     template<typename... TIds>
@@ -414,7 +848,7 @@ private:
             matter::erased_storage{unordered_ids.template get<TIds>()}...};
 
         auto inserted_at =
-            groups_.insert(pos.it_,
+            groups_.insert(pos.base(),
                            std::make_move_iterator(stores.begin()),
                            std::make_move_iterator(stores.end()));
 
@@ -427,14 +861,14 @@ private:
     lower_bound(const matter::ordered_typed_ids<id_type, TIds...>& ids) const
         noexcept
     {
-        return std::lower_bound(begin(), end(), ids);
+        return matter::lower_bound(begin(), end(), ids);
     }
 
     template<typename... TIds>
     iterator
     lower_bound(const matter::ordered_typed_ids<id_type, TIds...>& ids) noexcept
     {
-        return std::lower_bound(begin(), end(), ids);
+        return matter::lower_bound(begin(), end(), ids);
     }
 };
 } // namespace matter

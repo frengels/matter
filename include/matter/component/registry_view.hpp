@@ -5,6 +5,7 @@
 
 #include "matter/component/group_vector_view.hpp"
 #include "matter/component/group_view.hpp"
+#include "matter/util/algorithm.hpp"
 
 namespace matter
 {
@@ -41,21 +42,21 @@ public:
             return;
         }
 
-        std::for_each(
+        matter::for_each(
             begin_,
             end_,
             [ids = ids_, f = std::move(f)](group_vector& grp_vec) {
                 matter::group_vector_view view{ids, grp_vec};
-                std::for_each(
+                matter::for_each(
                     view.begin(),
                     view.end(),
                     [f = std::move(f), size = grp_vec.group_size(), ids](
                         auto grp_view) {
-                        std::for_each(grp_view.begin(),
-                                      grp_view.end(),
-                                      [f = std::move(f)](auto comp_view) {
-                                          comp_view.invoke(std::move(f));
-                                      });
+                        matter::for_each(grp_view.begin(),
+                                         grp_view.end(),
+                                         [f = std::move(f)](auto comp_view) {
+                                             comp_view.invoke(std::move(f));
+                                         });
                     });
             });
     }
