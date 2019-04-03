@@ -99,3 +99,9 @@ void insert_multiple_runtime(benchmark::State& state)
 }
 
 BENCHMARK(insert_multiple_runtime)->Range(1, 1);
+
+int main(int argc, char** argv)
+{
+    ::benchmark::Initialize(&argc, argv);
+    ::benchmark::RunSpecifiedBenchmarks();
+}

@@ -1,0 +1,34 @@
+image: registry.gitlab.com/dreyri/matter/debian:v3
+
+stages:
+  - build
+
+.build_template: &gcc_build_definition
+  stage: build
+  cache:
+    paths:
+      - subprojects/
+  script:
+    - meson build
+    - ninja -C build test
+
+.build_template: &clang_build_definition
+  stage: build
+  cache:
+    paths:
+      - subprojects/
+  script:
+    - CC=clang CXX=clang++ meson build
+    - ninja -C build test
+
+build:debian-gcc:
+  image: registry.gitlab.com/dreyri/matter/debian:v4
+  <<: *gcc_build_definition
+
+build:debian-clang:
+  image: registry.gitlab.com/dreyri/matter/debian:v4
+  <<: *clang_build_definition
+
+build:alpine:
+  image: registry.gitlab.com/dreyri/matter/alpine:v1
+  <<: *gcc_build_definition
