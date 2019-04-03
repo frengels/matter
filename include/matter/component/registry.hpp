@@ -8,7 +8,6 @@
 #include "component_identifier.hpp"
 
 #include "matter/component/group_vector.hpp"
-#include "matter/component/range.hpp"
 #include "matter/component/registry_view.hpp"
 #include "matter/util/meta.hpp"
 
