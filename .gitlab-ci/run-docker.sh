@@ -21,5 +21,5 @@ else
 	--user $(id -u):$(id -g) \
         --volume "$(pwd)/..:/home/user/app" \
         --workdir "/home/user/app" \
-        --tty --interactive "${ALP_TAG}" bash
+        --tty --interactive "${DEB_TAG}" bash
 fi

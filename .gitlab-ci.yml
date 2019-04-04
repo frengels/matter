@@ -1,5 +1,6 @@
 stages:
   - build
+  - coverage
 
 .build_template: &gcc_build_definition
   stage: build
@@ -30,3 +31,11 @@ build:debian-clang:
 build:alpine:
   image: registry.gitlab.com/dreyri/matter/alpine:v1
   <<: *gcc_build_definition
+
+coverage:
+  image: registry.gitlab.com/dreyri/matter/debian:v4
+  stage: coverage
+  script:
+    - meson -Db_coverage=true build
+    - ninja -C build test
+    - ninja -C build coverage-text
