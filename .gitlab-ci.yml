@@ -2,41 +2,48 @@ stages:
   - build
   - coverage
 
-.build_template: &gcc_build_definition
-  stage: build
-  cache:
-    paths:
-      - subprojects/
-  script:
-    - meson build
-    - ninja -C build test
+cache:
+  paths:
+    - subprojects/
 
-.build_template: &clang_build_definition
+variables:
+  MESON_NOSAN_OPTIONS: "--buildtype=debug -Db_ndebug=false"
+  MESON_COMMON_OPTIONS: "--buildtype=debug -Db_ndebug=false -Db_sanitize=address,undefined"
+
+.build-template: &build-template
   stage: build
-  cache:
+  artifacts:
+    name: "matter-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
     paths:
-      - subprojects/
-  script:
-    - CC=clang CXX=clang++ meson build
-    - ninja -C build test
+      - "build/meson-logs"
 
 build:debian-gcc:
   image: registry.gitlab.com/dreyri/matter/debian:v4
-  <<: *gcc_build_definition
+  <<: *build-template
+  script:
+    - meson ${MESON_COMMON_OPTIONS} build
+    - ninja -C build test
 
 build:debian-clang:
   image: registry.gitlab.com/dreyri/matter/debian:v4
-  <<: *clang_build_definition
+  <<: *build-template
+  script:
+    - CC=clang CXX=clang++ meson ${MESON_COMMON_OPTIONS} build
+    - ninja -C build test
 
 build:alpine:
   image: registry.gitlab.com/dreyri/matter/alpine:v1
-  <<: *gcc_build_definition
+  <<: *build-template
+  script:
+    - meson ${MESON_NOSAN_OPTIONS} build
+    - ninja -C build test
 
 coverage:
   image: registry.gitlab.com/dreyri/matter/debian:v4
   stage: coverage
   script:
-    - meson -Db_coverage=true build
+    - meson ${MESON_COMMON_OPTIONS} -Db_coverage=true build
     - ninja -C build test
     - ninja -C build coverage-text
   artifacts:
