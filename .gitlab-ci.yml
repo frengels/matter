@@ -39,3 +39,6 @@ coverage:
     - meson -Db_coverage=true build
     - ninja -C build test
     - ninja -C build coverage-text
+  artifacts:
+    paths:
+      - build/meson-logs/coverage.txt
