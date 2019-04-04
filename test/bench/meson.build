@@ -8,4 +8,5 @@ foreach b : benches
     '@0@.cpp'.format(b),
     dependencies: [matter, google_benchmark_dep],
   )
+  test(b, b_exe)
 endforeach
