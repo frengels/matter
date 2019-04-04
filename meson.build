@@ -11,11 +11,18 @@ project(
 
 matter_inc = include_directories('include')
 
-catch2_dep = dependency('catch2', fallback: ['catch2', 'catch2_dep'])
-google_benchmark_dep = dependency('benchmark', fallback: ['google-benchmark', 'google_benchmark_dep'])
+if get_option('build_tests')
+    catch2_dep = dependency('catch2', fallback: ['catch2', 'catch2_dep'])
+endif
+
+if get_option('build_tests') and get_option('build_benchmarks')
+    google_benchmark_dep = dependency('benchmark', fallback: ['google-benchmark', 'google_benchmark_dep'])
+endif
 
 matter = declare_dependency(
   include_directories: matter_inc,
 )
 
-subdir('test')
+if get_option('build_tests')
+    subdir('test')
+endif

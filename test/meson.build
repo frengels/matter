@@ -29,4 +29,6 @@ foreach t : tests
   test(t, test_exe)
 endforeach
 
-subdir('bench')
+if get_option('build_benchmarks')
+    subdir('bench')
+endif
