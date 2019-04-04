@@ -1,0 +1,13 @@
+FROM debian:buster
+
+MAINTAINER Frederik Engels, frederik.engels92@gmail.com
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    clang \
+    pkg-config \
+    ca-certificates \
+    cmake \
+    meson \
+    ninja-build \
+    libbenchmark-dev
