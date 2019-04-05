@@ -34,6 +34,8 @@ public:
         std::tuple<storage_iterator_type<Cs>...> its_;
 
     public:
+        constexpr iterator() = default;
+
         constexpr iterator(storage_iterator_type<Cs>... its) noexcept
             : its_{its...}
         {}
@@ -145,8 +147,7 @@ public:
         storage_sentinel_type<detail::nth_t<0, Cs...>> sent_;
 
     public:
-        sentinel() noexcept : sent_{}
-        {}
+        sentinel() noexcept = default;
 
         sentinel(storage_sentinel_type<Cs>... sents) noexcept
             : sent_{std::get<0>(std::make_tuple(sents...))}
