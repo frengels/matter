@@ -37,7 +37,7 @@ struct greater
 };
 
 template<typename ForwardIt, typename Sentinel, typename UnaryFunction>
-constexpr void
+constexpr UnaryFunction
 for_each(ForwardIt first, Sentinel last, UnaryFunction f) noexcept(
     std::is_nothrow_invocable_v<UnaryFunction, typename ForwardIt::reference>)
 {
@@ -45,6 +45,8 @@ for_each(ForwardIt first, Sentinel last, UnaryFunction f) noexcept(
     {
         f(*first);
     }
+
+    return f;
 }
 
 namespace detail
@@ -60,12 +62,12 @@ constexpr void swap_if_less(T& lhs, T& rhs) noexcept
 } // namespace detail
 
 // simply a is_sorted that is constexpr until c++20 has it
-template<typename ForwardIt>
-constexpr bool is_sorted(ForwardIt first, ForwardIt last) noexcept
+template<typename ForwardIt, typename Sentinel>
+constexpr bool is_sorted(ForwardIt first, Sentinel last) noexcept
 {
     if (first != last)
     {
-        ForwardIt next = first;
+        ForwardIt next{first};
         while (++next != last)
         {
             if (*next < *first)
