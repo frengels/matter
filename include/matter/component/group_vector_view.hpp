@@ -397,7 +397,7 @@ public:
         : ids_{ids}, ordered_ids_{matter::ordered_typed_ids{ids_}},
           group_vec_{group_vec}
     {
-        assert(typed_ids_type::size() <= group_vec.group_size());
+        assert(ids.size() <= group_vec.group_size());
     }
 
     constexpr iterator begin() noexcept
