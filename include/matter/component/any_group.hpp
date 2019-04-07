@@ -3,12 +3,17 @@
 
 #pragma once
 
+#include <functional>
+
 #include "matter/component/traits.hpp"
 #include "matter/component/typed_id.hpp"
 #include "matter/storage/erased_storage.hpp"
 
 namespace matter
 {
+template<typename... Cs>
+struct group;
+
 namespace detail
 {
 /// \brief a group describes the containers for a tuple of components
@@ -27,8 +32,14 @@ private:
                                                const matter::erased_storage&,
                                                matter::erased_storage&>;
 
+    using size_type =
+        std::conditional_t<is_const, const std::size_t, std::size_t>;
+
     template<bool _Const>
     friend class any_group;
+
+    template<typename... Cs>
+    friend struct ::matter::group;
 
 public:
     using id_type = typename matter::erased_storage::id_type;
@@ -41,23 +52,40 @@ public:
     using reverse_iterator       = std::reverse_iterator<iterator>;
 
 private:
-    erased_type ptr_;
-    std::size_t size_;
+    erased_type                       ptr_;
+    std::reference_wrapper<size_type> size_;
+    std::size_t                       group_size_;
 
 public:
-    constexpr any_group(erased_type ptr, std::size_t size) noexcept
-        : ptr_{ptr}, size_{size}
+    constexpr any_group(erased_type ptr,
+                        size_type&  size,
+                        std::size_t group_size) noexcept
+        : ptr_{ptr}, size_{size}, group_size_{group_size}
     {
         assert(is_sorted());
     }
 
-    constexpr any_group(erased_type_ref ref, std::size_t size) noexcept
-        : any_group{std::addressof(ref), size}
+    constexpr any_group(erased_type_ref ref,
+                        size_type&      size,
+                        std::size_t     group_size) noexcept
+        : any_group{std::addressof(ref), size, group_size}
     {}
 
     constexpr any_group(const any_group<false>& mutable_grp)
-        : ptr_{mutable_grp.ptr_}, size_{mutable_grp.size_}
+        : any_group{mutable_grp.ptr_,
+                    mutable_grp.size_,
+                    mutable_grp.group_size()}
     {}
+
+    constexpr std::size_t group_size() const noexcept
+    {
+        return group_size_;
+    }
+
+    constexpr std::size_t size() const noexcept
+    {
+        return size_.get();
+    }
 
     iterator begin() noexcept
     {
@@ -66,7 +94,7 @@ public:
 
     iterator end() noexcept
     {
-        return ptr_ + size_;
+        return ptr_ + group_size();
     }
 
     const_iterator begin() const noexcept
@@ -76,7 +104,7 @@ public:
 
     const_iterator end() const noexcept
     {
-        return ptr_ + size_;
+        return ptr_ + group_size();
     }
 
     const_iterator cbegin() const noexcept
@@ -131,7 +159,7 @@ public:
 
     constexpr bool operator==(const any_group& other) const noexcept
     {
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] != other.ptr_[i])
             {
@@ -151,9 +179,9 @@ public:
     constexpr auto
     operator==(const ordered_typed_ids<id_type, TIds...>& ids) const noexcept
     {
-        assert(ids.size() == size());
+        assert(ids.size() == group_size());
 
-        for (std::size_t i = 0; i < size(); ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] != ids[i])
             {
@@ -173,9 +201,9 @@ public:
 
     constexpr bool operator<(const any_group& other) const noexcept
     {
-        assert(size() == other.size());
+        assert(group_size() == other.group_size());
 
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] < other.ptr_[i])
             {
@@ -190,9 +218,9 @@ public:
     constexpr bool operator<(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
     {
-        assert(ids.size() == size_);
+        assert(ids.size() == group_size());
 
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] < ids[i])
             {
@@ -205,9 +233,9 @@ public:
 
     constexpr bool operator>(const any_group& other) const noexcept
     {
-        assert(size() == other.size());
+        assert(group_size() == other.group_size());
 
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] > other.ptr_[i])
             {
@@ -222,9 +250,9 @@ public:
     constexpr bool operator>(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
     {
-        assert(ids.size() == size_);
+        assert(ids.size() == group_size());
 
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] > ids[i])
             {
@@ -321,7 +349,7 @@ public:
             "Cannot construct one of the components from passed args");
 
         // if this isn't true then we're emplacing in the wrong group
-        assert(sizeof...(Ts) == size_);
+        assert(sizeof...(Ts) == group_size());
         // if this isn't true then this group doesn't contain the ids
         assert(contains(ordered_typed_ids{ids}));
 
@@ -345,11 +373,6 @@ public:
         */
     }
 
-    constexpr std::size_t size() const noexcept
-    {
-        return size_;
-    }
-
     template<typename TId>
     constexpr std::enable_if_t<matter::is_typed_id_v<TId>, bool>
     contains(const TId& id) const noexcept
@@ -363,8 +386,8 @@ public:
     constexpr bool contains(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
     {
-        assert(ids.size() <= size_);
-        return std::includes(ptr_, ptr_ + size_, ids.begin(), ids.end());
+        assert(ids.size() <= group_size());
+        return std::includes(ptr_, ptr_ + group_size(), ids.begin(), ids.end());
     }
 
     constexpr bool contains(const any_group& other) const noexcept
@@ -401,7 +424,7 @@ public:
     storage(const unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
         assert(contains(ordered_typed_ids{ids}));
-        assert(ids.size() <= size_);
+        assert(ids.size() <= group_size());
 
         return {storage(ids.template get<Ts>())...};
     }
@@ -411,7 +434,7 @@ public:
     storage(const unordered_typed_ids<id_type, Ts...>& ids) const noexcept
     {
         assert(contains(ordered_typed_ids{ids}));
-        assert(ids.size() <= size_);
+        assert(ids.size() <= group_size());
 
         return {storage(ids.template get<Ts>())...};
     }
@@ -430,7 +453,7 @@ private:
     /// and to efficiently check whether ids are contained within this group
     bool is_sorted() const noexcept
     {
-        return std::is_sorted(ptr_, ptr_ + size_);
+        return std::is_sorted(begin(), end());
     }
 
     template<typename TId>

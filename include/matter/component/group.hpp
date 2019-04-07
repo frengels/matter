@@ -152,6 +152,7 @@ public:
     friend struct group;
 
 private:
+    std::reference_wrapper<std::size_t> size_;
     std::tuple<std::reference_wrapper<matter::component_storage_t<Cs>>...>
         stores_;
 
@@ -159,7 +160,7 @@ public:
     template<typename Id, typename... TIds>
     constexpr group(const matter::unordered_typed_ids<Id, TIds...>& unordered,
                     any_group& grp) noexcept
-        : stores_{grp.storage(unordered)}
+        : size_{grp.size_}, stores_{grp.storage(unordered)}
     {
         // require exact match and not just contains being satisfied
         assert(grp == matter::ordered_typed_ids{unordered});
@@ -167,12 +168,23 @@ public:
 
     template<typename... OtherCs>
     constexpr group(const matter::group<OtherCs...>& other) noexcept
-        : stores_{
+        : size_{other.size_},
+          stores_{
               std::get<std::reference_wrapper<matter::component_storage_t<Cs>>>(
                   other.stores_)...}
     {
         static_assert((detail::type_in_list_v<OtherCs, Cs...> && ...),
                       "Incompatible components, cannot construct");
+    }
+
+    constexpr std::size_t group_size() const noexcept
+    {
+        return sizeof...(Cs);
+    }
+
+    constexpr std::size_t size() const noexcept
+    {
+        return size_.get();
     }
 
     constexpr auto operator==(const group&) const noexcept
@@ -233,6 +245,7 @@ public:
                 (stores.erase(pos.template get<Cs>()), ...);
             },
             stores_);
+        --size_.get();
     }
 
     template<std::size_t... Is, typename TCArgs>
@@ -246,6 +259,8 @@ public:
                  ...);
             },
             stores_);
+
+        ++size_.get();
 
         return back();
     }
@@ -281,9 +296,11 @@ public:
                                       decltype(*buffer.template begin<Cs>())> &&
                               ...))
     {
-        return iterator{get<Cs>().insert(get<Cs>().end(),
-                                         buffer.template begin<Cs>(),
-                                         buffer.template end<Cs>())...};
+        auto it = iterator{get<Cs>().insert(get<Cs>().end(),
+                                            buffer.template begin<Cs>(),
+                                            buffer.template end<Cs>())...};
+        size_.get() += buffer.size();
+        return it;
     }
 
     constexpr component_view<Cs...> back() noexcept
@@ -291,19 +308,9 @@ public:
         return component_view{get<Cs>().back()...};
     }
 
-    static constexpr std::size_t group_size() noexcept
-    {
-        return sizeof...(Cs);
-    }
-
-    constexpr std::size_t size() const noexcept
-    {
-        return std::get<0>(stores_).get().size();
-    }
-
     constexpr auto empty() const noexcept
     {
-        return std::get<0>(stores_).get().empty();
+        return size() == 0;
     }
 
     constexpr matter::component_view<Cs...> operator[](std::size_t i) noexcept
