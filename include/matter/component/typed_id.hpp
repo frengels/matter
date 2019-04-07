@@ -43,7 +43,9 @@ template<typename TId>
 struct is_typed_id<
     TId,
     std::enable_if_t<
-        std::is_nothrow_copy_constructible_v<TId> &&
+        std::is_default_constructible_v<TId> &&
+            std::is_nothrow_copy_constructible_v<TId> &&
+            std::is_nothrow_copy_assignable_v<TId> &&
             std::is_same_v<typename TId::id_type,
                            std::remove_cv_t<std::remove_reference_t<decltype(
                                std::declval<const TId>().value())>>> &&
@@ -66,7 +68,9 @@ struct is_typed_id<
             std::is_same_v<bool,
                            decltype(
                                std::declval<const typename TId::id_type>() >
-                               std::declval<const typename TId::id_type>())>,
+                               std::declval<const typename TId::id_type>())> &&
+            std::is_same_v<bool,
+                           decltype(std::declval<const TId>().has_value())>,
         std::void_t<typename TId::id_type, typename TId::type>>>
     : std::true_type
 {};
@@ -96,6 +100,11 @@ public:
     {
         return value();
     }
+
+    constexpr auto has_value() const noexcept
+    {
+        return true;
+    }
 };
 
 template<typename Id, typename C>
@@ -108,6 +117,11 @@ private:
     id_type value_;
 
 public:
+    /// \brief default initialize into an invalid state
+    constexpr runtime_id() noexcept
+        : value_{std::numeric_limits<id_type>::max()}
+    {}
+
     constexpr runtime_id(id_type val) noexcept : value_{val}
     {}
 
@@ -119,6 +133,11 @@ public:
     constexpr operator id_type() const noexcept
     {
         return value();
+    }
+
+    constexpr auto has_value() const noexcept
+    {
+        return value_ != std::numeric_limits<id_type>::max();
     }
 };
 
@@ -135,7 +154,7 @@ class unordered_typed_ids {
 
     friend class ordered_typed_ids<Id, Ts...>;
 
-    static constexpr auto _size = sizeof...(Ts);
+    static constexpr auto size_ = sizeof...(Ts);
 
 public:
     using id_type = Id;
@@ -144,34 +163,41 @@ private:
     std::tuple<Ts...> ids_;
 
 public:
+    constexpr unordered_typed_ids() noexcept : ids_{}
+    {}
+
     constexpr unordered_typed_ids(Ts... tids) noexcept : ids_{tids...}
     {}
 
-    static constexpr auto size() noexcept
+    constexpr auto size() const noexcept
     {
-        return _size;
+        return size_;
+    }
+
+    constexpr auto has_value() const noexcept
+    {
+        return (get<Ts>().has_value() && ...);
     }
 
     template<typename T>
     constexpr T get() const noexcept
     {
-        static_assert(is_typed_id_v<T>, "T must be a full typed_id");
-        static_assert(detail::type_index<T, Ts...>().has_value(),
-                      "T is not a held type");
-        constexpr auto idx = detail::type_index<T, Ts...>().value();
-
-        return get<idx>();
+        auto tid = std::get<T>(ids_);
+        assert(tid.has_value());
+        return tid;
     }
 
     template<std::size_t I>
     constexpr auto get() const noexcept
     {
-        static_assert(I < size(), "I is out of bounds.");
-        return std::get<I>(this->ids_);
+        auto tid = std::get<I>(ids_);
+        assert(tid.has_value());
+        return tid;
     }
 
     constexpr auto as_array() const noexcept
     {
+        assert(has_value());
         return std::apply(
             [](auto... ids) { return std::array{ids.value()...}; }, ids_);
     }
@@ -205,16 +231,29 @@ class ordered_typed_ids {
 public:
     using id_type = Id;
 
-    static constexpr auto _size = sizeof...(Ts);
+    static constexpr auto size_ = sizeof...(Ts);
 
 private:
-    const std::array<Id, _size> ordered_ids_;
+    std::array<Id, size_> ordered_ids_;
 
 public:
+    /// \brief default initialize ordered ids into an invalid state
+    constexpr ordered_typed_ids() noexcept
+        : ordered_ids_{[] {
+              std::array<Id, size_> ids;
+              for (auto& id : ids)
+              {
+                  id = std::numeric_limits<id_type>::max();
+              }
+
+              return ids;
+          }()}
+    {}
+
     constexpr ordered_typed_ids(Ts... types) noexcept
-        : ordered_ids_{[&]() -> std::array<id_type, _size> {
+        : ordered_ids_{[&]() -> std::array<id_type, size_> {
               // no sorting required
-              if constexpr (size() == 1)
+              if constexpr (size_ == 1)
               {
                   return {types...};
               }
@@ -230,8 +269,8 @@ public:
 
     constexpr ordered_typed_ids(
         const unordered_typed_ids<id_type, Ts...>& ids) noexcept
-        : ordered_ids_{[&]() -> std::array<id_type, _size> {
-              if constexpr (size() == 1)
+        : ordered_ids_{[&]() -> std::array<id_type, size_> {
+              if constexpr (size_ == 1)
               {
                   // single element case doesn't require sorting
                   return {ids.template get<0>()};
@@ -244,6 +283,19 @@ public:
               }
           }()}
     {}
+
+    constexpr auto has_value() const noexcept
+    {
+        if constexpr (sizeof...(Ts) == 0)
+        {
+            // an empty ordered_ids is always valid because it has no content
+            return true;
+        }
+        else
+        {
+            return ordered_ids_[0] == std::numeric_limits<id_type>::max();
+        }
+    }
 
     template<std::size_t N>
     constexpr id_type get() const noexcept
@@ -263,12 +315,12 @@ public:
 
     static constexpr auto size() noexcept
     {
-        return _size;
+        return size_;
     }
 
     constexpr auto operator[](std::size_t idx) const noexcept
     {
-        assert(idx < _size);
+        assert(idx < size_);
         return ordered_ids_[idx];
     }
 
@@ -288,8 +340,8 @@ public:
         noexcept
     {
         constexpr auto other_size =
-            matter::ordered_typed_ids<id_type, Us...>::size();
-        static_assert(size() == other_size);
+            matter::ordered_typed_ids<id_type, Us...>::size_;
+        static_assert(size_ == other_size);
         return std::equal(begin(), end(), other.begin(), other.end());
     }
 
@@ -307,8 +359,8 @@ public:
         noexcept
     {
         constexpr auto other_size =
-            matter::ordered_typed_ids<id_type, Us...>::size();
-        static_assert(size() == other_size);
+            matter::ordered_typed_ids<id_type, Us...>::size_;
+        static_assert(size_ == other_size);
 
         for (std::size_t i = 0; i < size(); ++i)
         {
@@ -327,8 +379,8 @@ public:
         noexcept
     {
         constexpr auto other_size =
-            matter::ordered_typed_ids<id_type, Us...>::size();
-        static_assert(size() == other_size);
+            matter::ordered_typed_ids<id_type, Us...>::size_;
+        static_assert(size_ == other_size);
 
         for (std::size_t i = 0; i < size(); ++i)
         {
@@ -352,8 +404,8 @@ public:
         noexcept
     {
         constexpr auto other_size =
-            matter::ordered_typed_ids<id_type, Us...>::size();
-        static_assert(size() >= other_size);
+            matter::ordered_typed_ids<id_type, Us...>::size_;
+        static_assert(size_ >= other_size);
 
         if constexpr (other_size == 1)
         {

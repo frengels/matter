@@ -18,6 +18,30 @@ TEST_CASE("group_vector")
     CHECK(grpvec2.group_size() == 2);
     CHECK(grpvec3.group_size() == 3);
 
+    SECTION("default iterators")
+    {
+        SECTION("group_view")
+        {
+            // default constructed iterator and sentinel should both be equal
+            matter::group_view<int>::iterator it{};
+            matter::group_view<int>::sentinel sent{};
+
+            CHECK(it == sent);
+        }
+
+        SECTION("group_vector_view")
+        {
+            using group_vector_view_type = decltype(matter::group_vector_view{
+                ident.ids<int, float>(),
+                std::declval<matter::group_vector&>()});
+
+            group_vector_view_type::iterator it{};
+            group_vector_view_type::sentinel sent{};
+
+            CHECK(it == sent);
+        }
+    }
+
     SECTION("emplace storage")
     {
 
@@ -32,6 +56,67 @@ TEST_CASE("group_vector")
         grpvec3.emplace(ident.ids<short, char, float>()); // 1 2 3 -> 3rd
         grpvec3.emplace(ident.ids<int, short, char>());   // 0 2 3 -> 2nd
         grpvec3.emplace(ident.ids<float, int, short>());  // 0 1 3 -> 1st
+
+        SECTION("check empty views")
+        {
+            ident.register_type<uint64_t>();
+            SECTION("size 1")
+            {
+                auto view =
+                    matter::group_vector_view{ident.ids<uint64_t>(), grpvec1};
+
+                auto it  = view.begin();
+                auto end = view.end();
+
+                CHECK(it == end);
+
+                SECTION("reverse")
+                {
+                    auto rit  = view.rbegin();
+                    auto rend = view.rend();
+
+                    CHECK(rit == rend);
+                }
+            }
+
+            SECTION("size 2")
+            {
+                SECTION("wrong size")
+                {
+                    auto view = matter::group_vector_view{ident.ids<uint64_t>(),
+                                                          grpvec2};
+
+                    auto it  = view.begin();
+                    auto end = view.end();
+
+                    CHECK(it == end);
+
+                    SECTION("reverse")
+                    {
+                        auto rit  = view.rbegin();
+                        auto rend = view.rend();
+
+                        CHECK(rit == rend);
+                    }
+                }
+
+                auto view = matter::group_vector_view{
+                    ident.ids<uint64_t, float>(), grpvec2};
+
+                auto it  = view.begin();
+                auto end = view.end();
+
+                CHECK(it == end);
+
+                SECTION("reverse")
+                {
+                    auto rit  = view.rbegin();
+                    auto rend = view.rend();
+
+                    CHECK(rit == rend);
+                }
+            }
+        }
 
         SECTION("sorted")
         {

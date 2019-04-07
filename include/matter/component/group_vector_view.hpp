@@ -41,13 +41,16 @@ public:
 
     private:
         group_vector_iterator_type it_;
-        typed_ids_type             ids_;
-        ordered_ids_type           ordered_ids_;
+
+        typed_ids_type   ids_;
+        ordered_ids_type ordered_ids_;
 
         group_vector_base_iterator_type begin_;
         group_vector_sentinel_type      end_;
 
     public:
+        constexpr iterator() = default;
+
         constexpr iterator(const typed_ids_type&      ids,
                            const ordered_ids_type&    ordered_ids,
                            group_vector_iterator_type it,
@@ -397,7 +400,7 @@ public:
         : ids_{ids}, ordered_ids_{matter::ordered_typed_ids{ids_}},
           group_vec_{group_vec}
     {
-        assert(typed_ids_type::size() <= group_vec.group_size());
+        assert(ids.size() <= group_vec.group_size());
     }
 
     constexpr iterator begin() noexcept

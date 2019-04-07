@@ -99,6 +99,30 @@ TEST_CASE("benchmarks")
 
             pos_view.for_each([](position& pos) { pos.x = {}; });
         }
+
+        SECTION("iterator const")
+        {
+            timer t{
+                "Iterating over 1000000 single components - const iterator"};
+
+            auto pos_view = reg.view<position>();
+
+            matter::for_each(
+                pos_view.begin(), pos_view.end(), [](const auto&) {});
+        }
+
+        SECTION("iterator mut")
+        {
+            timer t{"Iterating over 1000000 single components - mut iterator"};
+
+            auto pos_view = reg.view<position>();
+
+            matter::for_each(
+                pos_view.begin(), pos_view.end(), [](auto&& comp_view) {
+                    comp_view.invoke(
+                        [](position& position) { position.x = {}; });
+                });
+        }
     }
     // TODO: test destroying
 
@@ -158,7 +182,7 @@ TEST_CASE("benchmarks")
         SECTION("mutable")
         {
             timer t{"Iterating over 1000000 double components, only half "
-                    "double - const"};
+                    "double - mut"};
 
             auto view = reg.view<position, velocity>();
 
