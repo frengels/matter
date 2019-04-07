@@ -87,27 +87,36 @@ public:
         ideal_group.template emplace_back(std::forward<TupArgs>(args)...);
     }
 
-    template<typename... InputIts>
-    void insert(std::pair<InputIts, InputIts>... its) noexcept(
-        (std::is_nothrow_move_constructible_v<typename InputIts::value_type> &&
-         ...))
+    template<typename... Cs>
+    auto create_buffer_for() const noexcept
     {
-        static_assert(
-            (matter::is_component_v<typename InputIts::value_type> && ...),
-            "Not all passed values are components");
+        return matter::insert_buffer{component_ids<Cs...>()};
+    }
 
-        // all iterators must have the same amount of elements
-        assert((std::distance(its.first, its.second) == ...));
+    template<typename... Cs, typename... TIds>
+    auto create_buffer_for(
+        matter::insert_buffer<matter::unordered_typed_ids<id_type, TIds...>>&&
+            move_from)
+    {
+        return matter::insert_buffer{component_ids<Cs...>(),
+                                     std::move(move_from)};
+    }
 
-        auto ids = identifier_.template ids<typename InputIts::value_type...>();
-
-        auto opt_ideal_group = find_group_from_ids(ids);
+    template<typename... TIds>
+    void insert(const matter::insert_buffer<
+                matter::unordered_typed_ids<id_type, TIds...>>&
+                    buffer) noexcept((std::
+                                          is_nothrow_copy_constructible_v<
+                                              typename TIds::type> &&
+                                      ...))
+    {
+        auto opt_ideal_group = find_group_from_ids(buffer.ids());
 
         auto ideal_group = opt_ideal_group ?
                                std::move(opt_ideal_group).value() :
-                               create_group(ids);
+                               create_group(buffer.ids());
 
-        ideal_group.insert_back(its...);
+        ideal_group.insert_back(buffer);
     }
 
 private:
@@ -153,8 +162,7 @@ private:
     }
 
     template<typename... Ts>
-    constexpr std::optional<group<typename Ts::type...>>
-    find_group_from_ids(
+    constexpr std::optional<group<typename Ts::type...>> find_group_from_ids(
         const unordered_typed_ids<id_type, Ts...>& ids,
         const ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
     {

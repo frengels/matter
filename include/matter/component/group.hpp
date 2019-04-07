@@ -10,6 +10,7 @@
 
 #include "matter/component/any_group.hpp"
 #include "matter/component/component_view.hpp"
+#include "matter/component/insert_buffer.hpp"
 #include "matter/component/traits.hpp"
 #include "matter/component/typed_id.hpp"
 #include "matter/util/container.hpp"
@@ -268,27 +269,21 @@ public:
         return emplace_back(std::tuple{std::move(comps)}...);
     }
 
-    template<typename... TCs>
-    constexpr std::enable_if_t<sizeof...(Cs) == sizeof...(TCs) &&
-                                   (std::is_constructible_v<Cs, TCs> && ...),
-                               iterator>
-    insert(iterator pos, TCs&&... elems)
+    template<typename Id, typename... TIds>
+    constexpr std::enable_if_t<
+        (detail::type_in_list_v<typename TIds::type, Cs...> && ...),
+        iterator>
+    insert_back(
+        const matter::insert_buffer<matter::unordered_typed_ids<Id, TIds...>>&
+            buffer) noexcept((std::
+                                  is_nothrow_constructible_v<
+                                      Cs,
+                                      decltype(*buffer.template begin<Cs>())> &&
+                              ...))
     {
-        return iterator{get<Cs>().insert(pos.template get<Cs>(),
-                                         std::forward<TCs>(elems))...};
-    }
-
-    template<typename... InputIt>
-    constexpr iterator insert(iterator pos, std::pair<InputIt, InputIt>... its)
-    {
-        return iterator{
-            get<Cs>().insert(pos.template get<Cs>(), its.first, its.second)...};
-    }
-
-    template<typename... InputIts>
-    constexpr iterator insert_back(std::pair<InputIts, InputIts>... its)
-    {
-        return insert(end(), its...);
+        return iterator{get<Cs>().insert(get<Cs>().end(),
+                                         buffer.template begin<Cs>(),
+                                         buffer.template end<Cs>())...};
     }
 
     constexpr component_view<Cs...> back() noexcept

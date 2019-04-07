@@ -310,20 +310,18 @@ TEST_CASE("group_vector")
         {
             auto grp =
                 grpvec3.find_group(ident.ids<float, int, short>()).value();
-            std::vector<float> fvec;
-            std::vector<int>   ivec;
-            std::vector<short> svec;
+
+            // let's try different id order
+            auto ids     = ident.ids<int, float, short>();
+            auto ifsbuff = matter::insert_buffer{ids};
+            ifsbuff.reserve(10);
 
             for (auto i = 0; i < 10; ++i)
             {
-                fvec.push_back(i);
-                ivec.push_back(i);
-                svec.push_back(i);
+                ifsbuff.push_back(i, i, i);
             }
 
-            grp.insert_back(std::pair{fvec.begin(), fvec.end()},
-                            std::pair{ivec.begin(), ivec.end()},
-                            std::pair{svec.begin(), svec.end()});
+            grp.insert_back(ifsbuff);
 
             auto view = matter::group_view{grp};
 

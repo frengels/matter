@@ -106,8 +106,8 @@ TEST_CASE("registry")
 
         SECTION("fill view")
         {
-            float                   f1{};
-            std::vector<float_comp> fvec;
+            float f1{};
+            auto  fvec = reg.create_buffer_for<float_comp>();
             fvec.reserve(10000);
 
             for (auto i = 0; i < 10000; ++i)
@@ -116,7 +116,7 @@ TEST_CASE("registry")
                 fvec.emplace_back(f1);
             }
 
-            reg.insert(std::pair{fvec.begin(), fvec.end()});
+            reg.insert(fvec);
 
             SECTION("read view")
             {
@@ -162,19 +162,15 @@ TEST_CASE("registry")
                 }
             }
 
-            std::vector<float_comp> fvec2;
-            fvec2.reserve(10000);
-            std::vector<int_comp> ivec;
-            ivec.reserve(10000);
+            auto fibuff = reg.create_buffer_for<float_comp, int_comp>();
+            fibuff.reserve(10000);
 
             for (auto i = 0; i < 10000; ++i)
             {
-                fvec2.emplace_back(1.0f);
-                ivec.emplace_back(1);
+                fibuff.emplace_back(1.0f, 1);
             }
 
-            reg.insert(std::pair{fvec2.begin(), fvec2.end()},
-                       std::pair{ivec.begin(), ivec.end()});
+            reg.insert(fibuff);
 
             SECTION("check multiple component views")
             {
