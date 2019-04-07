@@ -128,6 +128,38 @@ TEST_CASE("registry")
                     CHECK(fcomp.f == j);
                     ++j;
                 });
+
+                SECTION("iterator")
+                {
+                    SECTION("empty iterator validation")
+                    {
+                        matter::registry<int, float, char> empty_reg;
+                        empty_reg.create<float>(std::forward_as_tuple(5.0f));
+
+                        auto empty_view  = empty_reg.view<int>();
+                        auto empty_begin = empty_view.begin();
+                        auto empty_end   = empty_view.end();
+                        // check if empty init is valid
+                        CHECK(empty_begin == empty_end);
+                    }
+                    // auto sent = fview.end();
+                    auto j1 = 0;
+                    matter::for_each(
+                        fview.begin(), fview.end(), [&](auto&& comp_view) {
+                            comp_view.invoke([&](float_comp& fcomp) {
+                                CHECK(fcomp.f == j1);
+                                fcomp.f = (2 * j1);
+                                ++j1;
+                            });
+                        });
+                    j1 = 0;
+                    matter::for_each(
+                        fview.begin(), fview.end(), [&](auto&& comp_view) {
+                            auto [fcomp] = comp_view;
+                            CHECK(fcomp.f == (2 * j1));
+                            ++j1;
+                        });
+                }
             }
 
             std::vector<float_comp> fvec2;
