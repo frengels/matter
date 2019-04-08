@@ -180,10 +180,14 @@ TEST_CASE("group_vector")
                     auto exact_grp =
                         matter::group(ident.ids<short, char, float>(), mut_grp);
 
+                    CHECK(exact_grp.size() == 0);
+
                     auto comp_view =
                         exact_grp.emplace_back(std::forward_as_tuple(5),
                                                std::forward_as_tuple('n'),
                                                std::forward_as_tuple(5.0f));
+
+                    CHECK(exact_grp.size() == 1);
 
                     auto [s, c, f] = comp_view;
                     CHECK(s == 5);
