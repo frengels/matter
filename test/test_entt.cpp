@@ -52,11 +52,10 @@ TEST_CASE("benchmarks")
         timer t{"Constructing 1000000 static component pairs of position and "
                 "velocity"};
 
-        std::vector<position> pos(1000000);
-        std::vector<velocity> vel(1000000);
+        auto posvel = reg.create_buffer_for<position, velocity>();
+        posvel.resize(1000000);
 
-        reg.insert(std::pair{pos.begin(), pos.end()},
-                   std::pair{vel.begin(), vel.end()});
+        reg.insert(posvel);
     }
 
     SECTION("assign_comp_runtime")
@@ -68,19 +67,19 @@ TEST_CASE("benchmarks")
         timer t{"Constructing 1000000 runtime component pairs of position and "
                 "velocity"};
 
-        std::vector<position> pos(1000000);
-        std::vector<velocity> vel(1000000);
+        auto posvel = reg.create_buffer_for<velocity, position>();
+        posvel.resize(1000000);
 
-        reg.insert(std::pair{pos.begin(), pos.end()},
-                   std::pair{vel.begin(), vel.end()});
+        reg.insert(posvel);
     }
 
     SECTION("iterate_single")
     {
         matter::registry<position, velocity> reg;
-        std::vector<position>                pos(1000000);
+        auto pos = reg.create_buffer_for<position>();
+        pos.resize(1000000);
 
-        reg.insert(std::pair{pos.begin(), pos.end()});
+        reg.insert(pos);
 
         SECTION("const")
         {
@@ -102,8 +101,8 @@ TEST_CASE("benchmarks")
 
         SECTION("iterator const")
         {
-            timer t{
-                "Iterating over 1000000 single components - const iterator"};
+            timer t{"Iterating over 1000000 single components - const "
+                    "iterator"};
 
             auto pos_view = reg.view<position>();
 
@@ -129,11 +128,10 @@ TEST_CASE("benchmarks")
     SECTION("iterate_double")
     {
         matter::registry<position, velocity> reg;
-        std::vector<position>                pos(1000000);
-        std::vector<velocity>                vel(1000000);
+        auto posvel = reg.create_buffer_for<position, velocity>();
+        posvel.resize(1000000);
 
-        reg.insert(std::pair{pos.begin(), pos.end()},
-                   std::pair{vel.begin(), vel.end()});
+        reg.insert(posvel);
 
         SECTION("const")
         {
@@ -160,14 +158,15 @@ TEST_CASE("benchmarks")
     SECTION("iterate_double,half")
     {
         matter::registry<position, velocity> reg;
-        std::vector<velocity>                vel(1000000);
+        auto vel = reg.create_buffer_for<velocity>();
+        vel.resize(1000000);
 
-        reg.insert(std::pair{vel.begin(), vel.end()});
+        reg.insert(vel);
 
-        std::vector<position> pos(1000000);
+        auto posvel = reg.create_buffer_for<position, velocity>(std::move(vel));
+        posvel.resize(1000000);
 
-        reg.insert(std::pair{pos.begin(), pos.end()},
-                   std::pair{vel.begin(), vel.end()});
+        reg.insert(posvel);
 
         SECTION("const")
         {
@@ -196,17 +195,18 @@ TEST_CASE("benchmarks")
     SECTION("iterate_single")
     {
         matter::registry<position, velocity> reg;
-        std::vector<velocity>                vel(1000000);
+        auto vel = reg.create_buffer_for<velocity>();
+        vel.resize(1000000);
 
-        reg.insert(std::pair{vel.begin(), vel.end()});
+        reg.insert(vel);
 
         reg.create<position, velocity>(std::forward_as_tuple(),
                                        std::forward_as_tuple());
 
         SECTION("const")
         {
-            timer t{
-                "Iterating over 1000000 components, only one has both - const"};
+            timer t{"Iterating over 1000000 components, only one has both "
+                    "- const"};
 
             auto view = reg.view<position, velocity>();
             view.for_each([](const position&, const velocity&) {});
@@ -214,8 +214,8 @@ TEST_CASE("benchmarks")
 
         SECTION("mutable")
         {
-            timer t{
-                "Iterating over 1000000 components, only one has both - mut"};
+            timer t{"Iterating over 1000000 components, only one has both "
+                    "- mut"};
 
             auto view = reg.view<position, velocity>();
             view.for_each([](position& pos, velocity& vel) {
