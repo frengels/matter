@@ -272,9 +272,11 @@ public:
 
     constexpr component_view<Cs...> operator[](std::size_t index) noexcept
     {
-        return std::apply([index](auto&... stores) {
-            return component_view{stores[index]...};
-        });
+        return std::apply(
+            [index](auto&&... stores) {
+                return component_view{stores.get()[index]...};
+            },
+            stores_);
     }
 
     template<typename T>

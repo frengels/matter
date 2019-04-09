@@ -69,6 +69,16 @@ public:
             return it_;
         }
 
+        constexpr const auto& ids() const noexcept
+        {
+            return ids_;
+        }
+
+        constexpr const auto& ordered_ids() const noexcept
+        {
+            return ordered_ids_;
+        }
+
         constexpr auto group_size() const noexcept
         {
             return base().group_size();

@@ -191,6 +191,147 @@ struct registry_view<matter::unordered_typed_ids<Id, TIds...>>
         }
     };
 
+    struct group_view_iterator
+    {
+        using group_vector_container_type = std::vector<group_vector>;
+        using group_vector_container_iterator_type =
+            matter::iterator_t<group_vector_container_type>;
+        using group_vector_container_sentinel_type =
+            matter::sentinel_t<group_vector_container_type>;
+
+        using group_vector_view_type = decltype(matter::group_vector_view{
+            std::declval<unordered_ids_type>(),
+            *std::declval<group_vector_container_iterator_type>()});
+        using group_vector_view_iterator_type =
+            matter::iterator_t<group_vector_view_type>;
+        using group_vector_view_sentinel_type =
+            matter::sentinel_t<group_vector_view_type>;
+
+        using value_type        = group_view<typename TIds::type...>;
+        using reference         = value_type;
+        using pointer           = void;
+        using iterator_category = std::forward_iterator_tag;
+
+    private:
+        group_vector_container_iterator_type grp_vec_container_it_;
+        group_vector_container_sentinel_type grp_vec_container_sent_;
+
+        group_vector_view_iterator_type grp_vec_view_it_;
+        group_vector_view_sentinel_type grp_vec_view_sent_;
+
+    public:
+        constexpr group_view_iterator(
+            const unordered_ids_type&            ids,
+            group_vector_container_iterator_type begin_range,
+            group_vector_container_sentinel_type end_range) noexcept
+            : grp_vec_container_it_{begin_range + ids.size()},
+              grp_vec_container_sent_{end_range}, grp_vec_view_it_{[&]() {
+                  auto grp_vec_view =
+                      group_vector_view_type{ids, *grp_vec_container_it_};
+                  return grp_vec_view.begin();
+              }()},
+              grp_vec_view_sent_{
+                  typename group_vector_view<unordered_ids_type>::sentinel{}}
+        {
+
+            if (grp_vec_view_it_ != grp_vec_view_sent_)
+            {
+                // the group_vector_view is not empty, hooray
+                return;
+            }
+            while (++grp_vec_container_it_ < grp_vec_container_sent_)
+            {
+                auto grp_vec_view = group_vector_view_type{
+                    grp_vec_view_it_.ids(), *grp_vec_container_it_};
+                grp_vec_view_it_   = grp_vec_view.begin();
+                grp_vec_view_sent_ = grp_vec_view.end();
+
+                if (grp_vec_view_it_ != grp_vec_view_sent_)
+                {
+                    // finally a non empty group_vector_view, after months of
+                    // iterations
+                    return;
+                }
+            }
+        }
+
+        constexpr group_view_iterator& operator++() noexcept
+        {
+            // we hit the end of our current group_vector_view, let's move up
+            if (++grp_vec_view_it_ == grp_vec_view_sent_)
+            {
+                do
+                {
+                    if (++grp_vec_container_it_ == grp_vec_container_sent_)
+                    {
+                        // we hit the end, nothing left to do
+                        return *this;
+                    }
+                    else
+                    {
+                        auto grp_vec_view = group_vector_view_type{
+                            ids(), *grp_vec_container_it_};
+                        grp_vec_view_it_   = grp_vec_view.begin();
+                        grp_vec_view_sent_ = grp_vec_view.end();
+                    }
+                } while (grp_vec_view_it_ == grp_vec_view_sent_);
+            }
+
+            return *this;
+        }
+
+        constexpr reference operator*() const noexcept
+        {
+            return *grp_vec_view_it_;
+        }
+
+        constexpr const auto& ids() const noexcept
+        {
+            return grp_vec_view_it_.ids();
+        }
+
+        constexpr const auto& ordered_ids() const noexcept
+        {
+            return grp_vec_view_it_.ordered_ids();
+        }
+
+        constexpr auto is_beyond_end() const noexcept
+        {
+            return grp_vec_container_it_ >= grp_vec_container_sent_;
+        }
+    };
+
+    struct group_view_sentinel
+    {
+        constexpr group_view_sentinel() noexcept = default;
+
+        constexpr auto operator==(const group_view_iterator& it) const noexcept
+        {
+            // use >= over == because the begin can be higher than end on
+            // instantiation
+            return it.is_beyond_end();
+        }
+
+        constexpr auto operator!=(const group_view_iterator& it) const noexcept
+        {
+            return !(*this == it);
+        }
+
+        constexpr friend auto
+        operator==(const group_view_iterator& it,
+                   const group_view_sentinel& sent) noexcept
+        {
+            return sent == it;
+        }
+
+        constexpr friend auto
+        operator!=(const group_view_iterator& it,
+                   const group_view_sentinel& sent) noexcept
+        {
+            return sent != it;
+        }
+    };
+
 private:
     unordered_ids_type                            ids_;
     matter::iterator_t<std::vector<group_vector>> begin_;
@@ -212,6 +353,16 @@ public:
     constexpr sentinel end() const noexcept
     {
         return sentinel{};
+    }
+
+    constexpr group_view_iterator group_view_begin() noexcept
+    {
+        return group_view_iterator{ids_, begin_, end_};
+    }
+
+    constexpr group_view_sentinel group_view_end() noexcept
+    {
+        return group_view_sentinel{};
     }
 
     template<typename Function>
