@@ -378,16 +378,17 @@ public:
         matter::for_each(
             it, end_, [ids = ids_, f = std::move(f)](group_vector& grp_vec) {
                 matter::group_vector_view view{ids, grp_vec};
-                matter::for_each(view.begin(),
-                                 view.end(),
-                                 [f = std::move(f)](auto grp_view) {
-                                     matter::for_each(
-                                         grp_view.begin(),
-                                         grp_view.end(),
-                                         [f = std::move(f)](auto comp_view) {
-                                             comp_view.invoke(std::move(f));
-                                         });
-                                 });
+                matter::for_each(
+                    view.begin(),
+                    view.end(),
+                    [f = std::move(f)](auto grp_view) {
+#pragma omp simd
+                        for (std::size_t i = 0; i < grp_view.size(); ++i)
+                        {
+                            auto comp_view = grp_view[i];
+                            comp_view.invoke(std::move(f));
+                        }
+                    });
             });
     }
 };
