@@ -200,6 +200,28 @@ public:
         {
             return !(sent == rit);
         }
+
+        constexpr auto operator<(const iterator& it) const noexcept
+        {
+            return sent_ < it.template get<0>();
+        }
+
+        constexpr friend auto operator<(const iterator& it,
+                                        const sentinel& sent) noexcept
+        {
+            return it.template get<0>() < sent.sent_;
+        }
+
+        constexpr auto operator-(const iterator& it) const noexcept
+        {
+            return sent_ - it.template get<0>();
+        }
+
+        constexpr friend auto operator-(const iterator& it,
+                                        const sentinel& sent) noexcept
+        {
+            return it.template get<0>() - sent.sent_;
+        }
     };
 
 private:
