@@ -29,6 +29,16 @@ public:
         : id_{std::move(other.id_)}, erased_{std::move(other.erased_)}
     {}
 
+    constexpr erased& base() noexcept
+    {
+        return erased_;
+    }
+
+    constexpr const erased& base() const noexcept
+    {
+        return erased_;
+    }
+
     id_erased& operator=(id_erased&& other) noexcept
     {
         id_     = std::move(other.id_);
