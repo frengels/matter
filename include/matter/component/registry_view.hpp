@@ -391,6 +391,21 @@ public:
                     });
             });
     }
+
+    /// erase the entity at index idx of group at it, all components will be
+    /// removed with the entity
+    void erase(const group_view_iterator& it, std::size_t idx) noexcept
+    {
+        // this is where the to be erased entity lies
+        auto any_grp = (*it).underlying_group();
+        any_grp.erase(idx);
+    }
+
+    /// remove the components from iterator at it
+    /// this will move the entity to a different group
+    template<typename... Cs>
+    void detach(const iterator& it)
+    {}
 };
 
 template<typename Id, typename... TIds>

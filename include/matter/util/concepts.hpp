@@ -51,6 +51,18 @@ template<typename T>
 struct has_pre_increment<T, std::void_t<decltype(++std::declval<T&>())>>
     : std::true_type
 {};
+
+template<typename T, typename It, typename = void>
+struct has_erase_for : std::false_type
+{};
+
+template<typename T, typename It>
+struct has_erase_for<
+    T,
+    It,
+    std::void_t<decltype(std::declval<T&>().erase(std::declval<It>()))>>
+    : std::true_type
+{};
 } // namespace matter
 
 #endif
