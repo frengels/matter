@@ -5,7 +5,6 @@ tests = [
   'storage',
   'ecs',
   'entity',
-  'variant',
   'util',
   'erased',
   'typed_id',
