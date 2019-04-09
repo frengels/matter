@@ -152,6 +152,7 @@ public:
     friend struct group;
 
 private:
+    matter::erased_storage* underlying_storage_;
     std::tuple<std::reference_wrapper<matter::component_storage_t<Cs>>...>
         stores_;
 
@@ -159,7 +160,7 @@ public:
     template<typename Id, typename... TIds>
     constexpr group(const matter::unordered_typed_ids<Id, TIds...>& unordered,
                     any_group& grp) noexcept
-        : stores_{grp.storage(unordered)}
+        : underlying_storage_{grp.data()}, stores_{grp.storage(unordered)}
     {
         // require exact match and not just contains being satisfied
         assert(grp == matter::ordered_typed_ids{unordered});
@@ -167,12 +168,18 @@ public:
 
     template<typename... OtherCs>
     constexpr group(const matter::group<OtherCs...>& other) noexcept
-        : stores_{
+        : underlying_storage_{other.underlying_storage_},
+          stores_{
               std::get<std::reference_wrapper<matter::component_storage_t<Cs>>>(
                   other.stores_)...}
     {
         static_assert((detail::type_in_list_v<OtherCs, Cs...> && ...),
                       "Incompatible components, cannot construct");
+    }
+
+    constexpr any_group underlying_group() const noexcept
+    {
+        return any_group{underlying_storage_, group_size()};
     }
 
     constexpr auto operator==(const group&) const noexcept

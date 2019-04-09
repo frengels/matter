@@ -413,6 +413,16 @@ public:
         assert(ids.size() <= group_vec.group_size());
     }
 
+    constexpr auto& base() noexcept
+    {
+        return group_vec_.get();
+    }
+
+    constexpr const auto& base() const noexcept
+    {
+        return group_vec_.get();
+    }
+
     constexpr iterator begin() noexcept
     {
         return iterator{ids_,

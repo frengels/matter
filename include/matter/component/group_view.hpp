@@ -225,6 +225,7 @@ public:
     };
 
 private:
+    any_group grp_;
     std::tuple<std::reference_wrapper<matter::component_storage_t<Cs>>...>
         stores_;
 
@@ -232,12 +233,17 @@ public:
     template<typename Id, typename... TIds>
     constexpr group_view(const unordered_typed_ids<Id, TIds...>& ids,
                          any_group&                              grp) noexcept
-        : stores_{grp.storage(ids)}
+        : grp_{grp}, stores_{grp.storage(ids)}
     {}
 
     constexpr group_view(const group<Cs...>& grp) noexcept
-        : stores_{grp.stores_}
+        : grp_{grp.underlying_group()}, stores_{grp.stores_}
     {}
+
+    constexpr any_group underlying_group() const noexcept
+    {
+        return grp_;
+    }
 
     template<typename Id>
     constexpr auto operator==(const group<Id, Cs...>& grp) const noexcept
@@ -321,14 +327,14 @@ public:
         return sentinel{get<Cs>().end()...};
     }
 
-    constexpr auto size() const noexcept
+    constexpr std::size_t size() const noexcept
     {
-        return std::get<0>(stores_).get().size();
+        return get<0>().size();
     }
 
     constexpr auto empty() const noexcept
     {
-        return std::get<0>(stores_).get().empty();
+        return get<0>().empty();
     }
 };
 
