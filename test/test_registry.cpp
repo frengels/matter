@@ -223,5 +223,18 @@ TEST_CASE("registry")
         iview.for_each([&](auto&&...) { ++n; });
         // the only inct_comp should be gone
         CHECK(n == 0);
+
+        auto it1 = fview.group_view_begin();
+        // erase through the registry method
+        reg.erase(it1, 0);
+
+        n = 0;
+        fview.for_each([&](auto&&...) { ++n; });
+        // all float_comp entities are also erased now
+        CHECK(n == 0);
+
+        n = 0;
+        iview.for_each([&](auto&&...) { ++n; });
+        CHECK(n == 0);
     }
 }
