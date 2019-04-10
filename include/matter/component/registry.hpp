@@ -119,6 +119,13 @@ public:
         ideal_group.insert_back(buffer);
     }
 
+    template<typename GroupViewIterator>
+    void erase(GroupViewIterator it, std::size_t idx) noexcept
+    {
+        auto grp = (*it).underlying_group();
+        grp.erase(idx);
+    }
+
 private:
     template<typename... Ts>
     group<typename Ts::type...>
