@@ -45,6 +45,7 @@ struct erased_storage_vtable
 {
 
     using size_type = std::size_t;
+    using id_type   = typename matter::id_erased::id_type;
 
     using get_function_type =
         std::add_pointer_t<void*(matter::erased&, size_type)>;
@@ -52,11 +53,17 @@ struct erased_storage_vtable
         std::add_pointer_t<void(matter::erased&, const void*)>;
     using erase_function_type =
         std::add_pointer_t<void(matter::erased&, size_type idx)>;
+    using size_function_type =
+        std::add_pointer_t<std::size_t(const matter::erased&)>;
+    // needed to create a new storage when it's not available beforehand
+    using create_function_type = std::add_pointer_t<matter::id_erased(id_type)>;
 
 private:
     get_function_type       get_fn_;
     push_back_function_type pb_fn_;
     erase_function_type     erase_fn_;
+    size_function_type      size_fn_;
+    create_function_type    create_fn_;
 
 public:
     template<typename C>
@@ -75,16 +82,30 @@ public:
           erase_fn_{[](matter::erased& er_storage, size_type idx) {
               auto& storage =
                   er_storage.template get<matter::component_storage_t<C>>();
+
+              // use swap and pop to efficiently erase without mass moving
+              auto last_idx = storage.size() - 1;
+              storage[idx]  = std::move(storage[last_idx]);
+
               if constexpr (matter::has_erase_for<
                                 matter::component_storage_t<C>,
                                 size_type>::value)
               {
-                  storage.erase(idx);
+                  storage.erase(last_idx);
               }
               else
               {
-                  storage.erase(std::begin(storage) + idx);
+                  storage.erase(std::begin(storage) + last_idx);
               }
+          }},
+          size_fn_{[](const matter::erased& er_storage) {
+              const auto& storage =
+                  er_storage.template get<matter::component_storage_t<C>>();
+              return storage.size();
+          }},
+          create_fn_{[](id_type id) {
+              return id_erased{
+                  id, std::in_place_type_t<matter::component_storage_t<C>>{}};
           }}
     {
         static_assert(matter::is_component_v<C>,
@@ -106,6 +127,16 @@ public:
     constexpr void erase(matter::erased& er_storage, size_type idx) noexcept
     {
         return erase_fn_(er_storage, idx);
+    }
+
+    constexpr std::size_t size(const matter::erased& er_storage) const noexcept
+    {
+        return size_fn_(er_storage);
+    }
+
+    matter::id_erased create_storage(id_type id) const noexcept
+    {
+        return create_fn_(id);
     }
 };
 } // namespace detail
@@ -141,6 +172,11 @@ public:
                       "You must use a typed id to construct erased_storage.");
     }
 
+    erased_storage(matter::id_erased&&            erased,
+                   detail::erased_storage_vtable* vptr) noexcept
+        : erased_{std::move(erased)}, vptr_{vptr}
+    {}
+
     template<typename C>
     constexpr matter::component_storage_t<C>& get() noexcept
     {
@@ -173,6 +209,17 @@ public:
     constexpr void erase(size_type idx) noexcept
     {
         return vptr_->erase(erased_.base(), idx);
+    }
+
+    constexpr std::size_t size() const noexcept
+    {
+        return vptr_->size(erased_.base());
+    }
+
+    /// create another storage of this type, the contents are not copied
+    matter::erased_storage duplicate_storage() const noexcept
+    {
+        return matter::erased_storage{vptr_->create_storage(id()), vptr_};
     }
 
     constexpr auto operator==(const erased_storage& other) const noexcept
