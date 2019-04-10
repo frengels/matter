@@ -69,6 +69,16 @@ public:
             return it_;
         }
 
+        constexpr const auto& ids() const noexcept
+        {
+            return ids_;
+        }
+
+        constexpr const auto& ordered_ids() const noexcept
+        {
+            return ordered_ids_;
+        }
+
         constexpr auto group_size() const noexcept
         {
             return base().group_size();
@@ -401,6 +411,16 @@ public:
           group_vec_{group_vec}
     {
         assert(ids.size() <= group_vec.group_size());
+    }
+
+    constexpr auto& base() noexcept
+    {
+        return group_vec_.get();
+    }
+
+    constexpr const auto& base() const noexcept
+    {
+        return group_vec_.get();
     }
 
     constexpr iterator begin() noexcept

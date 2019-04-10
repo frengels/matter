@@ -31,7 +31,8 @@ private:
     friend class any_group;
 
 public:
-    using id_type = typename matter::erased_storage::id_type;
+    using id_type   = typename matter::erased_storage::id_type;
+    using size_type = typename matter::erased_storage::size_type;
 
     using const_iterator = const matter::erased_storage*;
     using iterator =
@@ -122,6 +123,13 @@ public:
     constexpr erased_type data() noexcept
     {
         return ptr_;
+    }
+
+    constexpr void erase(size_type idx) noexcept
+    {
+        std::for_each(begin(), end(), [&](auto&& erased_storage) {
+            erased_storage.erase(idx);
+        });
     }
 
     constexpr const matter::erased_storage* data() const noexcept

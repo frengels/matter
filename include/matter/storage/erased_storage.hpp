@@ -75,7 +75,16 @@ public:
           erase_fn_{[](matter::erased& er_storage, size_type idx) {
               auto& storage =
                   er_storage.template get<matter::component_storage_t<C>>();
-              storage.erase(std::begin(storage) + idx);
+              if constexpr (matter::has_erase_for<
+                                matter::component_storage_t<C>,
+                                size_type>::value)
+              {
+                  storage.erase(idx);
+              }
+              else
+              {
+                  storage.erase(std::begin(storage) + idx);
+              }
           }}
     {
         static_assert(matter::is_component_v<C>,

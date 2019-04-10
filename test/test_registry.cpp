@@ -191,4 +191,50 @@ TEST_CASE("registry")
             }
         }
     }
+
+    SECTION("erase")
+    {
+        reg.create<float_comp>(std::forward_as_tuple(5.0f));
+        reg.create<float_comp, int_comp>(std::forward_as_tuple(5.0f),
+                                         std::forward_as_tuple(5));
+
+        int  n     = 0;
+        auto fview = reg.view<float_comp>();
+        fview.for_each([&](auto&&...) { ++n; });
+
+        CHECK(n == 2);
+
+        n          = 0;
+        auto iview = reg.view<int_comp>();
+        iview.for_each([&](auto&&...) { ++n; });
+        CHECK(n == 1);
+
+        auto it = iview.group_view_begin();
+        CHECK(it != iview.group_view_end());
+        // should be at index 0 within the group
+        iview.erase(it, 0);
+
+        n = 0;
+        fview.for_each([&](auto&&...) { ++n; });
+        // a float component should be gone
+        CHECK(n == 1);
+
+        n = 0;
+        iview.for_each([&](auto&&...) { ++n; });
+        // the only inct_comp should be gone
+        CHECK(n == 0);
+
+        auto it1 = fview.group_view_begin();
+        // erase through the registry method
+        reg.erase(it1, 0);
+
+        n = 0;
+        fview.for_each([&](auto&&...) { ++n; });
+        // all float_comp entities are also erased now
+        CHECK(n == 0);
+
+        n = 0;
+        iview.for_each([&](auto&&...) { ++n; });
+        CHECK(n == 0);
+    }
 }

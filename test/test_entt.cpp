@@ -122,6 +122,45 @@ TEST_CASE("benchmarks")
                         [](position& position) { position.x = {}; });
                 });
         }
+
+        SECTION("group_view_iterator const")
+        {
+            timer t{"Iterating over 1000000 single components - const "
+                    "group_view_iterator"};
+
+            auto pos_view = reg.view<position>();
+
+            matter::for_each(pos_view.group_view_begin(),
+                             pos_view.group_view_end(),
+                             [](auto grp_view) {
+                                 auto sz = grp_view.size();
+#pragma omp simd
+                                 for (std::size_t i = 0; i < sz; ++i)
+                                 {
+                                     grp_view[i].invoke([](const position&) {});
+                                 }
+                             });
+        }
+
+        SECTION("group_view_iterator const")
+        {
+            timer t{"Iterating over 1000000 single components - const "
+                    "group_view_iterator"};
+
+            auto pos_view = reg.view<position>();
+
+            matter::for_each(pos_view.group_view_begin(),
+                             pos_view.group_view_end(),
+                             [](auto grp_view) {
+                                 auto sz = grp_view.size();
+#pragma omp simd
+                                 for (std::size_t i = 0; i < sz; ++i)
+                                 {
+                                     grp_view[i].invoke(
+                                         [](position& pos) { pos.x = {}; });
+                                 }
+                             });
+        }
     }
     // TODO: test destroying
 
