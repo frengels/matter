@@ -113,7 +113,7 @@ for_each(ExecutionPolicy&&,
         // calculate the bounds of vectorization
 
 #pragma omp simd
-        for (auto it = first; it < last; ++first)
+        for (auto it = first; it < last; ++it)
         {
             f(*it);
         }
@@ -208,7 +208,7 @@ rotate(ForwardIt first, ForwardIt n_first, ForwardIt last) noexcept
         matter::iter_swap(write++, read++);
     }
 
-    rotate(write, next_read, last);
+    matter::rotate(write, next_read, last);
     return write;
 }
 
