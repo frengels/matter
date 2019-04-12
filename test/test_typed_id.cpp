@@ -35,6 +35,20 @@ TEST_CASE("typed_id")
             auto ordered1  = ident.ordered_ids<float, short, char>();
             auto rt_order1 = ident.ordered_ids<char, unsigned char, double>();
 
+            SECTION("get")
+            {
+                static_assert(!matter::is_typed_id_v<char>);
+                static_assert(matter::is_typed_id_v<static_typed_id<char>>);
+
+                unordered1.template get<char>();
+                static_assert(
+                    std::is_same_v<decltype(unordered1.template get<0>()),
+                                   decltype(unordered1.template get<char>())>);
+                static_assert(
+                    std::is_same_v<decltype(unordered2.template get<1>()),
+                                   decltype(unordered2.template get<char>())>);
+            }
+
             SECTION("structured bindings")
             {
                 SECTION("unordered")
