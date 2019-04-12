@@ -99,27 +99,21 @@ TEST_CASE("benchmarks")
             pos_view.for_each([](position& pos) { pos.x = {}; });
         }
 
-        SECTION("iterator const")
+        SECTION("group_view_iterator const")
         {
             timer t{"Iterating over 1000000 single components - const "
-                    "iterator"};
+                    "group_view_iterator"};
 
             auto pos_view = reg.view<position>();
 
             matter::for_each(
-                pos_view.begin(), pos_view.end(), [](const auto&) {});
-        }
-
-        SECTION("iterator mut")
-        {
-            timer t{"Iterating over 1000000 single components - mut iterator"};
-
-            auto pos_view = reg.view<position>();
-
-            matter::for_each(
-                pos_view.begin(), pos_view.end(), [](auto&& comp_view) {
-                    comp_view.invoke(
-                        [](position& position) { position.x = {}; });
+                pos_view.begin(), pos_view.end(), [](auto grp_view) {
+                    auto sz = grp_view.size();
+#pragma omp simd
+                    for (std::size_t i = 0; i < sz; ++i)
+                    {
+                        grp_view[i].invoke([](const position&) {});
+                    }
                 });
         }
 
@@ -130,36 +124,15 @@ TEST_CASE("benchmarks")
 
             auto pos_view = reg.view<position>();
 
-            matter::for_each(pos_view.group_view_begin(),
-                             pos_view.group_view_end(),
-                             [](auto grp_view) {
-                                 auto sz = grp_view.size();
+            matter::for_each(
+                pos_view.begin(), pos_view.end(), [](auto grp_view) {
+                    auto sz = grp_view.size();
 #pragma omp simd
-                                 for (std::size_t i = 0; i < sz; ++i)
-                                 {
-                                     grp_view[i].invoke([](const position&) {});
-                                 }
-                             });
-        }
-
-        SECTION("group_view_iterator const")
-        {
-            timer t{"Iterating over 1000000 single components - const "
-                    "group_view_iterator"};
-
-            auto pos_view = reg.view<position>();
-
-            matter::for_each(pos_view.group_view_begin(),
-                             pos_view.group_view_end(),
-                             [](auto grp_view) {
-                                 auto sz = grp_view.size();
-#pragma omp simd
-                                 for (std::size_t i = 0; i < sz; ++i)
-                                 {
-                                     grp_view[i].invoke(
-                                         [](position& pos) { pos.x = {}; });
-                                 }
-                             });
+                    for (std::size_t i = 0; i < sz; ++i)
+                    {
+                        grp_view[i].invoke([](position& pos) { pos.x = {}; });
+                    }
+                });
         }
     }
 
@@ -175,7 +148,7 @@ TEST_CASE("benchmarks")
         timer t{"Destroying 1000000 entities"};
 
         auto pos_view = reg.view<position>();
-        auto it       = pos_view.group_view_begin();
+        auto it       = pos_view.begin();
         for (std::size_t i = 999999; i != 0; --i)
         {
             pos_view.erase(it, i);
