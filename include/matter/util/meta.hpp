@@ -151,6 +151,18 @@ struct nth<0, T, Ts...>
 template<std::size_t N, typename... Ts>
 using nth_t = typename nth<N, Ts...>::type;
 
+template<typename... Ts>
+struct first;
+
+template<typename T, typename... Ts>
+struct first<T, Ts...>
+{
+    using type = T;
+};
+
+template<typename... Ts>
+using first_t = typename first<Ts...>::type;
+
 template<typename T, typename TupArgs>
 struct is_constructible_expand_tuple : std::false_type
 {};
