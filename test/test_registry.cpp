@@ -145,19 +145,27 @@ TEST_CASE("registry")
                     // auto sent = fview.end();
                     auto j1 = 0;
                     matter::for_each(
-                        fview.begin(), fview.end(), [&](auto&& comp_view) {
-                            comp_view.invoke([&](float_comp& fcomp) {
-                                CHECK(fcomp.f == j1);
-                                fcomp.f = (2 * j1);
-                                ++j1;
-                            });
+                        fview.begin(), fview.end(), [&](auto&& group_view) {
+                            for (std::size_t i = 0; i < group_view.size(); ++i)
+                            {
+                                auto comp_view = group_view[i];
+                                comp_view.invoke([&](float_comp& fcomp) {
+                                    CHECK(fcomp.f == j1);
+                                    fcomp.f = (2 * j1);
+                                    ++j1;
+                                });
+                            }
                         });
                     j1 = 0;
                     matter::for_each(
-                        fview.begin(), fview.end(), [&](auto&& comp_view) {
-                            auto [fcomp] = comp_view;
-                            CHECK(fcomp.f == (2 * j1));
-                            ++j1;
+                        fview.begin(), fview.end(), [&](auto&& group_view) {
+                            for (std::size_t i = 0; i < group_view.size(); ++i)
+                            {
+                                auto comp_view = group_view[i];
+                                auto [fcomp]   = comp_view;
+                                CHECK(fcomp.f == (2 * j1));
+                                ++j1;
+                            }
                         });
                 }
             }
@@ -211,8 +219,8 @@ TEST_CASE("registry")
 
         SECTION("erase")
         {
-            auto it = iview.group_view_begin();
-            CHECK(it != iview.group_view_end());
+            auto it = iview.begin();
+            CHECK(it != iview.end());
             // should be at index 0 within the group
             iview.erase(it, 0);
 
@@ -226,7 +234,7 @@ TEST_CASE("registry")
             // the only inct_comp should be gone
             CHECK(n == 0);
 
-            auto it1 = fview.group_view_begin();
+            auto it1 = fview.begin();
             // erase through the registry method
             reg.erase(it1, 0);
 
@@ -242,13 +250,13 @@ TEST_CASE("registry")
 
         SECTION("detach")
         {
-            auto it = iview.group_view_begin();
+            auto it = iview.begin();
             iview.detach<int_comp>(it, 0);
 
             // views need to be reconstructed after modification
             iview = reg.view<int_comp>();
             n     = 0;
-            it    = iview.group_view_begin();
+            it    = iview.begin();
             iview.for_each([&](auto&&...) { ++n; });
             CHECK(n == 0);
 
@@ -292,7 +300,7 @@ TEST_CASE("registry")
             fiview.for_each([&](auto&&...) { ++n; });
             CHECK(n == 10000);
 
-            fiview.detach<float_comp>(fiview.group_view_begin(), 0);
+            fiview.detach<float_comp>(fiview.begin(), 0);
 
             auto icview = detach_reg.view<int_comp>();
 
