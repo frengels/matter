@@ -41,6 +41,7 @@ build:alpine:
 
 coverage:
   image: registry.gitlab.com/dreyri/matter/debian:v4
+  allow_failure: true
   stage: coverage
   script:
     - meson ${MESON_COMMON_OPTIONS} -Db_coverage=true build
