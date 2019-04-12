@@ -92,7 +92,7 @@ public:
     template<typename T>
     constexpr const T& get() const noexcept
     {
-        return *static_cast<T*>(get_void());
+        return *static_cast<const T*>(get_void());
     }
 
     friend void swap(erased& lhs, erased& rhs) noexcept;

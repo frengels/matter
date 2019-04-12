@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <functional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -52,31 +53,60 @@ struct is_typed_id<
             std::is_same_v<
                 typename TId::id_type,
                 std::remove_cv_t<std::remove_reference_t<decltype(
-                    typename TId::id_type(std::declval<const TId>()))>>> &&
+                    typename TId::id_type(std::declval<const TId&>()))>>> &&
             std::is_same_v<bool,
                            decltype(
-                               std::declval<const typename TId::id_type>() ==
-                               std::declval<const typename TId::id_type>())> &&
+                               std::declval<const typename TId::id_type&>() ==
+                               std::declval<const typename TId::id_type&>())> &&
             std::is_same_v<bool,
                            decltype(
-                               std::declval<const typename TId::id_type>() !=
-                               std::declval<const typename TId::id_type>())> &&
+                               std::declval<const typename TId::id_type&>() !=
+                               std::declval<const typename TId::id_type&>())> &&
             std::is_same_v<bool,
                            decltype(
-                               std::declval<const typename TId::id_type>() <
-                               std::declval<const typename TId::id_type>())> &&
+                               std::declval<const typename TId::id_type&>() <
+                               std::declval<const typename TId::id_type&>())> &&
             std::is_same_v<bool,
                            decltype(
-                               std::declval<const typename TId::id_type>() >
-                               std::declval<const typename TId::id_type>())> &&
+                               std::declval<const typename TId::id_type&>() >
+                               std::declval<const typename TId::id_type&>())> &&
             std::is_same_v<bool,
-                           decltype(std::declval<const TId>().has_value())>,
+                           decltype(std::declval<const TId&>().has_value())>,
         std::void_t<typename TId::id_type, typename TId::type>>>
     : std::true_type
 {};
 
 template<typename T>
-static constexpr auto is_typed_id_v = is_typed_id<T>::value;
+constexpr bool is_typed_id_v = is_typed_id<T>::value;
+
+namespace impl
+{
+template<typename T, typename... TTs>
+struct common_typed_id_type
+{};
+
+template<typename T, typename U, typename TT, typename... TTs>
+struct common_typed_id_type_impl : common_typed_id_type<T, TTs...>
+{};
+
+template<typename T, typename TT, typename... TTs>
+struct common_typed_id_type_impl<T, T, TT, TTs...>
+{
+    using type = TT;
+};
+
+template<typename T, typename TT, typename... TTs>
+struct common_typed_id_type<T, TT, TTs...>
+    : common_typed_id_type_impl<T, typename TT::type, TT, TTs...>
+{};
+} // namespace impl
+
+template<typename T, typename... TIds>
+struct common_typed_id_type : impl::common_typed_id_type<T, TIds...>
+{};
+
+template<typename T, typename... TIds>
+using common_typed_id_type_t = typename common_typed_id_type<T, TIds...>::type;
 
 template<typename Id, typename C, Id Val>
 struct static_id
@@ -88,8 +118,7 @@ private:
     static constexpr auto value_ = Val;
 
 public:
-    constexpr static_id() noexcept
-    {}
+    constexpr static_id() noexcept = default;
 
     constexpr auto value() const noexcept
     {
@@ -180,9 +209,18 @@ public:
     }
 
     template<typename T>
-    constexpr T get() const noexcept
+    constexpr std::enable_if_t<!matter::is_typed_id_v<T>,
+                               matter::common_typed_id_type_t<T, Ts...>>
+    get() const noexcept
     {
-        auto tid = std::get<T>(ids_);
+        return std::get<matter::common_typed_id_type_t<T, Ts...>>(ids_);
+    }
+
+    template<typename TId>
+    constexpr std::enable_if_t<matter::is_typed_id_v<TId>, TId> get() const
+        noexcept
+    {
+        auto tid = std::get<TId>(ids_);
         assert(tid.has_value());
         return tid;
     }
@@ -417,16 +455,22 @@ public:
         }
     }
 
-    constexpr bool contains(id_type id) const noexcept
+    constexpr bool contains(const id_type& id) const noexcept
     {
         auto it = std::lower_bound(begin(), end(), id);
-        return it == end() ? false : true;
+
+        if (it == end() || *it != id)
+        {
+            return false;
+        }
+
+        return true;
     }
 };
 
 template<typename... Ts>
 ordered_typed_ids(Ts... types) noexcept
-    ->ordered_typed_ids<typename detail::nth<0, Ts...>::id_type, Ts...>;
+    ->ordered_typed_ids<typename detail::first_t<Ts...>::id_type, Ts...>;
 
 template<typename Id, typename... Ts>
 ordered_typed_ids(const unordered_typed_ids<Id, Ts...>& ids) noexcept

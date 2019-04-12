@@ -404,8 +404,43 @@ public:
     /// remove the components from iterator at it
     /// this will move the entity to a different group
     template<typename... Cs>
-    void detach(const iterator& it)
-    {}
+    std::enable_if_t<(detail::type_in_list_v<Cs, typename TIds::type...> &&
+                      ...)>
+    detach(const group_view_iterator& it, std::size_t idx) noexcept
+    {
+        any_group current_group     = (*it).underlying_group();
+        auto      group_size        = current_group.group_size();
+        auto      future_group_size = group_size - sizeof...(Cs);
+
+        // group vector to insert into
+        auto& group_vector = *(begin_ + future_group_size);
+
+        auto new_group = group_vector.find_new_group_without(
+            const_any_group{current_group},
+            matter::unordered_typed_ids<id_type,
+                                        decltype(ids_.template get<Cs>())...>{
+                ids_.template get<Cs>()...});
+
+        auto ordered_without_ids =
+            matter::ordered_typed_ids{ids_.template get<Cs>()...};
+
+        // migrate from our old group to the new group
+        matter::for_each(matter::execution::unseq,
+                         current_group.begin(),
+                         current_group.end(),
+                         [&](auto&& er_storage) {
+                             if (!ordered_without_ids.contains(er_storage.id()))
+                             {
+                                 new_group.push_back(er_storage[idx]);
+                             }
+                         });
+
+        // all sizes must be equal after migration
+        assert(new_group.are_sizes_valid());
+
+        // remove the entity from the old array
+        current_group.erase(idx);
+    }
 };
 
 template<typename Id, typename... TIds>

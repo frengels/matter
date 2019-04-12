@@ -122,6 +122,8 @@ public:
     template<typename GroupViewIterator>
     void erase(GroupViewIterator it, std::size_t idx) noexcept
     {
+        // need to use the very abstract GroupViewIterator because otherwise
+        // template deduction doesn't work at all
         auto grp = (*it).underlying_group();
         grp.erase(idx);
     }

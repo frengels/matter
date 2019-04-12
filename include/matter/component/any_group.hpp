@@ -5,6 +5,7 @@
 
 #include "matter/component/traits.hpp"
 #include "matter/component/typed_id.hpp"
+#include "matter/component/untyped_id.hpp"
 #include "matter/storage/erased_storage.hpp"
 
 namespace matter
@@ -43,11 +44,11 @@ public:
 
 private:
     erased_type ptr_;
-    std::size_t size_;
+    std::size_t group_size_;
 
 public:
-    constexpr any_group(erased_type ptr, std::size_t size) noexcept
-        : ptr_{ptr}, size_{size}
+    constexpr any_group(erased_type ptr, std::size_t group_size) noexcept
+        : ptr_{ptr}, group_size_{group_size}
     {
         assert(is_sorted());
     }
@@ -57,7 +58,7 @@ public:
     {}
 
     constexpr any_group(const any_group<false>& mutable_grp)
-        : ptr_{mutable_grp.ptr_}, size_{mutable_grp.size_}
+        : ptr_{mutable_grp.ptr_}, group_size_{mutable_grp.group_size_}
     {}
 
     iterator begin() noexcept
@@ -67,7 +68,7 @@ public:
 
     iterator end() noexcept
     {
-        return ptr_ + size_;
+        return ptr_ + group_size();
     }
 
     const_iterator begin() const noexcept
@@ -77,7 +78,7 @@ public:
 
     const_iterator end() const noexcept
     {
-        return ptr_ + size_;
+        return ptr_ + group_size();
     }
 
     const_iterator cbegin() const noexcept
@@ -87,7 +88,7 @@ public:
 
     const_iterator cend() const noexcept
     {
-        return ptr_;
+        return ptr_ + group_size();
     }
 
     reverse_iterator rbegin() noexcept
@@ -125,6 +126,11 @@ public:
         return ptr_;
     }
 
+    constexpr const erased_type data() const noexcept
+    {
+        return ptr_;
+    }
+
     constexpr void erase(size_type idx) noexcept
     {
         std::for_each(begin(), end(), [&](auto&& erased_storage) {
@@ -132,14 +138,43 @@ public:
         });
     }
 
-    constexpr const matter::erased_storage* data() const noexcept
+    /// get the object with the passed id at the passed index
+    constexpr erased_component<id_type> get_at(const id_type& id,
+                                               size_type      index) noexcept
     {
-        return ptr_;
+        assert(contains(id));
+        auto* storage = find_id(id);
+
+        return storage[index];
+    }
+
+    constexpr void push_back(erased_component<id_type> comp) noexcept
+    {
+        auto* storage = find_id(comp.id());
+        assert(storage);
+
+        storage->push_back(comp);
+    }
+
+    /// \brief used to validate that all underlying sizes are equal
+    constexpr bool are_sizes_valid() const noexcept
+    {
+        auto expected_sz = ptr_->size();
+
+        for (std::size_t i = 1; i < group_size(); ++i)
+        {
+            if (ptr_[i].size() != expected_sz)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     constexpr bool operator==(const any_group& other) const noexcept
     {
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] != other.ptr_[i])
             {
@@ -155,13 +190,12 @@ public:
         return !(*this == other);
     }
 
-    template<typename... TIds>
-    constexpr auto
-    operator==(const ordered_typed_ids<id_type, TIds...>& ids) const noexcept
+    constexpr auto operator==(matter::ordered_untyped_ids<id_type> ids) const
+        noexcept
     {
-        assert(ids.size() == size());
+        assert(ids.size() == group_size());
 
-        for (std::size_t i = 0; i < size(); ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] != ids[i])
             {
@@ -174,6 +208,29 @@ public:
 
     template<typename... TIds>
     constexpr auto
+    operator==(const ordered_typed_ids<id_type, TIds...>& ids) const noexcept
+    {
+        assert(ids.size() == group_size());
+
+        for (std::size_t i = 0; i < group_size(); ++i)
+        {
+            if (ptr_[i] != ids[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    constexpr auto operator!=(matter::ordered_untyped_ids<id_type> ids) const
+        noexcept
+    {
+        return !(*this == std::move(ids));
+    }
+
+    template<typename... TIds>
+    constexpr auto
     operator!=(const ordered_typed_ids<id_type, TIds...>& ids) const noexcept
     {
         return !(*this == ids);
@@ -181,9 +238,9 @@ public:
 
     constexpr bool operator<(const any_group& other) const noexcept
     {
-        assert(size() == other.size());
+        assert(group_size() == other.group_size());
 
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] < other.ptr_[i])
             {
@@ -198,9 +255,25 @@ public:
     constexpr bool operator<(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
     {
-        assert(ids.size() == size_);
+        assert(ids.size() == group_size());
 
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
+        {
+            if (ptr_[i] < ids[i])
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    constexpr auto operator<(matter::ordered_untyped_ids<id_type> ids) const
+        noexcept
+    {
+        assert(group_size() == ids.size());
+
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] < ids[i])
             {
@@ -213,9 +286,9 @@ public:
 
     constexpr bool operator>(const any_group& other) const noexcept
     {
-        assert(size() == other.size());
+        assert(group_size() == other.group_size());
 
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] > other.ptr_[i])
             {
@@ -230,9 +303,25 @@ public:
     constexpr bool operator>(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
     {
-        assert(ids.size() == size_);
+        assert(ids.size() == group_size());
 
-        for (std::size_t i = 0; i < size_; ++i)
+        for (std::size_t i = 0; i < group_size(); ++i)
+        {
+            if (ptr_[i] > ids[i])
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    constexpr auto operator>(matter::ordered_untyped_ids<id_type> ids) const
+        noexcept
+    {
+        assert(group_size() == ids.size());
+
+        for (std::size_t i = 0; i < group_size(); ++i)
         {
             if (ptr_[i] > ids[i])
             {
@@ -329,7 +418,7 @@ public:
             "Cannot construct one of the components from passed args");
 
         // if this isn't true then we're emplacing in the wrong group
-        assert(sizeof...(Ts) == size_);
+        assert(sizeof...(Ts) == group_size());
         // if this isn't true then this group doesn't contain the ids
         assert(contains(ordered_typed_ids{ids}));
 
@@ -355,7 +444,19 @@ public:
 
     constexpr std::size_t size() const noexcept
     {
-        return size_;
+        assert(are_sizes_valid());
+        return ptr_->size();
+    }
+
+    constexpr std::size_t group_size() const noexcept
+    {
+        return group_size_;
+    }
+
+    constexpr bool contains(const id_type& id) const noexcept
+    {
+        auto* ptr = find_id(id);
+        return ptr;
     }
 
     template<typename TId>
@@ -363,16 +464,15 @@ public:
     contains(const TId& id) const noexcept
     {
         static_assert(matter::has_same_id_type_v<TId, id_type>);
-        auto* ptr = find_id(id);
-        return ptr == end() ? false : true;
+        return contains(id.value());
     }
 
     template<typename... Ts>
     constexpr bool contains(const ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
     {
-        assert(ids.size() <= size_);
-        return std::includes(ptr_, ptr_ + size_, ids.begin(), ids.end());
+        assert(ids.size() <= group_size());
+        return std::includes(ptr_, ptr_ + group_size(), ids.begin(), ids.end());
     }
 
     constexpr bool contains(const any_group& other) const noexcept
@@ -409,7 +509,7 @@ public:
     storage(const unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
         assert(contains(ordered_typed_ids{ids}));
-        assert(ids.size() <= size_);
+        assert(ids.size() <= group_size());
 
         return {storage(ids.template get<Ts>())...};
     }
@@ -419,7 +519,7 @@ public:
     storage(const unordered_typed_ids<id_type, Ts...>& ids) const noexcept
     {
         assert(contains(ordered_typed_ids{ids}));
-        assert(ids.size() <= size_);
+        assert(ids.size() <= group_size());
 
         return {storage(ids.template get<Ts>())...};
     }
@@ -431,6 +531,30 @@ public:
         swap(lhs.size_, rhs.size_);
     }
 
+    erased_type find_id(const id_type& id) noexcept
+    {
+        auto it = matter::lower_bound(begin(), end(), id);
+
+        if (it == end() || it->id() != id)
+        {
+            return nullptr;
+        }
+
+        return it;
+    }
+
+    const matter::erased_storage* find_id(const id_type& id) const noexcept
+    {
+        auto it = matter::lower_bound(begin(), end(), id);
+
+        if (it == end() || it->id() != id)
+        {
+            return nullptr;
+        }
+
+        return it;
+    }
+
 private:
     /// \brief elements in a group must always be sorted
     /// this function is a precondition for most operations to ensure all
@@ -438,23 +562,15 @@ private:
     /// and to efficiently check whether ids are contained within this group
     bool is_sorted() const noexcept
     {
-        return std::is_sorted(ptr_, ptr_ + size_);
+        return std::is_sorted(begin(), end());
     }
 
     template<typename TId>
-    constexpr std::enable_if_t<matter::is_typed_id_v<TId>,
-                               matter::erased_storage*>
+    constexpr std::enable_if_t<matter::is_typed_id_v<TId>, erased_type>
     find_id(const TId& id) noexcept
     {
         static_assert(matter::has_same_id_type_v<TId, id_type>);
-        auto it = std::lower_bound(begin(), end(), id);
-
-        if (it == end() || it->id() != id)
-        {
-            return end();
-        }
-
-        return it;
+        return find_id(id.value());
     }
 
     template<typename TId>
@@ -463,14 +579,7 @@ private:
     find_id(const TId& id) const noexcept
     {
         static_assert(matter::has_same_id_type_v<TId, id_type>);
-        auto it = std::lower_bound(begin(), end(), id);
-
-        if (it == end() || it->id() != id)
-        {
-            return end();
-        }
-
-        return it;
+        return find_id(id.value());
     }
 };
 } // namespace detail

@@ -162,7 +162,27 @@ TEST_CASE("benchmarks")
                              });
         }
     }
-    // TODO: test destroying
+
+    SECTION("destroy")
+    {
+        matter::registry<position> reg;
+
+        auto buff = reg.create_buffer_for<position>();
+        buff.resize(1000000);
+
+        reg.insert(buff);
+
+        timer t{"Destroying 1000000 entities"};
+
+        auto pos_view = reg.view<position>();
+        auto it       = pos_view.group_view_begin();
+        for (std::size_t i = 999999; i != 0; --i)
+        {
+            pos_view.erase(it, i);
+        }
+
+        pos_view.erase(it, 0);
+    }
 
     SECTION("iterate_double")
     {

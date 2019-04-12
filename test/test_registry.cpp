@@ -192,7 +192,7 @@ TEST_CASE("registry")
         }
     }
 
-    SECTION("erase")
+    SECTION("removal")
     {
         reg.create<float_comp>(std::forward_as_tuple(5.0f));
         reg.create<float_comp, int_comp>(std::forward_as_tuple(5.0f),
@@ -209,32 +209,110 @@ TEST_CASE("registry")
         iview.for_each([&](auto&&...) { ++n; });
         CHECK(n == 1);
 
-        auto it = iview.group_view_begin();
-        CHECK(it != iview.group_view_end());
-        // should be at index 0 within the group
-        iview.erase(it, 0);
+        SECTION("erase")
+        {
+            auto it = iview.group_view_begin();
+            CHECK(it != iview.group_view_end());
+            // should be at index 0 within the group
+            iview.erase(it, 0);
 
-        n = 0;
-        fview.for_each([&](auto&&...) { ++n; });
-        // a float component should be gone
-        CHECK(n == 1);
+            n = 0;
+            fview.for_each([&](auto&&...) { ++n; });
+            // a float component should be gone
+            CHECK(n == 1);
 
-        n = 0;
-        iview.for_each([&](auto&&...) { ++n; });
-        // the only inct_comp should be gone
-        CHECK(n == 0);
+            n = 0;
+            iview.for_each([&](auto&&...) { ++n; });
+            // the only inct_comp should be gone
+            CHECK(n == 0);
 
-        auto it1 = fview.group_view_begin();
-        // erase through the registry method
-        reg.erase(it1, 0);
+            auto it1 = fview.group_view_begin();
+            // erase through the registry method
+            reg.erase(it1, 0);
 
-        n = 0;
-        fview.for_each([&](auto&&...) { ++n; });
-        // all float_comp entities are also erased now
-        CHECK(n == 0);
+            n = 0;
+            fview.for_each([&](auto&&...) { ++n; });
+            // all float_comp entities are also erased now
+            CHECK(n == 0);
 
-        n = 0;
-        iview.for_each([&](auto&&...) { ++n; });
-        CHECK(n == 0);
+            n = 0;
+            iview.for_each([&](auto&&...) { ++n; });
+            CHECK(n == 0);
+        }
+
+        SECTION("detach")
+        {
+            auto it = iview.group_view_begin();
+            iview.detach<int_comp>(it, 0);
+
+            // views need to be reconstructed after modification
+            iview = reg.view<int_comp>();
+            n     = 0;
+            it    = iview.group_view_begin();
+            iview.for_each([&](auto&&...) { ++n; });
+            CHECK(n == 0);
+
+            fview = reg.view<float_comp>();
+            n     = 0;
+            fview.for_each([&](auto&&...) { ++n; });
+            CHECK(n == 2);
+        }
+
+        SECTION("more detach")
+        {
+            matter::registry<> detach_reg;
+            detach_reg.register_component<float_comp>();
+            detach_reg.register_component<int_comp>();
+            detach_reg.register_component<string_comp>();
+            detach_reg.register_component<int>();
+
+            auto buff = detach_reg.create_buffer_for<int, int_comp>();
+
+            for (int i = 0; i < 10000; ++i)
+            {
+                buff.emplace_back(i, 2 * i);
+            }
+
+            detach_reg.insert(buff);
+
+            auto ifbuff = detach_reg.create_buffer_for<int_comp, float_comp>(
+                std::move(buff));
+
+            for (int i = 0; i < 10000; ++i)
+            {
+                ifbuff.emplace_back(i, i * 2);
+            }
+
+            detach_reg.insert(ifbuff);
+
+            // setup done let's test
+
+            auto n      = 0;
+            auto fiview = detach_reg.view<float_comp, int_comp>();
+            fiview.for_each([&](auto&&...) { ++n; });
+            CHECK(n == 10000);
+
+            fiview.detach<float_comp>(fiview.group_view_begin(), 0);
+
+            auto icview = detach_reg.view<int_comp>();
+
+            fiview = detach_reg.view<float_comp, int_comp>();
+            n      = 0;
+            fiview.for_each([&](auto&&...) { ++n; });
+
+            // there should be one less now
+            CHECK(n == 9999);
+
+            n = 0;
+            detach_reg.view<float_comp>().for_each([&](auto&&...) { ++n; });
+            // the same one less when checking just float_comp
+            CHECK(n == 9999);
+
+            n = 0;
+            icview.for_each([&](auto&&...) { ++n; });
+
+            // all int_comps are still present
+            CHECK(n == 20000);
+        }
     }
 }

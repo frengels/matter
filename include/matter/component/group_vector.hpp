@@ -9,6 +9,7 @@
 
 #include "matter/component/group.hpp"
 #include "matter/component/typed_id.hpp"
+#include "matter/component/untyped_id.hpp"
 #include "matter/storage/erased_storage.hpp"
 #include "matter/util/iterator.hpp"
 #include "matter/util/meta.hpp"
@@ -463,13 +464,13 @@ public:
 
         const_reverse_iterator& operator++() noexcept
         {
-            it_ += size_;
+            it_ += group_size();
             return *this;
         }
 
         const_reverse_iterator& operator--() noexcept
         {
-            it_ -= size_;
+            it_ -= group_size();
             return *this;
         }
 
@@ -489,13 +490,13 @@ public:
 
         const_reverse_iterator& operator+=(difference_type movement) noexcept
         {
-            it_ += (movement * size_);
+            it_ += (movement * group_size());
             return *this;
         }
 
         const_reverse_iterator& operator-=(difference_type movement) noexcept
         {
-            it_ -= (movement * size_);
+            it_ -= (movement * group_size());
             return *this;
         }
 
@@ -526,7 +527,7 @@ public:
 
         reference operator*() const noexcept
         {
-            return {*it_, size_};
+            return {*it_, group_size()};
         }
     };
 
@@ -673,6 +674,38 @@ public:
         return size_;
     }
 
+    any_group emplace_at(const_any_group storage_vtable_source,
+                         const_iterator  pos,
+                         matter::ordered_untyped_ids<id_type> ids) noexcept
+    {
+        assert(storage_vtable_source.size() >= group_size());
+        assert(find(ids) == groups_.end());
+        assert(ids.size() == group_size());
+
+        // create place to store stores
+        std::vector<matter::erased_storage> stores;
+        stores.reserve(group_size());
+
+        // fill with stores
+        matter::for_each(
+            matter::execution::unseq,
+            ids.begin(),
+            ids.end(),
+            [&](const auto& id) {
+                stores.emplace_back(
+                    storage_vtable_source.find_id(id)->duplicate_storage());
+            });
+
+        auto inserted_at =
+            groups_.insert(pos.base(),
+                           std::make_move_iterator(stores.begin()),
+                           std::make_move_iterator(stores.end()));
+
+        // already sorted at this point
+
+        return {*inserted_at, group_size()};
+    }
+
     template<typename... Ts>
     group<typename Ts::type...>
     emplace(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
@@ -685,7 +718,7 @@ public:
                        ...),
                       "Component storage for one of the Cs... is not default "
                       "constructible");
-        assert(size_ == ids.size());
+        assert(group_size() == ids.size());
 
         auto ordered_ids = ordered_typed_ids{ids};
 
@@ -694,6 +727,36 @@ public:
         auto inserted_at = emplace_at(insertion_point, ids);
         auto grp         = *inserted_at;
         return group{ids, grp};
+    }
+
+    const_iterator find(matter::ordered_untyped_ids<id_type> ids) const noexcept
+    {
+        assert(ids.size() == group_size());
+
+        auto it = lower_bound(ids);
+
+        if (it == end())
+        {
+            return it;
+        }
+
+        auto grp = *it;
+        return grp == ids ? it : const_iterator{groups_.end(), group_size()};
+    }
+
+    iterator find(matter::ordered_untyped_ids<id_type> ids) noexcept
+    {
+        assert(ids.size() == group_size());
+
+        auto it = lower_bound(ids);
+
+        if (it == end())
+        {
+            return it;
+        }
+
+        auto grp = *it;
+        return grp == ids ? it : iterator{groups_.end(), group_size()};
     }
 
     template<typename... TIds>
@@ -732,6 +795,19 @@ public:
 
         auto grp = *it;
         return grp == ids ? it : iterator{groups_.end(), group_size()};
+    }
+
+    std::optional<any_group>
+    find_group(matter::ordered_untyped_ids<id_type> ids) noexcept
+    {
+        auto it = find(ids);
+
+        if (it == end())
+        {
+            return {};
+        }
+
+        return *it;
     }
 
     template<typename... TIds>
@@ -807,6 +883,48 @@ public:
                                   matter::ordered_typed_ids{unordered_ids});
     }
 
+    template<typename... TIds>
+    any_group
+    find_new_group_without(const_any_group grp,
+                           const matter::unordered_typed_ids<id_type, TIds...>&
+                               without_ids) noexcept
+    {
+        assert((grp.group_size() - without_ids.size()) == group_size());
+
+        std::vector<id_type> ids;
+        ids.reserve(group_size());
+
+        auto without_ids_arr = without_ids.as_array();
+
+        std::for_each(grp.begin(), grp.end(), [&](auto&& storage) {
+            // if the current id cannot be found within the removed ids then
+            // push it to the back
+            if (!std::binary_search(without_ids_arr.begin(),
+                                    without_ids_arr.end(),
+                                    storage.id()))
+            {
+                ids.push_back(storage.id());
+            }
+        });
+
+        assert(ids.size() == group_size());
+
+        // ids is already sorted because ids in grp are in a sorted order
+        auto ordered_ids = matter::ordered_untyped_ids{ids.data(), ids.size()};
+
+        auto new_group_it = lower_bound(ordered_ids);
+
+        if (new_group_it != groups_.end())
+        {
+            if (*new_group_it == ordered_ids)
+            {
+                return *new_group_it;
+            }
+        }
+
+        return emplace_at(grp, new_group_it, ordered_ids);
+    }
+
     any_group operator[](std::size_t index) noexcept
     {
         assert(index <= size());
@@ -815,8 +933,8 @@ public:
 
     std::size_t size() const noexcept
     {
-        assert((groups_.size() % size_) == 0);
-        return groups_.size() / size_;
+        assert((groups_.size() % group_size()) == 0);
+        return groups_.size() / group_size();
     }
 
     bool empty() const noexcept
@@ -852,8 +970,20 @@ private:
                            std::make_move_iterator(stores.begin()),
                            std::make_move_iterator(stores.end()));
 
-        std::sort(inserted_at, inserted_at + size_);
+        // sort the inserted stores to construct a valid group
+        matter::insertion_sort(inserted_at, inserted_at + group_size());
         return {inserted_at, group_size()};
+    }
+
+    const_iterator lower_bound(matter::ordered_untyped_ids<id_type> ids) const
+        noexcept
+    {
+        return matter::lower_bound(begin(), end(), std::move(ids));
+    }
+
+    iterator lower_bound(matter::ordered_untyped_ids<id_type> ids) noexcept
+    {
+        return matter::lower_bound(begin(), end(), std::move(ids));
     }
 
     template<typename... TIds>
