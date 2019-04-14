@@ -308,6 +308,16 @@ constexpr void insertion_sort(ForwardIt begin, Sentinel last) noexcept
     }
 }
 
+template<typename ForwardIt, typename Sentinel, typename Compare>
+constexpr void
+insertion_sort(ForwardIt begin, Sentinel last, Compare comp) noexcept
+{
+    for (auto it = begin; it != last; ++it)
+    {
+        matter::rotate(matter::upper_bound(begin, it, *it, comp), it, it + 1);
+    }
+}
+
 template<typename T, std::size_t N>
 constexpr void static_sort(std::array<T, N>& arr) noexcept
 {
