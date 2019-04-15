@@ -4,6 +4,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <type_traits>
 #include <utility>
 
@@ -12,15 +13,17 @@ namespace matter
 /// \brief allow erasing a type for generic storage
 /// Upon destruction the destructor of the object will be run.
 /// Unlike `std::any` no mechanism to identify the correct type is provided.
-class erased final {
+class erased {
 public:
     using deleter_type = std::add_pointer_t<void(void*)>;
 
 private:
-    void*        obj_;
-    deleter_type deleter_;
+    void*        obj_{nullptr};
+    deleter_type deleter_{nullptr};
 
 public:
+    erased() noexcept = default;
+
     template<typename T, typename... Args>
     erased(std::in_place_type_t<T>,
            Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
@@ -59,6 +62,11 @@ public:
         clear();
     }
 
+    operator bool() const noexcept
+    {
+        return !empty();
+    }
+
     bool empty() const noexcept
     {
         return obj_ == nullptr;
@@ -71,6 +79,21 @@ public:
             deleter_(obj_);
             obj_ = nullptr;
         }
+    }
+
+    template<typename T, typename... Args>
+    T& emplace(Args&&... args) noexcept(
+        std::is_nothrow_constructible_v<T, Args...>)
+    {
+        clear();
+        auto* obj = new T(std::forward<Args>(args)...);
+        obj_      = obj;
+        deleter_  = [](void* obj) {
+            auto* t = static_cast<T*>(obj);
+            delete t;
+        };
+
+        return *obj;
     }
 
     constexpr void* get_void() noexcept
@@ -86,13 +109,25 @@ public:
     template<typename T>
     constexpr T& get() noexcept
     {
+        assert(get_void());
         return *static_cast<T*>(get_void());
     }
 
     template<typename T>
     constexpr const T& get() const noexcept
     {
+        assert(get_void());
         return *static_cast<const T*>(get_void());
+    }
+
+    constexpr bool operator==(const erased& other) const noexcept
+    {
+        return get_void() == other.get_void();
+    }
+
+    constexpr bool operator!=(const erased& other) const noexcept
+    {
+        return !(*this == other);
     }
 
     friend void swap(erased& lhs, erased& rhs) noexcept;
