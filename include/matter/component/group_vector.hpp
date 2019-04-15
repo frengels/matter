@@ -653,15 +653,36 @@ public:
         return {groups_.begin(), group_size()};
     }
 
+    const_iterator cbegin() const noexcept
+    {
+        return begin();
+    }
+
     auto end() const noexcept
     {
         return sentinel{groups_.cend()};
+    }
+
+    auto cend() const noexcept
+    {
+        return end();
     }
 
     reverse_iterator rbegin() noexcept
     {
         return reverse_iterator{groups_.rbegin() + (group_size() - 1),
                                 group_size()};
+    }
+
+    const_reverse_iterator rbegin() const noexcept
+    {
+        return const_reverse_iterator{groups_.rbegin() + (group_size() - 1),
+                                      group_size()};
+    }
+
+    const_reverse_iterator crbegin() const noexcept
+    {
+        return rbegin();
     }
 
     auto rend() const noexcept
@@ -703,6 +724,7 @@ public:
 
         // already sorted at this point
 
+        assert(is_sorted());
         return {*inserted_at, group_size()};
     }
 
@@ -884,10 +906,10 @@ public:
     }
 
     template<typename... TIds>
-    any_group
-    find_new_group_without(const_any_group grp,
-                           const matter::unordered_typed_ids<id_type, TIds...>&
-                               without_ids) noexcept
+    [[deprecated("use find_emplace_group overload over this")]] any_group
+    find_new_group_without(
+        const_any_group                               grp,
+        matter::unordered_typed_ids<id_type, TIds...> without_ids) noexcept
     {
         assert((grp.group_size() - without_ids.size()) == group_size());
 
@@ -912,17 +934,29 @@ public:
         // ids is already sorted because ids in grp are in a sorted order
         auto ordered_ids = matter::ordered_untyped_ids{ids.data(), ids.size()};
 
-        auto new_group_it = lower_bound(ordered_ids);
+        return find_emplace_group(grp, ordered_ids);
+    }
 
+    any_group
+    find_emplace_group(const_any_group                      storage_source,
+                       matter::ordered_untyped_ids<id_type> new_ids) noexcept
+    {
+        assert(storage_source.group_size() > group_size());
+        assert(new_ids.size() == group_size());
+
+        auto new_group_it = lower_bound(new_ids);
+
+        // this is the case where the group already exists
         if (new_group_it != groups_.end())
         {
-            if (*new_group_it == ordered_ids)
+            if (*new_group_it == new_ids)
             {
                 return *new_group_it;
             }
         }
 
-        return emplace_at(grp, new_group_it, ordered_ids);
+        // this is the case where the group does not exist yet
+        return emplace_at(storage_source, new_group_it, new_ids);
     }
 
     any_group operator[](std::size_t index) noexcept
@@ -945,7 +979,7 @@ public:
 private:
     template<typename... TIds>
     iterator emplace_at(
-        iterator pos,
+        const_iterator pos,
         const unordered_typed_ids<id_type, TIds...>&
             unordered_ids) noexcept((std::
                                          is_nothrow_default_constructible_v<
@@ -999,6 +1033,12 @@ private:
     lower_bound(const matter::ordered_typed_ids<id_type, TIds...>& ids) noexcept
     {
         return matter::lower_bound(begin(), end(), ids);
+    }
+
+    /// \brief used to verify post conditions
+    bool is_sorted() const noexcept
+    {
+        return matter::is_sorted(begin(), end());
     }
 };
 } // namespace matter
