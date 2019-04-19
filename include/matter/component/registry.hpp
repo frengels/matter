@@ -7,6 +7,8 @@
 
 #include "component_identifier.hpp"
 
+#include "matter/access/registry_access_view.hpp"
+#include "matter/access/type_traits.hpp"
 #include "matter/component/group_vector.hpp"
 #include "matter/component/registry_view.hpp"
 #include "matter/util/meta.hpp"
@@ -27,20 +29,6 @@ private:
 
 public:
     constexpr registry() = default;
-
-    template<typename... Cs>
-    auto view() noexcept(false)
-    {
-        return registry_view{component_ids<Cs...>(),
-                             group_vectors_.begin(),
-                             group_vectors_.end()};
-    }
-
-    template<typename... TIds>
-    auto view(const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
-    {
-        return registry_view{ids, group_vectors_.begin(), group_vectors_.end()};
-    }
 
     template<typename C>
     constexpr auto component_id() const
@@ -63,6 +51,35 @@ public:
     const matter::component_metadata& component_metadata(id_type id) noexcept
     {
         return identifier_.metadata(id);
+    }
+
+    template<typename... Access>
+    std::enable_if_t<
+        (matter::is_access_v<Access, matter::registry<Components...>> && ...),
+        registry_access_view<matter::registry<Components...>, Access...>>
+    view() noexcept
+    {
+        return registry_access_view<matter::registry<Components...>, Access...>{
+            group_vectors_.begin(), group_vectors_.end(), *this};
+    }
+
+    template<typename... Cs>
+    auto view() noexcept(false) -> std::enable_if_t<
+        (!matter::is_access_v<Cs, matter::registry<Components...>> && ...),
+        decltype(view(std::declval<registry<Components...>>()
+                          .template component_ids<Cs...>()))>
+    {
+        return view(component_ids<Cs...>());
+    }
+
+    template<typename... TIds>
+    auto view(const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
+        -> std::enable_if_t<(matter::is_typed_id_v<TIds> && ...),
+                            decltype(registry_view{ids,
+                                                   group_vectors_.begin(),
+                                                   group_vectors_.end()})>
+    {
+        return registry_view{ids, group_vectors_.begin(), group_vectors_.end()};
     }
 
     template<typename... Cs, typename... TupArgs>
@@ -168,6 +185,15 @@ private:
         auto& grp_vec = group_vectors_[i];
         assert(grp_vec.group_size() == i);
         return grp_vec;
+    }
+
+    constexpr any_group
+    find_emplace_group(const_any_group                      storage_source,
+                       matter::ordered_untyped_ids<id_type> new_ids) noexcept
+    {
+        auto& grp_vec = get_group_vector(new_ids.size());
+        return grp_vec.find_emplace_group(std::move(storage_source),
+                                          std::move(new_ids));
     }
 
     template<typename... Ts>
