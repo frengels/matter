@@ -4,6 +4,8 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
+#include <vector>
 
 #include "matter/util/algorithm.hpp"
 
@@ -26,8 +28,17 @@ public:
     constexpr ordered_untyped_ids(id_type* ids, size_type size) noexcept
         : ids_{ids}, size_{size}
     {
-        matter::insertion_sort(ids_, ids_ + this->size());
+        assert(std::is_sorted(ids_, ids_ + size));
     }
+
+    explicit constexpr ordered_untyped_ids(std::vector<id_type>& ids) noexcept
+        : ordered_untyped_ids{ids.data(), ids.size()}
+    {}
+
+    template<std::size_t N>
+    explicit constexpr ordered_untyped_ids(std::array<id_type, N>& ids) noexcept
+        : ordered_untyped_ids{ids.data(), ids.size()}
+    {}
 
     constexpr const_iterator begin() const noexcept
     {
