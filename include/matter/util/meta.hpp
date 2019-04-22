@@ -188,6 +188,18 @@ template<typename T, typename TupArgs>
 constexpr auto is_nothrow_constructible_expand_tuple_v =
     is_nothrow_constructible_expand_tuple<T, TupArgs>::value;
 
+template<typename Callable, typename TupArgs>
+struct invoke_result_expand_tuple;
+
+template<typename Callable, typename... Args>
+struct invoke_result_expand_tuple<Callable, std::tuple<Args...>>
+    : std::invoke_result<Callable, Args...>
+{};
+
+template<typename Callable, typename TupArgs>
+using invoke_result_expand_tuple_t =
+    typename invoke_result_expand_tuple<Callable, TupArgs>::type;
+
 namespace impl
 {
 template<std::size_t Cur, std::size_t End, std::size_t... Is>
@@ -204,6 +216,122 @@ struct make_index_range_impl<End, End, Is...>
 template<std::size_t Begin, std::size_t End>
 using make_index_range = typename impl::make_index_range_impl<Begin, End>::type;
 } // namespace detail
+
+namespace meta
+{
+template<typename T>
+struct is_tuple : std::false_type
+{};
+
+template<typename... Ts>
+struct is_tuple<std::tuple<Ts...>> : std::true_type
+{};
+
+template<typename T>
+constexpr bool is_tuple_v = matter::meta::is_tuple<T>::value;
+
+template<typename Tuple>
+struct decay_tuple_types;
+
+template<typename... Ts>
+struct decay_tuple_types<std::tuple<Ts...>>
+{
+    using type = std::tuple<std::decay_t<Ts>...>;
+};
+
+template<typename Tuple>
+using decay_tuple_types_t = typename decay_tuple_types<Tuple>::type;
+
+template<typename... Tuples>
+struct merge_tuple_types;
+
+// case for single tuple
+template<typename... Ts>
+struct merge_tuple_types<std::tuple<Ts...>>
+{
+    using type = std::tuple<Ts...>;
+};
+
+// case for 2 or more tuples, recurse over all of them
+template<typename... Tuples, typename... Ts, typename... Us>
+struct merge_tuple_types<std::tuple<Ts...>, std::tuple<Us...>, Tuples...>
+    : merge_tuple_types<std::tuple<Ts..., Us...>, Tuples...>
+{};
+
+template<typename... Tuples>
+using merge_tuple_types_t = typename merge_tuple_types<Tuples...>::type;
+
+namespace detail
+{
+template<template<typename> typename Predicate, typename Tuple, typename... Ts>
+struct filter_tuple_types_impl;
+
+// no more types to filter leftover
+template<template<typename> typename Predicate, typename... TupTs>
+struct filter_tuple_types_impl<Predicate, std::tuple<TupTs...>>
+{
+    using type = std::tuple<TupTs...>;
+};
+
+// apply our predicate
+template<template<typename> typename Predicate,
+         typename... TupTs,
+         typename T,
+         typename... Ts>
+struct filter_tuple_types_impl<Predicate, std::tuple<TupTs...>, T, Ts...>
+    : std::conditional_t<
+          Predicate<T>::value,
+          filter_tuple_types_impl<Predicate, std::tuple<TupTs..., T>, Ts...>,
+          filter_tuple_types_impl<Predicate, std::tuple<TupTs...>, Ts...>>
+{};
+} // namespace detail
+
+template<template<typename> typename Predicate, typename Tuple>
+struct filter_tuple_types;
+
+template<template<typename> typename Predicate, typename... Ts>
+struct filter_tuple_types<Predicate, std::tuple<Ts...>>
+    : detail::filter_tuple_types_impl<Predicate, std::tuple<>, Ts...>
+{};
+
+template<template<typename> typename Predicate, typename Tuple>
+using filter_tuple_types_t =
+    typename filter_tuple_types<Predicate, Tuple>::type;
+
+namespace detail
+{
+template<typename T>
+struct is_void : std::is_same<void, T>
+{};
+} // namespace detail
+
+template<typename Tuple>
+struct filter_void_tuple_types : filter_tuple_types<detail::is_void, Tuple>
+{};
+
+template<template<typename...> typename TemplateType, typename Tuple>
+struct expand_tuple_type;
+
+template<template<typename...> typename TemplateType, typename... Ts>
+struct expand_tuple_type<TemplateType, std::tuple<Ts...>>
+{
+    using type = TemplateType<Ts...>;
+};
+
+template<template<typename...> typename TemplateType, typename Tuple>
+using expand_tuple_type_t =
+    typename expand_tuple_type<TemplateType, Tuple>::type;
+
+template<std::size_t N, typename Tuple>
+struct nth_tuple_type;
+
+template<std::size_t N, typename... Ts>
+struct nth_tuple_type<N, std::tuple<Ts...>> : matter::detail::nth<N, Ts...>
+{};
+
+template<std::size_t N, typename Tuple>
+using nth_tuple_type_t = typename nth_tuple_type<N, Tuple>::type;
+} // namespace meta
 } // namespace matter
 
 #endif
