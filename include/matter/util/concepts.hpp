@@ -63,6 +63,19 @@ struct has_erase_for<
     std::void_t<decltype(std::declval<T&>().erase(std::declval<It>()))>>
     : std::true_type
 {};
+
+template<typename T, typename = void>
+struct is_optional : std::false_type
+{};
+
+template<typename T>
+struct is_optional<T,
+                   std::void_t<decltype(bool(std::declval<const T>())),
+                               decltype(*std::declval<T>())>> : std::true_type
+{};
+
+template<typename T>
+constexpr bool is_optional_v = is_optional<T>::value;
 } // namespace matter
 
 #endif
