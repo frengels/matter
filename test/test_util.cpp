@@ -29,6 +29,20 @@ TEST_CASE("util")
         static_assert(std::is_same_v<
                       matter::detail::merge_non_void_t<int, float, void, int>,
                       std::tuple<int, float, int>>);
+
+        SECTION("merge tuples")
+        {
+            static_assert(std::is_same_v<
+                          std::tuple<float, int, char>,
+                          matter::meta::merge_tuple_types_t<std::tuple<float>,
+                                                            std::tuple<int>,
+                                                            std::tuple<char>>>);
+            static_assert(!std::is_same_v<
+                          std::tuple<double, int, char>,
+                          matter::meta::merge_tuple_types_t<std::tuple<float>,
+                                                            std::tuple<int>,
+                                                            std::tuple<char>>>);
+        }
     }
 
     SECTION("find types")
