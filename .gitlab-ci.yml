@@ -27,6 +27,7 @@ build:debian-gcc:
 
 build:debian-clang:
   image: registry.gitlab.com/dreyri/matter/debian:v4
+  allow_failure: true
   <<: *build-template
   script:
     - CC=clang CXX=clang++ meson ${MESON_COMMON_OPTIONS} build

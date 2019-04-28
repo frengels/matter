@@ -288,9 +288,10 @@ public:
                                       decltype(*buffer.template begin<Cs>())> &&
                               ...))
     {
-        return iterator{get<Cs>().insert(get<Cs>().end(),
-                                         buffer.template begin<Cs>(),
-                                         buffer.template end<Cs>())...};
+        return iterator{get<Cs>().insert(
+            get<Cs>().end(),
+            std::make_move_iterator(buffer.template begin<Cs>()),
+            std::make_move_iterator(buffer.template end<Cs>()))...};
     }
 
     constexpr component_view<Cs...> back() noexcept

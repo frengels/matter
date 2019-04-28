@@ -3,46 +3,50 @@
 
 #pragma once
 
+#include <numeric>
+
 #include "matter/util/erased.hpp"
 
 namespace matter
 {
-class id_erased final {
+class id_erased : public matter::erased {
 public:
-    using id_type = std::size_t;
+    using id_type   = std::size_t;
+    using base_type = matter::erased;
 
 private:
-    id_type        id_;
-    matter::erased erased_;
+    id_type id_{std::numeric_limits<id_type>::max()};
 
 public:
+    constexpr id_erased() noexcept = default;
+
     template<typename T, typename... Args>
     id_erased(id_type id, std::in_place_type_t<T>, Args&&... args) noexcept(
         std::is_nothrow_constructible_v<erased,
                                         std::in_place_type_t<T>,
                                         Args&&...>)
-        : id_{id}, erased_{std::in_place_type_t<T>{},
-                           std::forward<Args>(args)...}
+        : base_type{std::in_place_type_t<T>{}, std::forward<Args>(args)...},
+          id_{id}
     {}
 
     id_erased(id_erased&& other) noexcept
-        : id_{std::move(other.id_)}, erased_{std::move(other.erased_)}
+        : base_type{std::move(other)}, id_{std::move(other.id_)}
     {}
 
-    constexpr erased& base() noexcept
+    constexpr base_type& base() noexcept
     {
-        return erased_;
+        return *this;
     }
 
-    constexpr const erased& base() const noexcept
+    constexpr const base_type& base() const noexcept
     {
-        return erased_;
+        return *this;
     }
 
     id_erased& operator=(id_erased&& other) noexcept
     {
-        id_     = std::move(other.id_);
-        erased_ = std::move(other.erased_);
+        base_type::operator=(std::move(other));
+        id_                = std::move(other.id_);
 
         return *this;
     }
@@ -52,41 +56,16 @@ public:
         return id_;
     }
 
-    bool empty() const noexcept
-    {
-        return erased_.empty();
-    }
-
     void clear() noexcept
     {
-        erased_.clear();
-    }
 
-    constexpr void* get_void() noexcept
-    {
-        return erased_.get_void();
-    }
-
-    constexpr const void* get_void() const noexcept
-    {
-        return erased_.get_void();
-    }
-
-    template<typename T>
-    constexpr T& get() noexcept
-    {
-        return erased_.get<T>();
-    }
-
-    template<typename T>
-    constexpr const T& get() const noexcept
-    {
-        return erased_.get<T>();
+        id_ = std::numeric_limits<id_type>::max();
+        base_type::clear();
     }
 
     constexpr bool operator==(const id_erased& other) const noexcept
     {
-        return id_ == other.id_ && get_void() == other.get_void();
+        return id() == other.id() && base_type::operator==(other);
     }
 
     constexpr bool operator!=(const id_erased& other) const noexcept
@@ -96,95 +75,95 @@ public:
 
     constexpr bool operator<(const id_erased& other) const noexcept
     {
-        return id_ < other.id_;
+        return id() < other.id();
     }
 
     constexpr bool operator>(const id_erased& other) const noexcept
     {
-        return id_ > other.id_;
+        return id() > other.id();
     }
 
     constexpr bool operator<=(const id_erased& other) const noexcept
     {
-        return id_ <= other.id_;
+        return id() <= other.id();
     }
 
     constexpr bool operator>=(const id_erased& other) const noexcept
     {
-        return id_ >= other.id_;
+        return id() >= other.id();
     }
 
-    constexpr bool operator==(id_type id) const noexcept
+    constexpr bool operator==(id_type other_id) const noexcept
     {
-        return id_ == id;
+        return id() == other_id;
     }
 
-    constexpr bool operator!=(id_type id) const noexcept
+    constexpr bool operator!=(id_type other_id) const noexcept
     {
-        return id_ != id;
+        return !(*this == other_id);
     }
 
-    constexpr bool operator<(id_type id) const noexcept
+    constexpr bool operator<(id_type other_id) const noexcept
     {
-        return id_ < id;
+        return id() < other_id;
     }
 
-    constexpr bool operator>(id_type id) const noexcept
+    constexpr bool operator>(id_type other_id) const noexcept
     {
-        return id_ > id;
+        return id() > other_id;
     }
 
-    constexpr bool operator<=(id_type id) const noexcept
+    constexpr bool operator<=(id_type other_id) const noexcept
     {
-        return id_ <= id;
+        return id() <= other_id;
     }
 
-    constexpr bool operator>=(id_type id) const noexcept
+    constexpr bool operator>=(id_type other_id) const noexcept
     {
-        return id_ >= id;
+        return id_ >= other_id;
     }
 
     friend constexpr bool operator==(id_type          id,
                                      const id_erased& erased) noexcept
     {
-        return id == erased.id_;
+        return id == erased.id();
     }
 
     friend constexpr bool operator!=(id_type          id,
                                      const id_erased& erased) noexcept
     {
-        return id != erased.id_;
+        return id != erased.id();
     }
 
     friend constexpr bool operator<(id_type          id,
                                     const id_erased& erased) noexcept
     {
-        return id < erased.id_;
+        return id < erased.id();
     }
 
     friend constexpr bool operator>(id_type          id,
                                     const id_erased& erased) noexcept
     {
-        return id > erased.id_;
+        return id > erased.id();
     }
 
     friend constexpr bool operator<=(id_type          id,
                                      const id_erased& erased) noexcept
     {
-        return id <= erased.id_;
+        return id <= erased.id();
     }
 
     friend constexpr bool operator>=(id_type          id,
                                      const id_erased& erased) noexcept
     {
-        return id >= erased.id_;
+        return id >= erased.id();
     }
 
     friend void swap(id_erased& lhs, id_erased& rhs) noexcept
     {
         using std::swap;
         swap(lhs.id_, rhs.id_);
-        swap(lhs.erased_, rhs.erased_);
+        swap(static_cast<erased&>(lhs), static_cast<erased&>(rhs));
     }
 };
 } // namespace matter

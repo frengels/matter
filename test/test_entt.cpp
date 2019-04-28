@@ -4,6 +4,9 @@
 #include <iostream>
 #include <string_view>
 
+#include "matter/access/read.hpp"
+#include "matter/access/readwrite.hpp"
+#include "matter/access/write.hpp"
 #include "matter/component/registry.hpp"
 #include "matter/component/registry_view.hpp"
 
@@ -99,6 +102,29 @@ TEST_CASE("benchmarks")
             pos_view.for_each([](position& pos) { pos.x = {}; });
         }
 
+        SECTION("access read")
+        {
+            timer t{"Iterating over 1000000 single components - read access"};
+
+            auto pos_view = reg.view<matter::read<position>>();
+
+            pos_view.for_each([](auto) {});
+        }
+
+        SECTION("access write")
+        {
+            timer t{
+                "Iterating over 1000000 single components - readwrite access"};
+
+            auto pos_view = reg.view<matter::readwrite<position>>();
+
+            pos_view.for_each([](auto rwpos) {
+                position pos = rwpos.get();
+                pos.x        = {};
+                rwpos.stage(pos);
+            });
+        }
+
         SECTION("group_view_iterator const")
         {
             timer t{"Iterating over 1000000 single components - const "
@@ -185,6 +211,36 @@ TEST_CASE("benchmarks")
                 vel.x = {};
             });
         }
+
+        SECTION("read access")
+        {
+            timer t{"Iterating over 1000000 double components - read access"};
+
+            auto view =
+                reg.view<matter::read<position>, matter::read<velocity>>();
+
+            view.for_each([](auto, auto) {});
+        }
+
+        SECTION("write access")
+        {
+            timer t{
+                "Iterating over 1000000 double components - readwrite access"};
+
+            auto view = reg.view<matter::readwrite<position>,
+                                 matter::readwrite<velocity>>();
+
+            view.for_each([](auto rwpos, auto rwvel) {
+                auto pos = rwpos.get();
+                auto vel = rwvel.get();
+
+                pos.x = {};
+                vel.x = {};
+
+                rwpos.stage(pos);
+                rwvel.stage(vel);
+            });
+        }
     }
 
     SECTION("iterate_double,half")
@@ -222,6 +278,37 @@ TEST_CASE("benchmarks")
                 vel.x = {};
             });
         }
+
+        SECTION("read access")
+        {
+            timer t{"Iterating over 1000000 double components, only half "
+                    "double - read"};
+
+            auto view =
+                reg.view<matter::read<position>, matter::read<velocity>>();
+
+            view.for_each([](auto, auto) {});
+        }
+
+        SECTION("readwrite access")
+        {
+            timer t{"Iterating over 1000000 double components, only half "
+                    "double - readwrite access"};
+
+            auto view = reg.view<matter::readwrite<position>,
+                                 matter::readwrite<velocity>>();
+
+            view.for_each([](auto rwpos, auto rwvel) {
+                auto pos = rwpos.get();
+                auto vel = rwvel.get();
+
+                pos.x = {};
+                vel.x = {};
+
+                rwpos.stage(pos);
+                rwvel.stage(vel);
+            });
+        }
     }
 
     SECTION("iterate_single")
@@ -253,6 +340,35 @@ TEST_CASE("benchmarks")
             view.for_each([](position& pos, velocity& vel) {
                 pos.x = {};
                 vel.x = {};
+            });
+        }
+
+        SECTION("read access")
+        {
+            timer t{"Iterating over 1000000 components, only one has both - "
+                    "read access"};
+
+            auto view =
+                reg.view<matter::read<position>, matter::read<velocity>>();
+            view.for_each([](auto, auto) {});
+        }
+
+        SECTION("readwrite access")
+        {
+            timer t{"Iterating over 1000000 components, only one has both - "
+                    "readwrite access"};
+
+            auto view = reg.view<matter::readwrite<position>,
+                                 matter::readwrite<velocity>>();
+            view.for_each([](auto rwpos, auto rwvel) {
+                auto pos = rwpos.get();
+                auto vel = rwvel.get();
+
+                pos.x = {};
+                vel.x = {};
+
+                rwpos.stage(pos);
+                rwvel.stage(vel);
             });
         }
     }

@@ -47,6 +47,8 @@ private:
     std::size_t group_size_;
 
 public:
+    constexpr any_group() noexcept = default;
+
     constexpr any_group(erased_type ptr, std::size_t group_size) noexcept
         : ptr_{ptr}, group_size_{group_size}
     {
@@ -129,6 +131,11 @@ public:
     constexpr const erased_type data() const noexcept
     {
         return ptr_;
+    }
+
+    constexpr explicit operator bool() const noexcept
+    {
+        return data();
     }
 
     constexpr void erase(size_type idx) noexcept
@@ -565,6 +572,7 @@ private:
         return std::is_sorted(begin(), end());
     }
 
+public:
     template<typename TId>
     constexpr std::enable_if_t<matter::is_typed_id_v<TId>, erased_type>
     find_id(const TId& id) noexcept
