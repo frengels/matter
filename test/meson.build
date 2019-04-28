@@ -10,6 +10,7 @@ tests = [
   'typed_id',
   'algo',
   'group',
+  'group_container',
   'insert_buffer',
   'access',
 ]
