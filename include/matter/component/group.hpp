@@ -262,13 +262,50 @@ public:
         return back();
     }
 
+    // emplace_back function which takes tuples as arguments
     template<typename... CArgs>
-    constexpr component_view<Cs...> emplace_back(CArgs&&... cargs) noexcept(
+    constexpr std::enable_if_t<
+        (matter::detail::is_constructible_expand_tuple_v<Cs, CArgs> && ...),
+        component_view<Cs...>>
+    emplace_back(CArgs&&... cargs) noexcept(
         (detail::is_nothrow_constructible_expand_tuple_v<Cs, CArgs> && ...))
     {
         return _emplace_back_impl(
             std::index_sequence_for<Cs...>{},
             std::make_tuple(std::forward<CArgs>(cargs)...));
+    }
+
+    template<typename... Ts>
+    constexpr std::enable_if_t<(std::is_constructible_v<Cs, Ts> && ...),
+                               component_view<Cs...>>
+    emplace_back(Ts&&... ts) noexcept(
+        (std::is_nothrow_constructible_v<Cs, Ts> && ...))
+    {
+        std::apply(
+            [&](auto&&... stores) {
+                (stores.get().emplace_back(std::forward<Ts>(ts)), ...);
+            },
+            stores_);
+
+        return back();
+    }
+
+    // emplace_back function for when there is a single component in the group
+    template<typename... Args>
+    constexpr std::enable_if_t<
+        sizeof...(Cs) == 1 &&
+            std::is_constructible_v<matter::detail::first_t<Cs...>, Args...>,
+        component_view<Cs...>>
+    emplace_back(Args&&... args) noexcept(
+        std::is_nothrow_constructible_v<matter::detail::first_t<Cs...>,
+                                        Args...>)
+    {
+        std::apply(
+            [&](auto&& store) {
+                // should work since only a single store
+                store.get().emplace_back(std::forward<Args>(args)...);
+            },
+            stores_);
     }
 
     constexpr component_view<Cs...> push_back(const Cs&... comps)
