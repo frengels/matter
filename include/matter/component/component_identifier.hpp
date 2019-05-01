@@ -43,7 +43,7 @@ struct unregistered_component : std::logic_error
 /// being global if we use them directly there might be big gaps in ids in case
 /// you use multiple instances of `component_identifier`. To avoid this we map
 /// the global ids to a local id. This way we get a clean array of ids.
-template<typename... Components>
+template<typename Id, typename... Components>
 class component_identifier {
     static_assert((matter::is_component_v<Components> && ...),
                   "All types must be valid components");
@@ -52,7 +52,7 @@ class component_identifier {
     {};
 
 public:
-    using id_type = std::size_t;
+    using id_type = Id;
 
     static constexpr auto constexpr_components_size = sizeof...(Components);
 

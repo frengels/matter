@@ -16,28 +16,32 @@ namespace detail
 /// A group is a lightweight construct which represents a slice of a
 /// `group_vector`, the `erased_storage` contained in the group represent a
 /// container for components identified by the `id` within `erased_storage`.
-template<bool Const = false>
+template<typename Id, bool Const = false>
 class any_group {
+public:
+    using id_type = Id;
+
 private:
     static constexpr auto is_const = Const;
 
-    using erased_type     = std::conditional_t<is_const,
-                                           const matter::erased_storage*,
-                                           matter::erased_storage*>;
-    using erased_type_ref = std::conditional_t<is_const,
-                                               const matter::erased_storage&,
-                                               matter::erased_storage&>;
+    using erased_type =
+        std::conditional_t<is_const,
+                           const matter::erased_storage<id_type>*,
+                           matter::erased_storage<id_type>*>;
+    using erased_type_ref =
+        std::conditional_t<is_const,
+                           const matter::erased_storage<id_type>&,
+                           matter::erased_storage<id_type>&>;
 
-    template<bool _Const>
-    friend class any_group;
+    friend class any_group<Id, true>;
 
 public:
-    using id_type   = typename matter::erased_storage::id_type;
-    using size_type = typename matter::erased_storage::size_type;
+    using size_type = typename matter::erased_storage<id_type>::size_type;
 
-    using const_iterator = const matter::erased_storage*;
-    using iterator =
-        std::conditional_t<is_const, const_iterator, matter::erased_storage*>;
+    using const_iterator = const matter::erased_storage<id_type>*;
+    using iterator       = std::conditional_t<is_const,
+                                        const_iterator,
+                                        matter::erased_storage<id_type>*>;
 
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
     using reverse_iterator       = std::reverse_iterator<iterator>;
@@ -59,7 +63,7 @@ public:
         : any_group{std::addressof(ref), size}
     {}
 
-    constexpr any_group(const any_group<false>& mutable_grp)
+    constexpr any_group(const any_group<id_type, false>& mutable_grp)
         : ptr_{mutable_grp.ptr_}, group_size_{mutable_grp.group_size_}
     {}
 
@@ -531,7 +535,8 @@ public:
         return {storage(ids.template get<Ts>())...};
     }
 
-    friend void swap(any_group<Const>& lhs, any_group<Const>& rhs) noexcept
+    friend void swap(any_group<id_type, Const>& lhs,
+                     any_group<id_type, Const>& rhs) noexcept
     {
         using std::swap;
         swap(lhs.ptr_, rhs.ptr_);
@@ -550,7 +555,8 @@ public:
         return it;
     }
 
-    const matter::erased_storage* find_id(const id_type& id) const noexcept
+    const matter::erased_storage<id_type>* find_id(const id_type& id) const
+        noexcept
     {
         auto it = matter::lower_bound(begin(), end(), id);
 
@@ -583,7 +589,7 @@ public:
 
     template<typename TId>
     constexpr std::enable_if_t<matter::is_typed_id_v<TId>,
-                               const matter::erased_storage*>
+                               const matter::erased_storage<id_type>*>
     find_id(const TId& id) const noexcept
     {
         static_assert(matter::has_same_id_type_v<TId, id_type>);
@@ -592,11 +598,12 @@ public:
 };
 } // namespace detail
 
-using any_group = ::matter::detail::any_group<false>;
+template<typename Id>
+using any_group = ::matter::detail::any_group<Id, false>;
 
 /// \brief a group where the contained stores cannot be modified
-using const_any_group = ::matter::detail::any_group<true>;
-
+template<typename Id>
+using const_any_group = ::matter::detail::any_group<Id, true>;
 } // namespace matter
 
 #endif

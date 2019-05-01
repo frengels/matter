@@ -43,26 +43,31 @@ public:
     using required_types = C;
 
     using registry_type = Registry;
+    using id_type       = typename registry_type::id_type;
 
 public:
     constexpr write_meta(registry_type&) noexcept
     {}
 
-    constexpr void process_group_vector(matter::group_vector&) const noexcept
+    constexpr void process_group_vector(matter::group_vector<id_type>&) const
+        noexcept
     {}
 
-    constexpr void process_group(const_any_group) const noexcept
+    constexpr void process_group(const_any_group<id_type>) const noexcept
     {}
 
-    constexpr write<C> make_access(matter::entity_handle,
-                                   matter::storage_handle<C>) const noexcept
+    constexpr write<C> make_access(matter::entity_handle<id_type>,
+                                   matter::storage_handle<id_type, C>) const
+        noexcept
     {
         return write<C>{};
     }
 };
 
-static_assert(matter::is_access_v<matter::write<int>, matter::registry<>>);
-static_assert(matter::is_meta_access_v<write_meta<matter::registry<>, int>>);
+static_assert(
+    matter::is_access_v<matter::write<int>, matter::registry<std::size_t>>);
+static_assert(
+    matter::is_meta_access_v<write_meta<matter::registry<std::size_t>, int>>);
 } // namespace matter
 
 #endif

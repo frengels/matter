@@ -24,14 +24,15 @@ struct meta_access
 {
     using required_types = void;
     using registry_type  = Registry;
+    using id_type        = typename registry_type::id_type;
 
     constexpr meta_access(registry_type&);
 
-    constexpr void process_group_vector(matter::group_vector&);
+    constexpr void process_group_vector(matter::group_vector<id_type>&);
 
-    constexpr void process_group(matter::any_group);
+    constexpr void process_group(matter::any_group<id_type>);
 
-    constexpr void make_access(matter::entity_handle);
+    constexpr void make_access(matter::entity_handle<id_type>);
 };
 
 template<typename Registry>
@@ -39,13 +40,16 @@ struct meta_access_other
 {
     using required_types = std::tuple<int>;
     using registry_type  = Registry;
+    using id_type        = typename registry_type::id_type;
 
     constexpr meta_access_other(registry_type&);
 
-    constexpr std::optional<float> process_group_vector(matter::group_vector&);
+    constexpr std::optional<float>
+    process_group_vector(matter::group_vector<id_type>&);
 
     // take any group and the derefed result of process_group_vector if not void
-    constexpr std::optional<char> process_group(matter::any_group, float);
+    constexpr std::optional<char> process_group(matter::any_group<id_type>,
+                                                float);
 
     // this function gets the handle, the dereferenced return value of
     // process_group, or process_group_vector if process_group function is not
@@ -53,7 +57,7 @@ struct meta_access_other
     // required_types.
     // required_types is also used in filtering groups for presence.
     constexpr matter::prototype::access
-    make_access(matter::entity_handle, char, int&);
+    make_access(matter::entity_handle<id_type>, char, int&);
 };
 
 static_assert(
@@ -62,11 +66,6 @@ static_assert(matter::is_meta_access_v<
               matter::prototype::meta_access<matter::registry<>>>);
 static_assert(matter::is_meta_access_v<
               matter::prototype::meta_access_other<matter::registry<>>>);
-
-static_assert(
-    std::is_same_v<std::tuple<>,
-                   matter::required_types_t<
-                       matter::prototype::meta_access<matter::registry<>>>>);
 } // namespace prototype
 } // namespace matter
 

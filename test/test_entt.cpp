@@ -50,7 +50,7 @@ TEST_CASE("benchmarks")
 {
     SECTION("assign_comp_static")
     {
-        matter::registry<position, velocity> reg;
+        matter::registry<std::size_t, position, velocity> reg;
 
         timer t{"Constructing 1000000 static component pairs of position and "
                 "velocity"};
@@ -63,7 +63,7 @@ TEST_CASE("benchmarks")
 
     SECTION("assign_comp_runtime")
     {
-        matter::registry<> reg;
+        matter::registry<std::size_t> reg;
         reg.register_component<position>();
         reg.register_component<velocity>();
 
@@ -78,7 +78,7 @@ TEST_CASE("benchmarks")
 
     SECTION("iterate_single")
     {
-        matter::registry<position, velocity> reg;
+        matter::registry<std::size_t, position, velocity> reg;
         auto pos = reg.create_buffer_for<position>();
         pos.resize(1000000);
 
@@ -164,7 +164,7 @@ TEST_CASE("benchmarks")
 
     SECTION("destroy")
     {
-        matter::registry<position> reg;
+        matter::registry<std::size_t, position> reg;
 
         auto buff = reg.create_buffer_for<position>();
         buff.resize(1000000);
@@ -185,7 +185,7 @@ TEST_CASE("benchmarks")
 
     SECTION("iterate_double")
     {
-        matter::registry<position, velocity> reg;
+        matter::registry<std::size_t, position, velocity> reg;
         auto posvel = reg.create_buffer_for<position, velocity>();
         posvel.resize(1000000);
 
@@ -245,7 +245,7 @@ TEST_CASE("benchmarks")
 
     SECTION("iterate_double,half")
     {
-        matter::registry<position, velocity> reg;
+        matter::registry<std::size_t, position, velocity> reg;
         auto vel = reg.create_buffer_for<velocity>();
         vel.resize(1000000);
 
@@ -313,7 +313,7 @@ TEST_CASE("benchmarks")
 
     SECTION("iterate_single")
     {
-        matter::registry<position, velocity> reg;
+        matter::registry<std::size_t, position, velocity> reg;
         auto vel = reg.create_buffer_for<velocity>();
         vel.resize(1000000);
 

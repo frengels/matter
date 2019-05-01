@@ -9,9 +9,10 @@
 
 namespace matter
 {
+template<typename Id>
 class id_erased : public matter::erased {
 public:
-    using id_type   = std::size_t;
+    using id_type   = Id;
     using base_type = matter::erased;
 
 private:

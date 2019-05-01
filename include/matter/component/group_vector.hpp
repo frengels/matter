@@ -22,18 +22,21 @@ struct group_vector_view;
 /// \brief stores all groups of a certain size
 /// this is a specialised vector which stores groups, this datastructure allows
 /// dynamic sized groups without needing templates to overly bloat the code.
+template<typename Id>
 class group_vector {
 private:
     template<typename UnorderedTypedIds>
     friend struct group_vector_view;
 
 public:
+    using id_type = Id;
+
     struct iterator
     {
         using vector_iterator_type =
-            matter::iterator_t<std::vector<matter::erased_storage>>;
+            matter::iterator_t<std::vector<matter::erased_storage<id_type>>>;
 
-        using value_type        = any_group;
+        using value_type        = any_group<id_type>;
         using reference         = value_type;
         using pointer           = void;
         using iterator_category = typename std::iterator_traits<
@@ -151,10 +154,10 @@ public:
 
     struct const_iterator
     {
-        using vector_const_iterator_type =
-            matter::const_iterator_t<std::vector<matter::erased_storage>>;
+        using vector_const_iterator_type = matter::const_iterator_t<
+            std::vector<matter::erased_storage<id_type>>>;
 
-        using value_type        = const_any_group;
+        using value_type        = const_any_group<id_type>;
         using reference         = value_type;
         using pointer           = void;
         using iterator_category = typename std::iterator_traits<
@@ -285,10 +288,10 @@ public:
 
     struct reverse_iterator
     {
-        using vector_reverse_iterator_type =
-            matter::reverse_iterator_t<std::vector<matter::erased_storage>>;
+        using vector_reverse_iterator_type = matter::reverse_iterator_t<
+            std::vector<matter::erased_storage<id_type>>>;
 
-        using value_type        = any_group;
+        using value_type        = any_group<id_type>;
         using reference         = value_type;
         using pointer           = void;
         using iterator_category = typename std::iterator_traits<
@@ -396,9 +399,9 @@ public:
     {
         using vector_const_reverse_iterator_type =
             matter::const_reverse_iterator_t<
-                std::vector<matter::erased_storage>>;
+                std::vector<matter::erased_storage<id_type>>>;
 
-        using value_type        = const_any_group;
+        using value_type        = const_any_group<id_type>;
         using reference         = value_type;
         using pointer           = void;
         using iterator_category = typename std::iterator_traits<
@@ -533,8 +536,8 @@ public:
 
     struct sentinel
     {
-        using vector_const_sentinel_type =
-            matter::const_sentinel_t<std::vector<matter::erased_storage>>;
+        using vector_const_sentinel_type = matter::const_sentinel_t<
+            std::vector<matter::erased_storage<id_type>>>;
 
     private:
         vector_const_sentinel_type sent_;
@@ -584,7 +587,7 @@ public:
     {
         using vector_const_reverse_sentinel_type =
             matter::const_reverse_sentinel_t<
-                std::vector<matter::erased_storage>>;
+                std::vector<matter::erased_storage<id_type>>>;
 
     private:
         vector_const_reverse_sentinel_type sent_;
@@ -631,13 +634,10 @@ public:
         }
     };
 
-public:
-    using id_type = typename matter::erased_storage::id_type;
-
 private:
     /// the number of components each group stores
-    const std::size_t                   size_;
-    std::vector<matter::erased_storage> groups_{};
+    const std::size_t                            size_;
+    std::vector<matter::erased_storage<id_type>> groups_{};
 
 public:
     explicit group_vector(std::size_t size) : size_{size}
@@ -695,16 +695,17 @@ public:
         return size_;
     }
 
-    any_group emplace_at(const_any_group storage_vtable_source,
-                         const_iterator  pos,
-                         matter::ordered_untyped_ids<id_type> ids) noexcept
+    any_group<id_type>
+    emplace_at(const_any_group<id_type>             storage_vtable_source,
+               const_iterator                       pos,
+               matter::ordered_untyped_ids<id_type> ids) noexcept
     {
         assert(storage_vtable_source.size() >= group_size());
         assert(find(ids) == groups_.end());
         assert(ids.size() == group_size());
 
         // create place to store stores
-        std::vector<matter::erased_storage> stores;
+        std::vector<matter::erased_storage<id_type>> stores;
         stores.reserve(group_size());
 
         // fill with stores
@@ -729,7 +730,7 @@ public:
     }
 
     template<typename... Ts>
-    group<typename Ts::type...>
+    group<id_type, typename Ts::type...>
     emplace(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
         (std::is_nothrow_default_constructible_v<
              matter::component_storage_t<typename Ts::type>> &&
@@ -819,7 +820,7 @@ public:
         return grp == ids ? it : iterator{groups_.end(), group_size()};
     }
 
-    std::optional<any_group>
+    std::optional<any_group<id_type>>
     find_group(matter::ordered_untyped_ids<id_type> ids) noexcept
     {
         auto it = find(ids);
@@ -833,7 +834,7 @@ public:
     }
 
     template<typename... TIds>
-    std::optional<group<typename TIds::type...>> find_group(
+    std::optional<group<id_type, typename TIds::type...>> find_group(
         const matter::unordered_typed_ids<id_type, TIds...>& ids,
         const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
     {
@@ -849,7 +850,7 @@ public:
     }
 
     template<typename... TIds>
-    std::optional<group<typename TIds::type...>> find_group(
+    std::optional<group<id_type, typename TIds::type...>> find_group(
         const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
     {
         return find_group(ids, ordered_typed_ids{ids});
@@ -888,7 +889,7 @@ public:
     }
 
     template<typename... TIds>
-    any_group find_emplace_group(
+    any_group<id_type> find_emplace_group(
         const matter::unordered_typed_ids<id_type, TIds...>& unordered_ids,
         const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
     {
@@ -897,7 +898,7 @@ public:
     }
 
     template<typename... TIds>
-    any_group
+    any_group<id_type>
     find_emplace_group(const matter::unordered_typed_ids<id_type, TIds...>&
                            unordered_ids) noexcept
     {
@@ -906,9 +907,10 @@ public:
     }
 
     template<typename... TIds>
-    [[deprecated("use find_emplace_group overload over this")]] any_group
+    [[deprecated(
+        "use find_emplace_group overload over this")]] any_group<id_type>
     find_new_group_without(
-        const_any_group                               grp,
+        const_any_group<id_type>                      grp,
         matter::unordered_typed_ids<id_type, TIds...> without_ids) noexcept
     {
         assert((grp.group_size() - without_ids.size()) == group_size());
@@ -937,8 +939,8 @@ public:
         return find_emplace_group(grp, ordered_ids);
     }
 
-    any_group
-    find_emplace_group(const_any_group                      storage_source,
+    any_group<id_type>
+    find_emplace_group(const_any_group<id_type>             storage_source,
                        matter::ordered_untyped_ids<id_type> new_ids) noexcept
     {
         assert(storage_source.group_size() > group_size());
@@ -959,10 +961,11 @@ public:
         return emplace_at(storage_source, new_group_it, new_ids);
     }
 
-    any_group operator[](std::size_t index) noexcept
+    any_group<id_type> operator[](std::size_t index) noexcept
     {
         assert(index <= size());
-        return any_group{std::addressof(groups_[size_ * index]), size_};
+        return any_group<id_type>{std::addressof(groups_[size_ * index]),
+                                  size_};
     }
 
     std::size_t size() const noexcept
@@ -996,7 +999,7 @@ private:
             return true;
         }()));
 
-        std::array<matter::erased_storage, sizeof...(TIds)> stores{
+        std::array<matter::erased_storage<id_type>, sizeof...(TIds)> stores{
             matter::erased_storage{unordered_ids.template get<TIds>()}...};
 
         auto inserted_at =

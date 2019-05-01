@@ -24,15 +24,17 @@ public:
     struct iterator
     {
     private:
-        using group_vector_iterator_type = matter::iterator_t<group_vector>;
+        using group_vector_iterator_type =
+            matter::iterator_t<group_vector<id_type>>;
 
         using group_vector_base_iterator_type =
             decltype(std::declval<group_vector_iterator_type>().base());
 
-        using group_vector_sentinel_type = matter::sentinel_t<group_vector>;
+        using group_vector_sentinel_type =
+            matter::sentinel_t<group_vector<id_type>>;
 
     public:
-        using value_type        = group_view<typename TIds::type...>;
+        using value_type        = group_view<id_type, typename TIds::type...>;
         using reference         = value_type;
         using pointer           = void;
         using iterator_category = std::bidirectional_iterator_tag;
@@ -191,16 +193,16 @@ public:
     {
     private:
         using group_vector_reverse_iterator_type =
-            matter::reverse_iterator_t<group_vector>;
+            matter::reverse_iterator_t<group_vector<id_type>>;
 
         using group_vector_base_reverse_iterator_type =
             decltype(std::declval<group_vector_reverse_iterator_type>().base());
 
         using group_vector_reverse_sentinel_type =
-            matter::reverse_sentinel_t<group_vector>;
+            matter::reverse_sentinel_t<group_vector<id_type>>;
 
     public:
-        using value_type        = group_view<typename TIds::type...>;
+        using value_type        = group_view<id_type, typename TIds::type...>;
         using reference         = value_type;
         using pointer           = void;
         using iterator_category = std::bidirectional_iterator_tag;
@@ -400,13 +402,13 @@ public:
     };
 
 private:
-    typed_ids_type                       ids_;
-    ordered_ids_type                     ordered_ids_;
-    std::reference_wrapper<group_vector> group_vec_;
+    typed_ids_type                                ids_;
+    ordered_ids_type                              ordered_ids_;
+    std::reference_wrapper<group_vector<id_type>> group_vec_;
 
 public:
-    constexpr group_vector_view(const typed_ids_type& ids,
-                                group_vector&         group_vec) noexcept
+    constexpr group_vector_view(const typed_ids_type&  ids,
+                                group_vector<id_type>& group_vec) noexcept
         : ids_{ids}, ordered_ids_{matter::ordered_typed_ids{ids_}},
           group_vec_{group_vec}
     {
@@ -451,9 +453,9 @@ public:
 };
 
 template<typename UnorderedTypedIds>
-group_vector_view(
-    const UnorderedTypedIds& ids,
-    group_vector& group_vec) noexcept->group_vector_view<UnorderedTypedIds>;
+group_vector_view(const UnorderedTypedIds& ids,
+                  group_vector<typename UnorderedTypedIds::id_type>&
+                      group_vec) noexcept->group_vector_view<UnorderedTypedIds>;
 
 } // namespace matter
 

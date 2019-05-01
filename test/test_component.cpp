@@ -144,9 +144,12 @@ TEST_CASE("component")
 
     SECTION("component_identifier")
     {
-        matter::
-            component_identifier<float, int, std::string_view, empty_component>
-                cident;
+        matter::component_identifier<std::size_t,
+                                     float,
+                                     int,
+                                     std::string_view,
+                                     empty_component>
+            cident;
 
         static_assert(cident.id<float>() == 0);
         static_assert(cident.is_static<std::string_view>());
@@ -213,11 +216,6 @@ TEST_CASE("component")
                 CHECK(metadata2.align == alignof(std::string_view));
             }
         }
-    }
-
-    SECTION("registry")
-    {
-        matter::registry<float, int, char> reg;
     }
 }
 

@@ -9,11 +9,14 @@
 
 namespace matter
 {
-template<typename Component>
+template<typename Id, typename Component>
 class storage_handle {
     static_assert(
         std::is_same_v<Component, std::remove_const_t<Component>>,
         "const type are not allowed, most containers don't allow these");
+
+public:
+    using id_type = Id;
 
 private:
     std::reference_wrapper<matter::component_storage_t<Component>> store_;
@@ -24,13 +27,14 @@ public:
         : store_{store}
     {}
 
-    constexpr Component& operator[](const matter::entity_handle& ent) noexcept
+    constexpr Component&
+    operator[](const matter::entity_handle<id_type>& ent) noexcept
     {
         return store_.get()[ent.index()];
     }
 
     constexpr const Component&
-    operator[](const matter::entity_handle& ent) const noexcept
+    operator[](const matter::entity_handle<id_type>& ent) const noexcept
     {
         return store_[ent.index()];
     }

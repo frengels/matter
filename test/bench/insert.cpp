@@ -16,7 +16,7 @@ BENCHMARK(insert_single_vector)->Range(1, 1);
 
 void insert_single_first_idx(benchmark::State& state)
 {
-    matter::registry<int, char, float, uint64_t> reg;
+    matter::registry<std::size_t, int, char, float, uint64_t> reg;
 
     while (state.KeepRunning())
     {
@@ -28,7 +28,8 @@ BENCHMARK(insert_single_first_idx)->Range(1, 1);
 
 void insert_single_dynamic(benchmark::State& state)
 {
-    matter::registry<std::array<int, 16>, float, char, uint16_t> reg;
+    matter::registry<std::size_t, std::array<int, 16>, float, char, uint16_t>
+        reg;
     reg.register_component<int>();
 
     while (state.KeepRunning())
@@ -41,7 +42,7 @@ BENCHMARK(insert_single_dynamic)->Range(1, 1);
 
 void insert_multiple_static(benchmark::State& state)
 {
-    matter::registry<int, float, char> reg;
+    matter::registry<std::size_t, int, float, char> reg;
 
     while (state.KeepRunning())
     {
@@ -55,7 +56,7 @@ BENCHMARK(insert_multiple_static)->Range(1, 1);
 
 void insert_multiple_static_out_of_order(benchmark::State& state)
 {
-    matter::registry<int, float, char> reg;
+    matter::registry<std::size_t, int, float, char> reg;
 
     while (state.KeepRunning())
     {
@@ -69,7 +70,7 @@ BENCHMARK(insert_multiple_static_out_of_order)->Range(1, 1);
 
 void insert_multiple_mixed(benchmark::State& state)
 {
-    matter::registry<int, float, char> reg;
+    matter::registry<std::size_t, int, float, char> reg;
     reg.register_component<uint16_t>();
     reg.register_component<uint8_t>();
 
@@ -85,7 +86,7 @@ BENCHMARK(insert_multiple_mixed)->Range(1, 1);
 
 void insert_multiple_runtime(benchmark::State& state)
 {
-    matter::registry<float, char> reg;
+    matter::registry<std::size_t, float, char> reg;
     reg.register_component<int>();
     reg.register_component<uint16_t>();
     reg.register_component<uint8_t>();

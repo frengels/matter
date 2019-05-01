@@ -102,7 +102,7 @@ TEST_CASE("erased")
 
 TEST_CASE("erased_storage")
 {
-    matter::component_identifier<> ident;
+    matter::component_identifier<std::size_t> ident;
     ident.register_type<int_comp>();
     ident.register_type<float_comp>();
 

@@ -16,9 +16,6 @@
 
 namespace matter
 {
-template<typename... Cs>
-class component_identifier;
-
 template<typename Id, typename... Ts>
 class unordered_typed_ids;
 

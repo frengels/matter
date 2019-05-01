@@ -20,7 +20,8 @@ TEST_CASE("typed_id")
 
     SECTION("contains")
     {
-        matter::component_identifier<char, int, float, short, long> ident{};
+        matter::component_identifier<std::size_t, char, int, float, short, long>
+            ident{};
         ident.register_type<unsigned char>();
         ident.register_type<double>();
         ident.register_type<unsigned int>();

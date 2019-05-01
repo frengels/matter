@@ -37,19 +37,22 @@ struct read_meta
     using required_types = C;
 
     using registry_type = Registry;
+    using id_type       = typename registry_type::id_type;
 
 public:
     constexpr read_meta(registry_type&) noexcept
     {}
 
-    constexpr void process_group_vector(matter::group_vector&) const noexcept
+    constexpr void process_group_vector(matter::group_vector<id_type>&) const
+        noexcept
     {}
 
-    constexpr void process_group(const_any_group) const noexcept
+    constexpr void process_group(const_any_group<id_type>) const noexcept
     {}
 
-    constexpr read<C> make_access(matter::entity_handle     ent,
-                                  matter::storage_handle<C> component) noexcept
+    constexpr read<C>
+    make_access(matter::entity_handle<id_type>     ent,
+                matter::storage_handle<id_type, C> component) noexcept
     {
         return read{component[ent]};
     }
@@ -61,10 +64,12 @@ public:
     }
 };
 
-static_assert(matter::is_access_v<matter::read<int>, matter::registry<>>);
+static_assert(
+    matter::is_access_v<matter::read<int>, matter::registry<std::size_t>>);
 
 // assert we're using the concept correctly
-static_assert(matter::is_meta_access_v<read_meta<matter::registry<>, int>>);
+static_assert(
+    matter::is_meta_access_v<read_meta<matter::registry<std::size_t>, int>>);
 
 } // namespace matter
 

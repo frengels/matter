@@ -10,15 +10,17 @@
 
 namespace matter
 {
+// same underlying id_type is guaranteed by the meta_access concept
 template<typename Registry, typename... Access>
 class registry_access_view {
 public:
     using registry_type = Registry;
+    using id_type       = typename registry_type::id_type;
 
     using group_vector_container_iterator_type =
-        matter::iterator_t<std::vector<matter::group_vector>>;
+        matter::iterator_t<std::vector<matter::group_vector<id_type>>>;
     using group_vector_container_sentinel_type =
-        matter::sentinel_t<std::vector<matter::group_vector>>;
+        matter::sentinel_t<std::vector<matter::group_vector<id_type>>>;
 
     using required_types =
         matter::meta::merge_tuple_types_t<matter::required_types_t<
@@ -49,7 +51,7 @@ public:
 
 private:
     template<typename... ProcGroupRes, std::size_t... Is>
-    constexpr auto create_access_impl(matter::entity_handle        ent,
+    constexpr auto create_access_impl(matter::entity_handle<id_type> ent,
                                       std::tuple<ProcGroupRes...>& proc_res_tup,
                                       std::index_sequence<Is...>) noexcept
     {
@@ -76,15 +78,15 @@ public:
             return f;
         }
 
-        matter::for_each(it, end_, [&](matter::group_vector& grp_vec) {
+        matter::for_each(it, end_, [&](matter::group_vector<id_type>& grp_vec) {
             std::apply(
                 [&](auto&... meta) {
                     // not sure how to store the results of process_group_vector
                     // to pass on further yet
                     // just make the void ones a bool
                     auto process_group_vector = [](auto&& meta_access,
-                                                   matter::group_vector&
-                                                       grp_vec) {
+                                                   matter::group_vector<
+                                                       id_type>& grp_vec) {
                         using type = std::remove_const_t<
                             std::remove_reference_t<decltype(meta_access)>>;
 
@@ -117,7 +119,7 @@ public:
                     matter::for_each(
                         grp_vec.begin(),
                         grp_vec.end(),
-                        [&](matter::any_group grp) {
+                        [&](matter::any_group<id_type> grp) {
                             if (!filter_.filter(grp))
                             {
                                 // if the filter wasn't successful return
@@ -128,7 +130,8 @@ public:
                             auto process_group = [&](auto&& meta_access,
                                                      auto&& proc_grp_vec_res,
                                                      [[maybe_unused]] matter::
-                                                         any_group grp) {
+                                                         any_group<id_type>
+                                                             grp) {
                                 using type =
                                     std::remove_const_t<std::remove_reference_t<
                                         decltype(meta_access)>>;
@@ -209,11 +212,13 @@ public:
 
 template<typename... MetaAccess>
 registry_access_view(
-    matter::iterator_t<std::vector<matter::group_vector>> begin,
-    matter::sentinel_t<std::vector<matter::group_vector>> end,
+    matter::iterator_t<std::vector<matter::group_vector<
+        typename matter::detail::first_t<MetaAccess...>::id_type>>> begin,
+    matter::sentinel_t<std::vector<matter::group_vector<
+        typename matter::detail::first_t<MetaAccess...>::id_type>>> end,
     MetaAccess&&... acc) noexcept
     ->registry_access_view<
-        typename detail::nth_t<0, MetaAccess...>::registry_type,
+        typename detail::first_t<MetaAccess...>::registry_type,
         typename matter::make_access_result<MetaAccess>::type...>;
 } // namespace matter
 

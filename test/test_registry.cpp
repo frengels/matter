@@ -31,7 +31,7 @@ struct string_comp
 
 TEST_CASE("registry")
 {
-    matter::registry<float_comp, int_comp, string_comp> reg;
+    matter::registry<std::size_t, float_comp, int_comp, string_comp> reg;
 
     SECTION("group comparison")
     {
@@ -40,7 +40,7 @@ TEST_CASE("registry")
         reg.register_component<char>();
 
         // ids should roughly be 1, 0, 3 -> 0, 1, 3
-        auto grp_vec = matter::group_vector{3};
+        auto grp_vec = matter::group_vector<std::size_t>{3};
         auto grp     = grp_vec.emplace(
             reg.component_ids<int_comp, float_comp, const char*>());
 
@@ -56,7 +56,8 @@ TEST_CASE("registry")
         {
             // copy group in wrong order
             auto other_grp =
-                matter::group<float_comp, const char*, int_comp>{grp};
+                matter::group<std::size_t, float_comp, const char*, int_comp>{
+                    grp};
             CHECK(other_grp.empty());
             CHECK(grp.empty());
 
@@ -133,7 +134,8 @@ TEST_CASE("registry")
                 {
                     SECTION("empty iterator validation")
                     {
-                        matter::registry<int, float, char> empty_reg;
+                        matter::registry<std::size_t, int, float, char>
+                            empty_reg;
                         empty_reg.create<float>(std::forward_as_tuple(5.0f));
 
                         auto empty_view  = empty_reg.view<int>();
@@ -268,7 +270,7 @@ TEST_CASE("registry")
 
         SECTION("more detach")
         {
-            matter::registry<> detach_reg;
+            matter::registry<std::size_t> detach_reg;
             detach_reg.register_component<float_comp>();
             detach_reg.register_component<int_comp>();
             detach_reg.register_component<string_comp>();
