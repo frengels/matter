@@ -20,10 +20,16 @@ private:
     void*   value_;
 
 public:
-    constexpr erased_component(id_type id, void* val) : id_{id}, value_{val}
+    constexpr erased_component(const id_type& id, void* val)
+        : id_{id}, value_{val}
     {}
 
-    constexpr id_type id() const noexcept
+    template<typename T>
+    constexpr erased_component(const matter::typed_id<id_type, T>& tid, T* val)
+        : id_{tid}, value_{val}
+    {}
+
+    constexpr const id_type& id() const noexcept
     {
         return id_;
     }
@@ -146,6 +152,8 @@ public:
 template<typename Id>
 struct erased_storage
 {
+    static_assert(matter::is_id_v<Id>);
+
     using id_type    = typename matter::id_erased<Id>::id_type;
     using value_type = erased_component<id_type>;
     using size_type  = std::size_t;
@@ -156,24 +164,18 @@ private:
     detail::erased_storage_vtable<id_type>* vptr_;
 
 public:
-    template<typename TId>
-    explicit erased_storage(const TId& tid) noexcept(
-        std::is_nothrow_constructible_v<
-            matter::id_erased<id_type>,
-            matter::component_storage_t<typename TId::id_type>,
-            std::in_place_type_t<typename TId::type>>)
-        : erased_{tid.value(),
-                  std::in_place_type_t<
-                      matter::component_storage_t<typename TId::type>>{}},
+    template<typename T>
+    explicit erased_storage(const matter::typed_id<id_type, T>& tid) noexcept(
+        std::is_nothrow_constructible_v<matter::id_erased<id_type>,
+                                        matter::component_storage_t<T>,
+                                        std::in_place_type_t<T>>)
+        : erased_{tid, std::in_place_type_t<matter::component_storage_t<T>>{}},
           vptr_{[]() {
               static detail::erased_storage_vtable<id_type> vobj{
-                  std::in_place_type_t<typename TId::type>{}};
+                  std::in_place_type_t<T>{}};
               return std::addressof(vobj);
           }()}
-    {
-        static_assert(matter::is_typed_id_v<TId>,
-                      "You must use a typed id to construct erased_storage.");
-    }
+    {}
 
     erased_storage(matter::id_erased<id_type>&&            erased,
                    detail::erased_storage_vtable<id_type>* vptr) noexcept
@@ -333,8 +335,8 @@ public:
     }
 };
 
-template<typename TId>
-erased_storage(const TId& tid)->erased_storage<typename TId::id_type>;
+template<typename Id, typename T>
+erased_storage(const matter::typed_id<Id, T>& tid)->erased_storage<Id>;
 } // namespace matter
 
 #endif

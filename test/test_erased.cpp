@@ -102,7 +102,7 @@ TEST_CASE("erased")
 
 TEST_CASE("erased_storage")
 {
-    matter::component_identifier<std::size_t> ident;
+    matter::component_identifier<matter::signed_id<int>> ident;
     ident.register_type<int_comp>();
     ident.register_type<float_comp>();
 
@@ -113,7 +113,7 @@ TEST_CASE("erased_storage")
         int_comp icomp1{50};
 
         store.push_back(
-            matter::erased_component{ident.id<int_comp>().value(), &icomp1});
+            matter::erased_component{ident.id<int_comp>(), &icomp1});
 
         auto  er_comp    = store[0];
         auto& icomp1_ref = *static_cast<int_comp*>(er_comp.get());
@@ -123,7 +123,7 @@ TEST_CASE("erased_storage")
         int_comp icomp2{42};
 
         store.push_back(
-            matter::erased_component{ident.id<int_comp>().value(), &icomp2});
+            matter::erased_component{ident.id<int_comp>(), &icomp2});
 
         er_comp                = store[0];
         auto& icomp1_ref_again = *static_cast<int_comp*>(er_comp.get());

@@ -8,11 +8,16 @@
 
 TEST_CASE("group_vector")
 {
-    matter::component_identifier<std::size_t, int, float, short, char> ident;
+    matter::component_identifier<matter::unsigned_id<std::size_t>,
+                                 int,
+                                 float,
+                                 short,
+                                 char>
+        ident;
 
-    matter::group_vector<std::size_t> grpvec1{1};
-    matter::group_vector<std::size_t> grpvec2{2};
-    matter::group_vector<std::size_t> grpvec3{3};
+    matter::group_vector<matter::unsigned_id<std::size_t>> grpvec1{1};
+    matter::group_vector<matter::unsigned_id<std::size_t>> grpvec2{2};
+    matter::group_vector<matter::unsigned_id<std::size_t>> grpvec3{3};
 
     CHECK(grpvec1.group_size() == 1);
     CHECK(grpvec2.group_size() == 2);
@@ -23,8 +28,10 @@ TEST_CASE("group_vector")
         SECTION("group_view")
         {
             // default constructed iterator and sentinel should both be equal
-            matter::group_view<std::size_t, int>::iterator it{};
-            matter::group_view<std::size_t, int>::sentinel sent{};
+            matter::group_view<matter::unsigned_id<std::size_t>, int>::iterator
+                it{};
+            matter::group_view<matter::unsigned_id<std::size_t>, int>::sentinel
+                sent{};
 
             CHECK(it == sent);
         }
@@ -33,7 +40,8 @@ TEST_CASE("group_vector")
         {
             using group_vector_view_type = decltype(matter::group_vector_view{
                 ident.ids<int, float>(),
-                std::declval<matter::group_vector<std::size_t>&>()});
+                std::declval<matter::group_vector<
+                    matter::unsigned_id<std::size_t>>&>()});
 
             group_vector_view_type::iterator it{};
             group_vector_view_type::sentinel sent{};
@@ -337,7 +345,7 @@ TEST_CASE("group_vector")
 
             for (auto i = 0; i < 10; ++i)
             {
-                ifsbuff.push_back(i, i, i);
+                ifsbuff.emplace_back(i, i, i);
             }
 
             grp.insert_back(ifsbuff);

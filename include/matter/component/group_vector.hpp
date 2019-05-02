@@ -16,17 +16,14 @@
 
 namespace matter
 {
-template<typename UnorderedTypedIds>
-struct group_vector_view;
-
 /// \brief stores all groups of a certain size
 /// this is a specialised vector which stores groups, this datastructure allows
 /// dynamic sized groups without needing templates to overly bloat the code.
 template<typename Id>
 class group_vector {
 private:
-    template<typename UnorderedTypedIds>
-    friend struct group_vector_view;
+    template<typename _Id, typename... Ts>
+    friend class group_vector_view;
 
 public:
     using id_type = Id;
@@ -730,17 +727,17 @@ public:
     }
 
     template<typename... Ts>
-    group<id_type, typename Ts::type...>
+    group<id_type, Ts...>
     emplace(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
         (std::is_nothrow_default_constructible_v<
-             matter::component_storage_t<typename Ts::type>> &&
+             matter::component_storage_t<Ts>> &&
          ...))
     {
-        static_assert((std::is_default_constructible_v<
-                           matter::component_storage_t<typename Ts::type>> &&
-                       ...),
-                      "Component storage for one of the Cs... is not default "
-                      "constructible");
+        static_assert(
+            (std::is_default_constructible_v<matter::component_storage_t<Ts>> &&
+             ...),
+            "Component storage for one of the Cs... is not default "
+            "constructible");
         assert(group_size() == ids.size());
 
         auto ordered_ids = ordered_typed_ids{ids};
@@ -782,9 +779,9 @@ public:
         return grp == ids ? it : iterator{groups_.end(), group_size()};
     }
 
-    template<typename... TIds>
+    template<typename... Ts>
     const_iterator
-    find(const matter::ordered_typed_ids<id_type, TIds...>& ids) const noexcept
+    find(const matter::ordered_typed_ids<id_type, Ts...>& ids) const noexcept
     {
         assert(ids.size() == group_size());
 
@@ -803,9 +800,8 @@ public:
     /// the passed ids must be the exact same size as the groups managed by this
     /// group_vector. To retrieve groups which contain the requested components
     /// you should use a group_vector_view<T>.
-    template<typename... TIds>
-    iterator
-    find(const matter::ordered_typed_ids<id_type, TIds...>& ids) noexcept
+    template<typename... Ts>
+    iterator find(const matter::ordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
         assert(ids.size() == group_size());
 
@@ -833,10 +829,10 @@ public:
         return *it;
     }
 
-    template<typename... TIds>
-    std::optional<group<id_type, typename TIds::type...>> find_group(
-        const matter::unordered_typed_ids<id_type, TIds...>& ids,
-        const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
+    template<typename... Ts>
+    std::optional<group<id_type, Ts...>> find_group(
+        const matter::unordered_typed_ids<id_type, Ts...>& ids,
+        const matter::ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
     {
         auto it = find(ordered_ids);
 
@@ -849,18 +845,18 @@ public:
         return group{ids, grp};
     }
 
-    template<typename... TIds>
-    std::optional<group<id_type, typename TIds::type...>> find_group(
-        const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
+    template<typename... Ts>
+    std::optional<group<id_type, Ts...>>
+    find_group(const matter::unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
         return find_group(ids, ordered_typed_ids{ids});
     }
 
     /// \brief same as find, but emplaces the group if not found
-    template<typename... TIds>
+    template<typename... Ts>
     iterator find_emplace(
-        const matter::unordered_typed_ids<id_type, TIds...>& unordered_ids,
-        const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
+        const matter::unordered_typed_ids<id_type, Ts...>& unordered_ids,
+        const matter::ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
     {
         assert(ordered_ids.size() == group_size());
 
@@ -880,45 +876,45 @@ public:
         }
     }
 
-    template<typename... TIds>
-    iterator find_emplace(const matter::unordered_typed_ids<id_type, TIds...>&
+    template<typename... Ts>
+    iterator find_emplace(const matter::unordered_typed_ids<id_type, Ts...>&
                               unordered_ids) noexcept
     {
         return find_emplace(unordered_ids,
                             matter::ordered_typed_ids{unordered_ids});
     }
 
-    template<typename... TIds>
+    template<typename... Ts>
     any_group<id_type> find_emplace_group(
-        const matter::unordered_typed_ids<id_type, TIds...>& unordered_ids,
-        const matter::ordered_typed_ids<id_type, TIds...>& ordered_ids) noexcept
+        const matter::unordered_typed_ids<id_type, Ts...>& unordered_ids,
+        const matter::ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
     {
         auto it = find_emplace(unordered_ids, ordered_ids);
         return *it;
     }
 
-    template<typename... TIds>
+    template<typename... Ts>
     any_group<id_type>
-    find_emplace_group(const matter::unordered_typed_ids<id_type, TIds...>&
+    find_emplace_group(const matter::unordered_typed_ids<id_type, Ts...>&
                            unordered_ids) noexcept
     {
         return find_emplace_group(unordered_ids,
                                   matter::ordered_typed_ids{unordered_ids});
     }
 
-    template<typename... TIds>
+    template<typename... Ts>
     [[deprecated(
         "use find_emplace_group overload over this")]] any_group<id_type>
     find_new_group_without(
-        const_any_group<id_type>                      grp,
-        matter::unordered_typed_ids<id_type, TIds...> without_ids) noexcept
+        const_any_group<id_type>                           grp,
+        const matter::unordered_typed_ids<id_type, Ts...>& without_ids) noexcept
     {
         assert((grp.group_size() - without_ids.size()) == group_size());
 
         std::vector<id_type> ids;
         ids.reserve(group_size());
 
-        auto without_ids_arr = without_ids.as_array();
+        auto without_ids_arr = without_ids.array();
 
         std::for_each(grp.begin(), grp.end(), [&](auto&& storage) {
             // if the current id cannot be found within the removed ids then
@@ -980,14 +976,13 @@ public:
     }
 
 private:
-    template<typename... TIds>
+    template<typename... Ts>
     iterator emplace_at(
         const_iterator pos,
-        const unordered_typed_ids<id_type, TIds...>&
+        const unordered_typed_ids<id_type, Ts...>&
             unordered_ids) noexcept((std::
                                          is_nothrow_default_constructible_v<
-                                             matter::component_storage_t<
-                                                 typename TIds::type>> &&
+                                             matter::component_storage_t<Ts>> &&
                                      ...))
     {
         assert(([&]() {
@@ -999,8 +994,8 @@ private:
             return true;
         }()));
 
-        std::array<matter::erased_storage<id_type>, sizeof...(TIds)> stores{
-            matter::erased_storage{unordered_ids.template get<TIds>()}...};
+        std::array<matter::erased_storage<id_type>, sizeof...(Ts)> stores{
+            matter::erased_storage{unordered_ids.template get<Ts>()}...};
 
         auto inserted_at =
             groups_.insert(pos.base(),
@@ -1023,17 +1018,17 @@ private:
         return matter::lower_bound(begin(), end(), std::move(ids));
     }
 
-    template<typename... TIds>
+    template<typename... Ts>
     const_iterator
-    lower_bound(const matter::ordered_typed_ids<id_type, TIds...>& ids) const
+    lower_bound(const matter::ordered_typed_ids<id_type, Ts...>& ids) const
         noexcept
     {
         return matter::lower_bound(begin(), end(), ids);
     }
 
-    template<typename... TIds>
+    template<typename... Ts>
     iterator
-    lower_bound(const matter::ordered_typed_ids<id_type, TIds...>& ids) noexcept
+    lower_bound(const matter::ordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
         return matter::lower_bound(begin(), end(), ids);
     }

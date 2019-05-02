@@ -5,27 +5,33 @@
 
 #include <numeric>
 
+#include "matter/component/id.hpp"
 #include "matter/util/erased.hpp"
 
 namespace matter
 {
 template<typename Id>
 class id_erased : public matter::erased {
+    static_assert(matter::is_id_v<Id>);
+
 public:
     using id_type   = Id;
     using base_type = matter::erased;
 
 private:
-    id_type id_{std::numeric_limits<id_type>::max()};
+    id_type id_{};
 
 public:
     constexpr id_erased() noexcept = default;
 
     template<typename T, typename... Args>
-    id_erased(id_type id, std::in_place_type_t<T>, Args&&... args) noexcept(
-        std::is_nothrow_constructible_v<erased,
-                                        std::in_place_type_t<T>,
-                                        Args&&...>)
+    id_erased(const id_type& id,
+              std::in_place_type_t<T>,
+              Args&&... args) noexcept(std::
+                                           is_nothrow_constructible_v<
+                                               erased,
+                                               std::in_place_type_t<T>,
+                                               Args&&...>)
         : base_type{std::in_place_type_t<T>{}, std::forward<Args>(args)...},
           id_{id}
     {}
@@ -163,8 +169,8 @@ public:
     friend void swap(id_erased& lhs, id_erased& rhs) noexcept
     {
         using std::swap;
-        swap(lhs.id_, rhs.id_);
         swap(static_cast<erased&>(lhs), static_cast<erased&>(rhs));
+        swap(lhs.id_, rhs.id_);
     }
 };
 } // namespace matter

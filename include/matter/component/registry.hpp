@@ -17,18 +17,21 @@ namespace matter
 {
 template<typename Id, typename... Components>
 class registry {
+    static_assert(matter::is_id_v<Id>);
+    static_assert((matter::is_component_v<Components> && ...));
+
 public:
     using identifier_type = component_identifier<Id, Components...>;
     using id_type         = typename identifier_type::id_type;
 
 private:
-    identifier_type identifier_;
+    identifier_type identifier_{};
 
     /// index indicates the length of the groups stored.
     std::vector<matter::group_vector<id_type>> group_vectors_;
 
 public:
-    constexpr registry() = default;
+    constexpr registry() noexcept = default;
 
     template<typename C>
     constexpr auto component_id() const
@@ -77,15 +80,8 @@ public:
         return view(component_ids<Cs...>());
     }
 
-    template<typename... TIds>
-    auto view(const matter::unordered_typed_ids<id_type, TIds...>& ids) noexcept
-        -> std::enable_if_t<
-            (matter::is_typed_id_v<TIds> && ...),
-            decltype(
-                registry_view<matter::unordered_typed_ids<id_type, TIds...>>{
-                    ids,
-                    group_vectors_.begin(),
-                    group_vectors_.end()})>
+    template<typename... Ts>
+    auto view(const matter::unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
         return registry_view{ids, group_vectors_.begin(), group_vectors_.end()};
     }
@@ -118,22 +114,16 @@ public:
         return matter::insert_buffer{component_ids<Cs...>()};
     }
 
-    template<typename... Cs, typename... TIds>
-    auto create_buffer_for(
-        matter::insert_buffer<matter::unordered_typed_ids<id_type, TIds...>>&&
-            move_from)
+    template<typename... Cs, typename... Ts>
+    auto create_buffer_for(matter::insert_buffer<id_type, Ts...>&& move_from)
     {
         return matter::insert_buffer{component_ids<Cs...>(),
                                      std::move(move_from)};
     }
 
-    template<typename... TIds>
-    void insert(const matter::insert_buffer<
-                matter::unordered_typed_ids<id_type, TIds...>>&
-                    buffer) noexcept((std::
-                                          is_nothrow_copy_constructible_v<
-                                              typename TIds::type> &&
-                                      ...))
+    template<typename... Ts>
+    void insert(const matter::insert_buffer<id_type, Ts...>& buffer) noexcept(
+        (std::is_nothrow_copy_constructible_v<Ts> && ...))
     {
         auto opt_ideal_group = find_group_from_ids(buffer.ids());
 
@@ -155,11 +145,12 @@ public:
 
 private:
     template<typename... Ts>
-    group<id_type, typename Ts::type...>
-    create_group(const unordered_typed_ids<id_type, Ts...>& ids) noexcept(
-        (std::is_nothrow_default_constructible_v<
-             matter::component_storage_t<typename Ts::type>> &&
-         ...))
+    group<id_type, Ts...>
+    create_group(const matter::unordered_typed_ids<id_type, Ts...>&
+                     ids) noexcept((std::
+                                        is_nothrow_default_constructible_v<
+                                            matter::component_storage_t<Ts>> &&
+                                    ...))
     {
         assert(!find_group_from_ids(ids));
 
@@ -205,8 +196,7 @@ private:
     }
 
     template<typename... Ts>
-    constexpr std::optional<group<id_type, typename Ts::type...>>
-    find_group_from_ids(
+    constexpr std::optional<group<id_type, Ts...>> find_group_from_ids(
         const unordered_typed_ids<id_type, Ts...>& ids,
         const ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
     {
@@ -215,7 +205,7 @@ private:
     }
 
     template<typename... Ts>
-    constexpr std::optional<group<id_type, typename Ts::type...>>
+    constexpr std::optional<group<id_type, Ts...>>
     find_group_from_ids(const unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
         return find_group_from_ids(ids, ordered_typed_ids{ids});
@@ -242,8 +232,8 @@ template<typename T>
 struct is_registry : std::false_type
 {};
 
-template<typename... Cs>
-struct is_registry<matter::registry<Cs...>> : std::true_type
+template<typename Id, typename... Cs>
+struct is_registry<matter::registry<Id, Cs...>> : std::true_type
 {};
 
 template<typename T>

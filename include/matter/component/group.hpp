@@ -159,10 +159,10 @@ private:
         stores_;
 
 public:
-    template<typename... TIds>
+    template<typename... Ts>
     constexpr group(
-        const matter::unordered_typed_ids<id_type, TIds...>& unordered,
-        any_group<id_type>                                   grp) noexcept
+        const matter::unordered_typed_ids<id_type, Ts...>& unordered,
+        any_group<id_type>                                 grp) noexcept
         : underlying_storage_{grp.data()}, stores_{grp.storage(unordered)}
     {
         // require exact match and not just contains being satisfied
@@ -204,25 +204,24 @@ public:
         return detail::type_in_list_v<T, Cs...>;
     }
 
-    template<typename TId>
-    constexpr auto contains(const TId&) const noexcept
+    template<typename T>
+    constexpr bool contains(const matter::typed_id<id_type, T>&) const noexcept
     {
-        return contains<typename TId::type>();
+        return contains<T>();
     }
 
-    template<typename... TIds>
+    template<typename... Ts>
     constexpr auto
-    contains(const matter::unordered_typed_ids<id_type, TIds...>&) const
-        noexcept
+    contains(const matter::unordered_typed_ids<id_type, Ts...>&) const noexcept
     {
-        return (contains<typename TIds::type>() && ...);
+        return (contains<Ts>() && ...);
     }
 
-    template<typename... TIds>
+    template<typename... Ts>
     constexpr auto
-    contains(const matter::ordered_typed_ids<id_type, TIds...>&) const noexcept
+    contains(const matter::ordered_typed_ids<id_type, Ts...>&) const noexcept
     {
-        return (contains<typename TIds::type>() && ...);
+        return (contains<Ts>() && ...);
     }
 
     constexpr iterator begin() noexcept
@@ -279,21 +278,17 @@ public:
 
     constexpr component_view<Cs...> push_back(Cs&&... comps)
     {
-        return emplace_back(std::tuple{std::move(comps)}...);
+        return emplace_back(std::forward_as_tuple(std::move(comps))...);
     }
 
-    template<typename... TIds>
-    constexpr std::enable_if_t<
-        (detail::type_in_list_v<typename TIds::type, Cs...> && ...),
-        iterator>
-    insert_back(
-        const matter::insert_buffer<
-            matter::unordered_typed_ids<id_type, TIds...>>&
-            buffer) noexcept((std::
-                                  is_nothrow_constructible_v<
-                                      Cs,
-                                      decltype(*buffer.template begin<Cs>())> &&
-                              ...))
+    template<typename... Ts>
+    constexpr std::enable_if_t<(detail::type_in_list_v<Ts, Cs...> && ...),
+                               iterator>
+    insert_back(const matter::insert_buffer<id_type, Ts...>& buffer) noexcept(
+        (std::is_nothrow_constructible_v<
+             Cs,
+             decltype(*std::make_move_iterator(buffer.template begin<Cs>()))> &&
+         ...))
     {
         return iterator{get<Cs>().insert(
             get<Cs>().end(),
@@ -344,9 +339,9 @@ private:
     }
 };
 
-template<typename Id, typename... TIds>
-group(const matter::unordered_typed_ids<Id, TIds...>&,
-      any_group<Id>) noexcept->group<Id, typename TIds::type...>;
+template<typename Id, typename... Ts>
+group(const matter::unordered_typed_ids<Id, Ts...>&,
+      any_group<Id>) noexcept->group<Id, Ts...>;
 
 } // namespace matter
 

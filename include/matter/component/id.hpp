@@ -19,7 +19,7 @@ template<typename Id>
 struct id_value_type<Id,
                      std::void_t<decltype(std::declval<const Id>().value())>>
 {
-    using type = decltype(std::declval<const Id>().value());
+    using type = std::decay_t<decltype(std::declval<const Id>().value())>;
 };
 
 template<typename Id>
@@ -28,11 +28,6 @@ using id_value_type_t = typename id_value_type<Id>::type;
 template<typename Id, typename = void>
 struct is_id : std::false_type
 {};
-
-struct nullid_t
-{};
-
-constexpr nullid_t nullid = {};
 
 // defines the concept for an id. The idea behind the concept is that ids have
 // to be strictly ordered and equality comparable (for sorting and allowing
@@ -46,31 +41,29 @@ struct is_id<
     Id,
     std::enable_if_t<
         std::is_default_constructible_v<Id> &&
-            std::is_constructible_v<Id, id_value_type_t<Id>> &&
-            std::is_constructible_v<Id, matter::nullid_t> &&
-            std::is_nothrow_copy_constructible_v<Id> &&
-            std::is_nothrow_copy_assignable_v<Id> &&
-            matter::is_swappable_v<Id> &&
-            std::is_same_v<bool,
-                           decltype(std::declval<const Id>() <
-                                    std::declval<const Id>())> &&
-            std::is_same_v<bool,
-                           decltype(std::declval<const Id>() >
-                                    std::declval<const Id>())> &&
-            std::is_same_v<bool,
-                           decltype(std::declval<const Id>() <=
-                                    std::declval<const Id>())> &&
-            std::is_same_v<bool,
-                           decltype(std::declval<const Id>() >=
-                                    std::declval<const Id>())> &&
-            std::is_same_v<bool,
-                           decltype(std::declval<const Id>() ==
-                                    std::declval<const Id>())> &&
-            std::is_same_v<bool,
-                           decltype(std::declval<const Id>() !=
-                                    std::declval<const Id>())> &&
-            std::is_same_v<bool, decltype(bool(std::declval<const Id>()))>,
-        std::void_t<decltype(Id::invalid_id)>>> : std::true_type
+        std::is_constructible_v<Id, id_value_type_t<Id>> &&
+        std::is_nothrow_copy_constructible_v<Id> &&
+        std::is_nothrow_copy_assignable_v<Id> && matter::is_swappable_v<Id> &&
+        std::is_same_v<bool,
+                       decltype(std::declval<const Id>() <
+                                std::declval<const Id>())> &&
+        std::is_same_v<bool,
+                       decltype(std::declval<const Id>() >
+                                std::declval<const Id>())> &&
+        std::is_same_v<bool,
+                       decltype(std::declval<const Id>() <=
+                                std::declval<const Id>())> &&
+        std::is_same_v<bool,
+                       decltype(std::declval<const Id>() >=
+                                std::declval<const Id>())> &&
+        std::is_same_v<bool,
+                       decltype(std::declval<const Id>() ==
+                                std::declval<const Id>())> &&
+        std::is_same_v<bool,
+                       decltype(std::declval<const Id>() !=
+                                std::declval<const Id>())> &&
+        std::is_same_v<bool, decltype(bool(std::declval<const Id>()))>>>
+    : std::true_type
 {};
 
 template<typename Id>
@@ -82,24 +75,22 @@ class unsigned_id {
                   "This class is specifically made for unsigned integrals");
 
 public:
-    using id_type = UnsignedIntegral;
+    using value_type = UnsignedIntegral;
 
-    static constexpr auto invalid_id = std::numeric_limits<id_type>::max();
+    static constexpr value_type invalid_id =
+        std::numeric_limits<value_type>::max();
 
 private:
     // our id value, by default it's set to max
-    id_type value_{invalid_id};
+    value_type value_{invalid_id};
 
 public:
     constexpr unsigned_id() noexcept = default;
 
-    constexpr unsigned_id(matter::nullid_t) noexcept
+    explicit constexpr unsigned_id(const value_type& id) noexcept : value_{id}
     {}
 
-    explicit constexpr unsigned_id(const id_type& id) noexcept : value_{id}
-    {}
-
-    constexpr id_type value() const noexcept
+    constexpr const value_type& value() const noexcept
     {
         return value_;
     }
@@ -172,7 +163,7 @@ public:
     }
 };
 
-static_assert(matter::is_id<unsigned_id<std::size_t>>::value);
+static_assert(matter::is_id_v<unsigned_id<std::size_t>>);
 
 template<typename SignedIntegral>
 class signed_id {
@@ -180,23 +171,20 @@ class signed_id {
                   "This class is specifically made for signed integrals");
 
 public:
-    using id_type = SignedIntegral;
+    using value_type = SignedIntegral;
 
-    static constexpr SignedIntegral invalid_id = -1;
+    static constexpr value_type invalid_id = -1;
 
 private:
-    id_type value_{invalid_id};
+    value_type value_{invalid_id};
 
 public:
     constexpr signed_id() noexcept = default;
 
-    constexpr signed_id(matter::nullid_t) noexcept
+    explicit constexpr signed_id(const value_type& id) noexcept : value_{id}
     {}
 
-    explicit constexpr signed_id(id_type id) noexcept : value_{id}
-    {}
-
-    constexpr id_type value() const noexcept
+    constexpr const value_type& value() const noexcept
     {
         return value_;
     }

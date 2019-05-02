@@ -10,46 +10,40 @@
 
 namespace matter
 {
-template<typename UnorderedTypedIds>
-struct insert_buffer;
-
-template<typename Id, typename... TIds>
-struct insert_buffer<matter::unordered_typed_ids<Id, TIds...>>
+template<typename Id, typename... Ts>
+struct insert_buffer
 {
     using id_type = Id;
 
 private:
-    template<typename UnorderedTypedIds>
+    template<typename _Id, typename... Us>
     friend struct insert_buffer;
 
 private:
-    matter::unordered_typed_ids<Id, TIds...>        ids_;
-    std::tuple<std::vector<typename TIds::type>...> buffers_;
+    matter::unordered_typed_ids<Id, Ts...> ids_;
+    std::tuple<std::vector<Ts>...>         buffers_;
 
 public:
-    insert_buffer(const matter::unordered_typed_ids<Id, TIds...>& ids) noexcept
+    insert_buffer(const matter::unordered_typed_ids<Id, Ts...>& ids) noexcept
         : ids_{ids}, buffers_{}
     {}
 
-    template<typename... UTIds>
-    insert_buffer(
-        const matter::unordered_typed_ids<Id, TIds...>& ids,
-        matter::insert_buffer<matter::unordered_typed_ids<Id, UTIds...>>&&
-            move_from) noexcept
+    template<typename... Us>
+    insert_buffer(const matter::unordered_typed_ids<Id, Ts...>& ids,
+                  matter::insert_buffer<Id, Us...>&& move_from) noexcept
         : ids_{ids}, buffers_{[&]() {
               // this will take the vector from the passed buffer and use any
               // buffer that we also have in the current buffer
-              if constexpr (detail::type_in_list_v<typename TIds::type,
-                                                   typename UTIds::type...>)
+              if constexpr (detail::type_in_list_v<Ts, Us...>)
               {
-                  auto vec = std::vector<typename TIds::type>{
-                      std::move(move_from.template get<typename TIds::type>())};
+                  auto vec =
+                      std::vector<Ts>{std::move(move_from.template get<Ts>())};
                   vec.clear();
                   return vec;
               }
               else
               {
-                  return std::vector<typename TIds::type>{};
+                  return std::vector<Ts>{};
               }
           }()...}
     {}
@@ -97,52 +91,35 @@ public:
     }
 
     void resize(std::size_t new_size) noexcept(
-        (std::is_nothrow_default_constructible_v<typename TIds::type> && ...))
+        (std::is_nothrow_default_constructible_v<Ts> && ...))
     {
         return std::apply(
             [&](auto&&... buffers) { (buffers.resize(new_size), ...); },
             buffers_);
     }
 
-    void resize(std::size_t new_size, const typename TIds::type... ts) noexcept(
-        (std::is_nothrow_copy_constructible_v<typename TIds::type> && ...))
+    void resize(std::size_t new_size, const Ts&... ts) noexcept(
+        (std::is_nothrow_copy_constructible_v<Ts> && ...))
     {
-        (get<typename TIds::type>().resize(new_size, ts), ...);
+        (get<Ts>().resize(new_size, ts), ...);
     }
 
     template<typename... TupArgs>
-    std::enable_if_t<(
-        detail::is_constructible_expand_tuple_v<typename TIds::type, TupArgs> &&
-        ...)>
+    std::enable_if_t<(detail::is_constructible_expand_tuple_v<Ts, TupArgs> &&
+                      ...)>
     emplace_back(TupArgs&&... tuple_args) noexcept(
-        (detail::is_nothrow_constructible_expand_tuple_v<typename TIds::type,
-                                                         TupArgs> &&
-         ...))
+        (detail::is_nothrow_constructible_expand_tuple_v<Ts, TupArgs> && ...))
     {
-        (emplace_one_impl<typename TIds::type>(
-             std::forward<TupArgs>(tuple_args)),
-         ...);
+        (emplace_one_impl<Ts>(std::forward<TupArgs>(tuple_args)), ...);
     }
 
-    template<typename... Args>
-    std::enable_if_t<sizeof...(Args) == sizeof...(TIds) &&
-                     (std::is_constructible_v<typename TIds::type, Args> &&
-                      ...)>
-    emplace_back(Args&&... args) noexcept(
-        (std::is_nothrow_constructible_v<typename TIds::type, Args> && ...))
+    template<typename... Us>
+    std::enable_if_t<sizeof...(Us) == sizeof...(Ts) &&
+                     (std::is_constructible_v<Ts, Us> && ...)>
+    emplace_back(Us&&... us) noexcept(
+        (std::is_nothrow_constructible_v<Ts, Us> && ...))
     {
-        (get<typename TIds::type>().emplace_back(std::forward<Args>(args)),
-         ...);
-    }
-
-    template<typename... Ts>
-    std::enable_if_t<sizeof...(Ts) == sizeof...(TIds) &&
-                     (std::is_constructible_v<typename TIds::type, const Ts&> &&
-                      ...)>
-    push_back(const Ts&... ts) noexcept((
-        std::is_nothrow_constructible_v<typename TIds::type, const Ts&> && ...))
-    {
-        (get<typename TIds::type>().push_back(ts), ...);
+        (get<Ts>().emplace_back(std::forward<Us>(us)), ...);
     }
 
 private:
@@ -166,15 +143,14 @@ private:
     }
 };
 
-template<typename UnorderedIdsType>
-insert_buffer(
-    const UnorderedIdsType& ids) noexcept->insert_buffer<UnorderedIdsType>;
+template<typename Id, typename... Ts>
+insert_buffer(const matter::unordered_typed_ids<Id, Ts...>& ids)
+    ->insert_buffer<Id, Ts...>;
 
-template<typename UnorderedTypedIds, typename OtherUnorderedTypedIds>
-insert_buffer(const UnorderedTypedIds& ids,
-              matter::insert_buffer<OtherUnorderedTypedIds>&&
-                  move_from) noexcept->insert_buffer<UnorderedTypedIds>;
-
+template<typename Id, typename... Ts, typename... Us>
+insert_buffer(const matter::unordered_typed_ids<Id, Ts...>&,
+              matter::insert_buffer<Id, Us...> &&)
+    ->insert_buffer<Id, Ts...>;
 } // namespace matter
 
 #endif

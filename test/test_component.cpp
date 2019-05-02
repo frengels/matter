@@ -144,78 +144,32 @@ TEST_CASE("component")
 
     SECTION("component_identifier")
     {
-        matter::component_identifier<std::size_t,
+        matter::component_identifier<matter::unsigned_id<std::size_t>,
                                      float,
                                      int,
                                      std::string_view,
                                      empty_component>
             cident;
 
-        static_assert(cident.id<float>() == 0);
+        static_assert(cident.id<float>().value() == 0);
         static_assert(cident.is_static<std::string_view>());
         static_assert(!cident.is_static<std::wstring_view>());
-        CHECK(cident.template id<float>() == 0);
-
-        static_assert(
-            matter::is_typed_id_v<decltype(cident.id<std::string>())>);
+        CHECK(cident.template id<float>().value() == 0);
 
         static_assert(cident.id<std::string_view>() ==
                       cident.id<std::string_view>());
 
         // we test whether the global id doesn't affect the local id
-        CHECK(!cident.is_registered<std::wstring_view>()); // this will generate
-                                                           // a global id
+        CHECK(!cident.is_registered<std::wstring_view>()); // this will
+                                                           // generate a
+                                                           // global id
         cident.register_type<random_component>(); // this will generate a local
                                                   // id of num+0
         cident.register_type<std::wstring_view>();
-        CHECK(cident.id<random_component>() ==
+        CHECK(cident.id<random_component>().value() ==
               decltype(cident)::constexpr_components_size);
-        CHECK(cident.id<std::wstring_view>() ==
+        CHECK(cident.id<std::wstring_view>().value() ==
               decltype(cident)::constexpr_components_size + 1);
-
-        SECTION("metadata")
-        {
-            SECTION("static")
-            {
-                // has a name
-                auto id = cident.id<empty_component>();
-
-                const auto& metadata1 = cident.metadata(id);
-                CHECK(metadata1.name.has_value());
-                CHECK(metadata1.name->compare(
-                          matter::component_name_v<empty_component>) == 0);
-                CHECK(metadata1.size == sizeof(empty_component));
-                CHECK(metadata1.align == alignof(empty_component));
-
-                auto        id2       = cident.id<std::string_view>();
-                const auto& metadata2 = cident.metadata(id2);
-
-                CHECK(!metadata2.name.has_value());
-                CHECK(metadata2.size == sizeof(std::string_view));
-                CHECK(metadata2.align == alignof(std::string_view));
-            }
-            SECTION("runtime")
-            {
-                auto id = cident.id<random_component>();
-
-                const auto& metadata1 = cident.metadata(id);
-                CHECK(metadata1.name.has_value());
-
-                CHECK(metadata1.name->compare(
-                          matter::component_name_v<random_component>) == 0);
-                CHECK(metadata1.size == sizeof(random_component));
-                CHECK(metadata1.align == alignof(random_component));
-
-                // next has no name
-                auto id2 = cident.id<std::string_view>();
-
-                const auto& metadata2 = cident.metadata(id2);
-
-                CHECK(!metadata2.name.has_value());
-                CHECK(metadata2.size == sizeof(std::string_view));
-                CHECK(metadata2.align == alignof(std::string_view));
-            }
-        }
     }
 }
 

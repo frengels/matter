@@ -9,14 +9,11 @@
 
 namespace matter
 {
-template<typename UnorderedTypedIds>
-struct registry_view;
-
-template<typename Id, typename... TIds>
-struct registry_view<matter::unordered_typed_ids<Id, TIds...>>
-{
+template<typename Id, typename... Ts>
+class registry_view {
+public:
     using id_type            = Id;
-    using unordered_ids_type = matter::unordered_typed_ids<id_type, TIds...>;
+    using unordered_ids_type = matter::unordered_typed_ids<id_type, Ts...>;
 
     struct iterator
     {
@@ -34,7 +31,7 @@ struct registry_view<matter::unordered_typed_ids<Id, TIds...>>
         using group_vector_view_sentinel_type =
             matter::sentinel_t<group_vector_view_type>;
 
-        using value_type        = group_view<id_type, typename TIds::type...>;
+        using value_type        = group_view<id_type, Ts...>;
         using reference         = value_type;
         using pointer           = void;
         using iterator_category = std::forward_iterator_tag;
@@ -58,7 +55,7 @@ struct registry_view<matter::unordered_typed_ids<Id, TIds...>>
                   return grp_vec_view.begin();
               }()},
               grp_vec_view_sent_{
-                  typename group_vector_view<unordered_ids_type>::sentinel{}}
+                  typename group_vector_view<id_type, Ts...>::sentinel{}}
         {
 
             if (grp_vec_view_it_ != grp_vec_view_sent_)
@@ -182,7 +179,7 @@ public:
 
     template<typename Function>
     void for_each(Function f) const
-        noexcept(std::is_nothrow_invocable_v<Function, typename TIds::type&...>)
+        noexcept(std::is_nothrow_invocable_v<Function, Ts&...>)
     {
         auto it = begin_ + ids_.size();
         if (it >= end_)
@@ -221,8 +218,7 @@ public:
     /// remove the components from iterator at it
     /// this will move the entity to a different group
     template<typename... Cs>
-    std::enable_if_t<(detail::type_in_list_v<Cs, typename TIds::type...> &&
-                      ...)>
+    std::enable_if_t<(detail::type_in_list_v<Cs, Ts...> && ...)>
     detach(const iterator& it, std::size_t idx) noexcept
     {
         any_group<id_type> current_group     = (*it).underlying_group();
@@ -260,11 +256,11 @@ public:
     }
 };
 
-template<typename Id, typename... TIds>
-registry_view(const matter::unordered_typed_ids<Id, TIds...>,
+template<typename Id, typename... Ts>
+registry_view(const matter::unordered_typed_ids<Id, Ts...>,
               matter::iterator_t<std::vector<group_vector<Id>>> begin,
               matter::sentinel_t<std::vector<group_vector<Id>>> end)
-    ->registry_view<matter::unordered_typed_ids<Id, TIds...>>;
+    ->registry_view<Id, Ts...>;
 } // namespace matter
 
 #endif

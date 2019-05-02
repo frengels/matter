@@ -65,11 +65,13 @@ public:
 };
 
 static_assert(
-    matter::is_access_v<matter::read<int>, matter::registry<std::size_t>>);
+    matter::is_access_v<matter::read<int>,
+                        matter::registry<matter::unsigned_id<std::size_t>>>);
 
 // assert we're using the concept correctly
 static_assert(
-    matter::is_meta_access_v<read_meta<matter::registry<std::size_t>, int>>);
+    matter::is_meta_access_v<
+        read_meta<matter::registry<matter::unsigned_id<std::size_t>>, int>>);
 
 } // namespace matter
 

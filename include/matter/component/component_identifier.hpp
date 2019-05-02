@@ -7,6 +7,7 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "matter/component/id.hpp"
 #include "matter/component/identifier.hpp"
 #include "matter/component/metadata.hpp"
 #include "matter/component/traits.hpp"
@@ -14,7 +15,6 @@
 
 namespace matter
 {
-
 struct unregistered_component : std::logic_error
 {
     template<typename Component>
@@ -45,6 +45,7 @@ struct unregistered_component : std::logic_error
 /// the global ids to a local id. This way we get a clean array of ids.
 template<typename Id, typename... Components>
 class component_identifier {
+    static_assert(matter::is_id_v<Id>, "Id must fulfil the is_id concept");
     static_assert((matter::is_component_v<Components> && ...),
                   "All types must be valid components");
 
@@ -52,9 +53,11 @@ class component_identifier {
     {};
 
 public:
-    using id_type = Id;
+    using id_type       = Id;
+    using id_value_type = matter::id_value_type_t<id_type>;
 
-    static constexpr auto constexpr_components_size = sizeof...(Components);
+    static constexpr id_value_type constexpr_components_size =
+        sizeof...(Components);
 
     using identifier_type = identifier<component_identifier_tag>;
 
@@ -63,18 +66,11 @@ private:
     /// identifier and the value is the id used by the local
     /// component_identifier
     // std::unordered_map<std::size_t, std::size_t> runtime_ids_;
-    std::vector<id_type> runtime_ids_;
-    std::size_t          next_local_id_{constexpr_components_size};
-
-    std::array<matter::component_metadata, constexpr_components_size>
-                                            static_metadata_;
-    std::vector<matter::component_metadata> runtime_metadata_;
+    std::vector<id_value_type> runtime_ids_;
+    id_value_type              next_local_id_{constexpr_components_size};
 
 public:
-    constexpr component_identifier()
-        : static_metadata_{
-              matter::component_metadata{std::in_place_type_t<Components>{}}...}
-    {}
+    constexpr component_identifier() = default;
 
     template<typename Component>
     static constexpr bool is_static() noexcept
@@ -84,41 +80,23 @@ public:
 
     /// \brief instructs the identifier to now identify this component
     template<typename Component>
-    std::size_t register_type() noexcept
+    id_type register_type() noexcept
     {
-        static_assert(matter::is_component_v<Component>,
-                      "You may only register valid components");
         assert(!is_static<Component>());
         auto global_id = identifier_type::template get<Component>();
         assert(runtime_ids_.size() <= global_id ||
-               runtime_ids_[global_id] == std::numeric_limits<id_type>::max());
+               runtime_ids_[global_id] == id_type::invalid_id);
         auto local_id = next_local_id_++;
 
         if (runtime_ids_.size() <= global_id)
         {
-            runtime_ids_.resize(global_id + 1,
-                                std::numeric_limits<id_type>::max());
+            // initialize to invalid state by default
+            runtime_ids_.resize(global_id + 1, id_type::invalid_id);
         }
 
         runtime_ids_[global_id] = local_id;
         // store all available metadata for id -> data relation
-        runtime_metadata_.emplace_back(std::in_place_type_t<Component>{});
-        return local_id;
-    }
-
-    const matter::component_metadata& metadata(id_type id) noexcept
-    {
-        assert((constexpr_components_size + runtime_metadata_.size()) > id);
-
-        if (id >= constexpr_components_size)
-        {
-            auto runtime_id = id - constexpr_components_size;
-            return runtime_metadata_[runtime_id];
-        }
-        else
-        {
-            return static_metadata_[id];
-        }
+        return id_type{local_id};
     }
 
     template<typename Component>
@@ -131,7 +109,7 @@ public:
 
         auto id = identifier_type::template get<Component>();
         return runtime_ids_.size() > id &&
-               runtime_ids_[id] != std::numeric_limits<id_type>::max();
+               runtime_ids_[id] != id_type::invalid_id;
     }
 
     /// \brief retrieve the local id for a component
@@ -140,26 +118,28 @@ public:
     {
         if constexpr (is_static<Component>())
         {
-            return static_id<Component>();
+            return matter::typed_id<id_type, Component>{
+                static_cast<matter::id_value_type_t<id_type>>(
+                    static_id<Component>())};
         }
         else
         {
-            return runtime_id<Component>();
+            return matter::typed_id<id_type, Component>{
+                static_cast<matter::id_value_type_t<id_type>>(
+                    runtime_id<Component>())};
         }
     }
 
     template<typename... Cs>
     constexpr auto ids() const
-        -> unordered_typed_ids<id_type, decltype(id<Cs>())...>
     {
-        return {id<Cs>()...};
+        return matter::unordered_typed_ids{id<Cs>()...};
     }
 
     template<typename... Cs>
     constexpr auto ordered_ids() const
-        -> ordered_typed_ids<id_type, decltype(id<Cs>())...>
     {
-        return {ids<Cs...>()};
+        return matter::ordered_typed_ids{ids<Cs...>()};
     }
 
 private:
@@ -171,7 +151,7 @@ private:
             "This component id should be retrieved using runtime_id() instead");
         constexpr auto res =
             detail::type_index<Component, Components...>().value();
-        return matter::static_id<id_type, Component, res>{};
+        return res;
     }
 
     template<typename Component>
@@ -184,12 +164,12 @@ private:
 
         auto local_id = runtime_ids_[id];
 
-        if (local_id == std::numeric_limits<id_type>::max())
+        if (local_id == id_type::invalid_id)
         {
             throw matter::unregistered_component{
                 std::in_place_type_t<Component>{}};
         }
-        return matter::runtime_id<id_type, Component>{local_id};
+        return local_id;
     }
 };
 } // namespace matter

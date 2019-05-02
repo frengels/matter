@@ -65,9 +65,11 @@ public:
 };
 
 static_assert(
-    matter::is_access_v<matter::write<int>, matter::registry<std::size_t>>);
+    matter::is_access_v<matter::write<int>,
+                        matter::registry<matter::unsigned_id<std::size_t>>>);
 static_assert(
-    matter::is_meta_access_v<write_meta<matter::registry<std::size_t>, int>>);
+    matter::is_meta_access_v<
+        write_meta<matter::registry<matter::unsigned_id<std::size_t>>, int>>);
 } // namespace matter
 
 #endif
