@@ -49,20 +49,22 @@ public:
     using required_types = C;
 
     using registry_type = Registry;
+    using id_type       = typename registry_type::id_type;
 
 public:
     constexpr readwrite_meta(registry_type&) noexcept
     {}
 
-    constexpr void process_group_vector(matter::group_vector&) const noexcept
-    {}
-
-    constexpr void process_group(const_any_group) const noexcept
-    {}
-
-    constexpr readwrite<C> make_access(matter::entity_handle     ent,
-                                       matter::storage_handle<C> store) const
+    constexpr void process_group_vector(matter::group_vector<id_type>&) const
         noexcept
+    {}
+
+    constexpr void process_group(const_any_group<id_type>) const noexcept
+    {}
+
+    constexpr readwrite<C>
+    make_access(matter::entity_handle<id_type>     ent,
+                matter::storage_handle<id_type, C> store) const noexcept
     {
         return readwrite<C>{store[ent]};
     }

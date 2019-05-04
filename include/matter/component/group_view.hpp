@@ -13,10 +13,11 @@ namespace matter
 /// \brief View the stores of Cs... in the current group
 /// A struct to easily access specific stores in a group. This is meant as a
 /// concrete view of the normally abstract group
-template<typename... Cs>
-struct group_view
-{
+template<typename Id, typename... Cs>
+class group_view {
 public:
+    using id_type = Id;
+
     struct iterator
     {
         using difference_type   = int;
@@ -225,28 +226,26 @@ public:
     };
 
 private:
-    any_group grp_;
+    any_group<id_type> grp_;
     std::tuple<std::reference_wrapper<matter::component_storage_t<Cs>>...>
         stores_;
 
 public:
-    template<typename Id, typename... TIds>
-    constexpr group_view(const unordered_typed_ids<Id, TIds...>& ids,
-                         any_group&                              grp) noexcept
+    constexpr group_view(const unordered_typed_ids<id_type, Cs...>& ids,
+                         any_group<id_type> grp) noexcept
         : grp_{grp}, stores_{grp.storage(ids)}
     {}
 
-    constexpr group_view(const group<Cs...>& grp) noexcept
+    constexpr group_view(const group<id_type, Cs...>& grp) noexcept
         : grp_{grp.underlying_group()}, stores_{grp.stores_}
     {}
 
-    constexpr any_group underlying_group() const noexcept
+    constexpr any_group<id_type> underlying_group() const noexcept
     {
         return grp_;
     }
 
-    template<typename Id>
-    constexpr auto operator==(const group<Id, Cs...>& grp) const noexcept
+    constexpr auto operator==(const group<id_type, Cs...>& grp) const noexcept
     {
         // compare address instead of comparison the full vector, if the address
         // isn't the same then they're not the same even if the contained
@@ -256,22 +255,21 @@ public:
                 ...);
     }
 
-    template<typename Id>
-    constexpr auto operator!=(const group<Id, Cs...>& grp) const noexcept
+    constexpr auto operator!=(const group<id_type, Cs...>& grp) const noexcept
     {
         return !(*this == grp);
     }
 
-    template<typename Id>
-    friend constexpr auto operator==(const group<Id, Cs...>&  grp,
-                                     const group_view<Cs...>& grp_view) noexcept
+    friend constexpr auto
+    operator==(const group<id_type, Cs...>&      grp,
+               const group_view<id_type, Cs...>& grp_view) noexcept
     {
         return grp_view == grp;
     }
 
-    template<typename Id>
-    friend constexpr auto operator!=(const group<Id, Cs...>&  grp,
-                                     const group_view<Cs...>& grp_view) noexcept
+    friend constexpr auto
+    operator!=(const group<id_type, Cs...>&      grp,
+               const group_view<id_type, Cs...>& grp_view) noexcept
     {
         return grp_view != grp;
     }
@@ -338,12 +336,12 @@ public:
     }
 };
 
-template<typename Id, typename... TIds>
-group_view(const unordered_typed_ids<Id, TIds...>& ids,
-           any_group& grp) noexcept->group_view<typename TIds::type...>;
+template<typename Id, typename... Cs>
+group_view(const unordered_typed_ids<Id, Cs...>& ids,
+           any_group<Id> grp) noexcept->group_view<Id, Cs...>;
 
-template<typename... Cs>
-group_view(const group<Cs...>& grp) noexcept->group_view<Cs...>;
+template<typename Id, typename... Cs>
+group_view(const group<Id, Cs...>& grp) noexcept->group_view<Id, Cs...>;
 
 } // namespace matter
 

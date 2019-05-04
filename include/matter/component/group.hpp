@@ -18,9 +18,11 @@
 
 namespace matter
 {
-template<typename... Cs>
-struct group
-{
+template<typename Id, typename... Cs>
+class group {
+public:
+    using id_type = Id;
+
 public:
     struct iterator
     {
@@ -145,21 +147,22 @@ public:
 
     using reverse_iterator = std::reverse_iterator<iterator>;
 
-    template<typename... Ts>
+    template<typename _Id, typename... Ts>
     friend class group_view;
 
-    template<typename... Ts>
-    friend struct group;
+    template<typename _Id, typename... Ts>
+    friend class group;
 
 private:
-    matter::erased_storage* underlying_storage_;
+    matter::erased_storage<id_type>* underlying_storage_;
     std::tuple<std::reference_wrapper<matter::component_storage_t<Cs>>...>
         stores_;
 
 public:
-    template<typename Id, typename... TIds>
-    constexpr group(const matter::unordered_typed_ids<Id, TIds...>& unordered,
-                    any_group& grp) noexcept
+    template<typename... Ts>
+    constexpr group(
+        const matter::unordered_typed_ids<id_type, Ts...>& unordered,
+        any_group<id_type>                                 grp) noexcept
         : underlying_storage_{grp.data()}, stores_{grp.storage(unordered)}
     {
         // require exact match and not just contains being satisfied
@@ -167,19 +170,21 @@ public:
     }
 
     template<typename... OtherCs>
-    constexpr group(const matter::group<OtherCs...>& other) noexcept
+    constexpr group(const matter::group<id_type, OtherCs...>& other) noexcept
         : underlying_storage_{other.underlying_storage_},
           stores_{
               std::get<std::reference_wrapper<matter::component_storage_t<Cs>>>(
                   other.stores_)...}
     {
+        static_assert(sizeof...(OtherCs) == sizeof...(Cs),
+                      "Groups are required to be of equal size");
         static_assert((detail::type_in_list_v<OtherCs, Cs...> && ...),
                       "Incompatible components, cannot construct");
     }
 
-    constexpr any_group underlying_group() const noexcept
+    constexpr any_group<id_type> underlying_group() const noexcept
     {
-        return any_group{underlying_storage_, group_size()};
+        return any_group<id_type>{underlying_storage_, group_size()};
     }
 
     constexpr auto operator==(const group&) const noexcept
@@ -199,24 +204,24 @@ public:
         return detail::type_in_list_v<T, Cs...>;
     }
 
-    template<typename TId>
-    constexpr auto contains(const TId&) const noexcept
+    template<typename T>
+    constexpr bool contains(const matter::typed_id<id_type, T>&) const noexcept
     {
-        return contains<typename TId::type>();
+        return contains<T>();
     }
 
-    template<typename Id, typename... TIds>
+    template<typename... Ts>
     constexpr auto
-    contains(const matter::unordered_typed_ids<Id, TIds...>&) const noexcept
+    contains(const matter::unordered_typed_ids<id_type, Ts...>&) const noexcept
     {
-        return (contains<typename TIds::type>() && ...);
+        return (contains<Ts>() && ...);
     }
 
-    template<typename Id, typename... TIds>
-    constexpr auto contains(const matter::ordered_typed_ids<Id, TIds...>&) const
-        noexcept
+    template<typename... Ts>
+    constexpr auto
+    contains(const matter::ordered_typed_ids<id_type, Ts...>&) const noexcept
     {
-        return (contains<typename TIds::type>() && ...);
+        return (contains<Ts>() && ...);
     }
 
     constexpr iterator begin() noexcept
@@ -273,20 +278,17 @@ public:
 
     constexpr component_view<Cs...> push_back(Cs&&... comps)
     {
-        return emplace_back(std::tuple{std::move(comps)}...);
+        return emplace_back(std::forward_as_tuple(std::move(comps))...);
     }
 
-    template<typename Id, typename... TIds>
-    constexpr std::enable_if_t<
-        (detail::type_in_list_v<typename TIds::type, Cs...> && ...),
-        iterator>
-    insert_back(
-        const matter::insert_buffer<matter::unordered_typed_ids<Id, TIds...>>&
-            buffer) noexcept((std::
-                                  is_nothrow_constructible_v<
-                                      Cs,
-                                      decltype(*buffer.template begin<Cs>())> &&
-                              ...))
+    template<typename... Ts>
+    constexpr std::enable_if_t<(detail::type_in_list_v<Ts, Cs...> && ...),
+                               iterator>
+    insert_back(const matter::insert_buffer<id_type, Ts...>& buffer) noexcept(
+        (std::is_nothrow_constructible_v<
+             Cs,
+             decltype(*std::make_move_iterator(buffer.template begin<Cs>()))> &&
+         ...))
     {
         return iterator{get<Cs>().insert(
             get<Cs>().end(),
@@ -337,9 +339,9 @@ private:
     }
 };
 
-template<typename Id, typename... TIds>
-group(const matter::unordered_typed_ids<Id, TIds...>&,
-      any_group&) noexcept->group<typename TIds::type...>;
+template<typename Id, typename... Ts>
+group(const matter::unordered_typed_ids<Id, Ts...>&,
+      any_group<Id>) noexcept->group<Id, Ts...>;
 
 } // namespace matter
 

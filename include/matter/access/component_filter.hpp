@@ -15,13 +15,14 @@ template<typename Registry, typename... Cs>
 class component_filter {
 public:
     using registry_type = Registry;
+    using id_type       = typename registry_type::id_type;
 
     using unordered_ids_type =
         decltype(std::declval<registry_type>().template component_ids<Cs...>());
 
 private:
     unordered_ids_type                              tids_;
-    matter::any_group                               filtered_grp_;
+    matter::any_group<id_type>                      filtered_grp_;
     std::tuple<matter::component_storage_t<Cs>*...> stores_;
 
 public:
@@ -29,7 +30,7 @@ public:
         : tids_{reg.template component_ids<Cs...>()}
     {}
 
-    constexpr bool filter(matter::any_group grp) noexcept
+    constexpr bool filter(matter::any_group<id_type> grp) noexcept
     {
         filtered_grp_ = std::move(grp);
 
@@ -44,7 +45,7 @@ public:
                 },
                 er_stores))
         {
-            filtered_grp_ = matter::any_group{};
+            filtered_grp_ = matter::any_group<id_type>{};
             return false;
         }
 
@@ -75,7 +76,7 @@ public:
 private:
     template<typename MetaAccess, typename ProcGroupRes, std::size_t... Is>
     auto make_access_impl(MetaAccess&                    meta,
-                          matter::entity_handle          ent,
+                          matter::entity_handle<id_type> ent,
                           [[maybe_unused]] ProcGroupRes& proc_res,
                           std::index_sequence<Is...>) noexcept
     {
@@ -101,6 +102,7 @@ private:
             return meta.make_access(
                 ent,
                 matter::storage_handle<
+                    id_type,
                     matter::meta::nth_tuple_type_t<Is, req_types>>{
                     get<matter::meta::nth_tuple_type_t<Is, req_types>>()}...);
         }
@@ -108,9 +110,9 @@ private:
 
 public:
     template<typename MetaAccess, typename ProcGroupRes>
-    auto make_access(MetaAccess&           meta,
-                     matter::entity_handle ent,
-                     ProcGroupRes&         proc_res) noexcept
+    auto make_access(MetaAccess&                    meta,
+                     matter::entity_handle<id_type> ent,
+                     ProcGroupRes&                  proc_res) noexcept
     {
         return make_access_impl(
             meta,

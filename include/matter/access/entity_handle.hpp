@@ -10,18 +10,21 @@ namespace matter
 /// \brief refers to an entity within the registry
 /// This handle is only valid until the next mutation has happened on the
 /// registry. Any usage after this point is undefined behavior.
-struct entity_handle
-{
+template<typename Id>
+class entity_handle {
+public:
+    using id_type = Id;
+
 private:
-    any_group   grp_;
-    std::size_t index_;
+    any_group<id_type> grp_;
+    std::size_t        index_;
 
 public:
-    constexpr entity_handle(any_group grp, std::size_t index) noexcept
+    constexpr entity_handle(any_group<id_type> grp, std::size_t index) noexcept
         : grp_{std::move(grp)}, index_{index}
     {}
 
-    any_group group() noexcept
+    any_group<id_type> group() noexcept
     {
         return grp_;
     }

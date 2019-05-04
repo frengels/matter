@@ -76,6 +76,20 @@ struct is_optional<T,
 
 template<typename T>
 constexpr bool is_optional_v = is_optional<T>::value;
+
+template<typename T, typename = void>
+struct is_swappable : std::false_type
+{};
+
+template<typename T>
+struct is_swappable<
+    T,
+    std::void_t<decltype(swap(std::declval<T&>(), std::declval<T&>()))>>
+    : std::true_type
+{};
+
+template<typename T>
+constexpr bool is_swappable_v = is_swappable<T>::value;
 } // namespace matter
 
 #endif

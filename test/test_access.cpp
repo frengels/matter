@@ -9,22 +9,26 @@ TEST_CASE("access")
 {
     SECTION("static_assertions")
     {
-        static_assert(std::is_same_v<matter::read<int>,
-                                     matter::make_access_result_t<matter::read<
-                                         int>::meta_type<matter::registry<>>>>);
-
         static_assert(
-            matter::is_access_v<matter::read<int>, matter::registry<>>);
-        static_assert(
-            matter::is_access_v<matter::read<float>, matter::registry<>>);
+            std::is_same_v<
+                matter::read<int>,
+                matter::make_access_result_t<matter::read<int>::meta_type<
+                    matter::registry<matter::unsigned_id<std::size_t>>>>>);
 
-        static_assert(matter::is_meta_access_v<
-                      matter::read<float>::meta_type<matter::registry<>>>);
-        static_assert(matter::is_meta_access_v<
-                      matter::read<float>::meta_type<matter::registry<>>>);
+        static_assert(matter::is_access_v<
+                      matter::read<int>,
+                      matter::registry<matter::unsigned_id<std::size_t>>>);
+        static_assert(matter::is_access_v<
+                      matter::read<float>,
+                      matter::registry<matter::unsigned_id<std::size_t>>>);
+
+        static_assert(matter::is_meta_access_v<matter::read<float>::meta_type<
+                          matter::registry<matter::unsigned_id<std::size_t>>>>);
+        static_assert(matter::is_meta_access_v<matter::read<float>::meta_type<
+                          matter::registry<matter::unsigned_id<std::size_t>>>>);
     }
 
-    matter::registry<> reg;
+    matter::registry<matter::unsigned_id<std::size_t>> reg;
 
     reg.register_component<int>();
     reg.register_component<float>();

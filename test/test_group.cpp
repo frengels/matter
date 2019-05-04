@@ -8,11 +8,16 @@
 
 TEST_CASE("group_vector")
 {
-    matter::component_identifier<int, float, short, char> ident;
+    matter::component_identifier<matter::unsigned_id<std::size_t>,
+                                 int,
+                                 float,
+                                 short,
+                                 char>
+        ident;
 
-    matter::group_vector grpvec1{1};
-    matter::group_vector grpvec2{2};
-    matter::group_vector grpvec3{3};
+    matter::group_vector<matter::unsigned_id<std::size_t>> grpvec1{1};
+    matter::group_vector<matter::unsigned_id<std::size_t>> grpvec2{2};
+    matter::group_vector<matter::unsigned_id<std::size_t>> grpvec3{3};
 
     CHECK(grpvec1.group_size() == 1);
     CHECK(grpvec2.group_size() == 2);
@@ -23,8 +28,10 @@ TEST_CASE("group_vector")
         SECTION("group_view")
         {
             // default constructed iterator and sentinel should both be equal
-            matter::group_view<int>::iterator it{};
-            matter::group_view<int>::sentinel sent{};
+            matter::group_view<matter::unsigned_id<std::size_t>, int>::iterator
+                it{};
+            matter::group_view<matter::unsigned_id<std::size_t>, int>::sentinel
+                sent{};
 
             CHECK(it == sent);
         }
@@ -33,7 +40,8 @@ TEST_CASE("group_vector")
         {
             using group_vector_view_type = decltype(matter::group_vector_view{
                 ident.ids<int, float>(),
-                std::declval<matter::group_vector&>()});
+                std::declval<matter::group_vector<
+                    matter::unsigned_id<std::size_t>>&>()});
 
             group_vector_view_type::iterator it{};
             group_vector_view_type::sentinel sent{};
@@ -146,11 +154,14 @@ TEST_CASE("group_vector")
                 auto end   = grpvec2.end();
                 CHECK((end - start) == 2);
 
-                auto                    it  = grpvec2.begin();
-                matter::const_any_group grp = *it;
+                auto it = grpvec2.begin();
+                auto grp =
+                    matter::const_any_group<typename decltype(*it)::id_type>{
+                        *it};
                 CHECK(grp == ident.ordered_ids<float, int>());
                 ++it;
-                grp = matter::const_any_group{*it};
+                grp = matter::const_any_group<typename decltype(*it)::id_type>{
+                    *it};
                 CHECK(grp == ident.ordered_ids<short, char>());
                 ++it;
                 CHECK(it == grpvec2.end());
@@ -162,15 +173,20 @@ TEST_CASE("group_vector")
                 auto end   = grpvec3.end();
                 CHECK((end - start) == 3);
 
-                auto                    it = grpvec3.begin();
-                matter::const_any_group grp{*it};
+                auto it = grpvec3.begin();
+                auto grp =
+                    matter::const_any_group<typename decltype(*it)::id_type>{
+                        *it};
                 CHECK(grp == ident.ordered_ids<int, float, short>());
                 ++it;
-                grp = matter::const_any_group{*it};
+                grp = matter::const_any_group<typename decltype(*it)::id_type>{
+                    *it};
                 CHECK(grp == ident.ordered_ids<int, char, short>());
                 ++it;
-                grp          = matter::const_any_group{*it};
-                auto mut_grp = matter::any_group{*it};
+                grp = matter::const_any_group<typename decltype(*it)::id_type>{
+                    *it};
+                auto mut_grp =
+                    matter::any_group<typename decltype(*it)::id_type>{*it};
                 CHECK(grp == ident.ordered_ids<float, short, char>());
                 ++it;
                 CHECK(it == grpvec3.end());
@@ -225,11 +241,14 @@ TEST_CASE("group_vector")
                 CHECK((end - start) == 2);
                 CHECK(grpvec2.size() == 2);
 
-                auto                    it = grpvec2.rbegin();
-                matter::const_any_group grp{*it};
+                auto it = grpvec2.rbegin();
+                auto grp =
+                    matter::const_any_group<typename decltype(*it)::id_type>{
+                        *it};
                 CHECK(grp == ident.ordered_ids<short, char>());
                 ++it;
-                grp = matter::const_any_group{*it};
+                grp = matter::const_any_group<typename decltype(*it)::id_type>{
+                    *it};
                 CHECK(grp == ident.ordered_ids<float, int>());
                 ++it;
                 CHECK(it == grpvec2.rend());
@@ -242,14 +261,18 @@ TEST_CASE("group_vector")
                 CHECK((end - start) == 3);
                 CHECK(grpvec3.size() == 3);
 
-                auto                    it = grpvec3.rbegin();
-                matter::const_any_group grp{*it};
+                auto it = grpvec3.rbegin();
+                auto grp =
+                    matter::const_any_group<typename decltype(*it)::id_type>{
+                        *it};
                 CHECK(grp == ident.ordered_ids<float, short, char>());
                 ++it;
-                grp = matter::const_any_group{*it};
+                grp = matter::const_any_group<typename decltype(*it)::id_type>{
+                    *it};
                 CHECK(grp == ident.ordered_ids<int, char, short>());
                 ++it;
-                grp = matter::const_any_group{*it};
+                grp = matter::const_any_group<typename decltype(*it)::id_type>{
+                    *it};
                 CHECK(grp == ident.ordered_ids<int, float, short>());
                 ++it;
                 CHECK(it == grpvec3.rend());
@@ -322,7 +345,7 @@ TEST_CASE("group_vector")
 
             for (auto i = 0; i < 10; ++i)
             {
-                ifsbuff.push_back(i, i, i);
+                ifsbuff.emplace_back(i, i, i);
             }
 
             grp.insert_back(ifsbuff);

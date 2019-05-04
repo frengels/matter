@@ -5,7 +5,8 @@
 
 TEST_CASE("insert_buffer")
 {
-    matter::component_identifier<float, int> ident{};
+    matter::component_identifier<matter::unsigned_id<std::size_t>, float, int>
+         ident{};
     auto buf = matter::insert_buffer{ident.ids<float, int>()};
     buf.reserve(10000);
 

@@ -11,14 +11,12 @@
 #include <type_traits>
 #include <utility>
 
+#include "matter/component/id.hpp"
 #include "matter/util/algorithm.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
 {
-template<typename... Cs>
-class component_identifier;
-
 template<typename Id, typename... Ts>
 class unordered_typed_ids;
 
@@ -36,43 +34,14 @@ struct has_same_id_type<
 template<typename TId, typename Id>
 constexpr auto has_same_id_type_v = has_same_id_type<TId, Id>::value;
 
-template<typename T, typename = void>
+template<typename TId, typename = void>
 struct is_typed_id : std::false_type
 {};
 
 template<typename TId>
 struct is_typed_id<
     TId,
-    std::enable_if_t<
-        std::is_default_constructible_v<TId> &&
-            std::is_nothrow_copy_constructible_v<TId> &&
-            std::is_nothrow_copy_assignable_v<TId> &&
-            std::is_same_v<typename TId::id_type,
-                           std::remove_cv_t<std::remove_reference_t<decltype(
-                               std::declval<const TId>().value())>>> &&
-            std::is_same_v<
-                typename TId::id_type,
-                std::remove_cv_t<std::remove_reference_t<decltype(
-                    typename TId::id_type(std::declval<const TId&>()))>>> &&
-            std::is_same_v<bool,
-                           decltype(
-                               std::declval<const typename TId::id_type&>() ==
-                               std::declval<const typename TId::id_type&>())> &&
-            std::is_same_v<bool,
-                           decltype(
-                               std::declval<const typename TId::id_type&>() !=
-                               std::declval<const typename TId::id_type&>())> &&
-            std::is_same_v<bool,
-                           decltype(
-                               std::declval<const typename TId::id_type&>() <
-                               std::declval<const typename TId::id_type&>())> &&
-            std::is_same_v<bool,
-                           decltype(
-                               std::declval<const typename TId::id_type&>() >
-                               std::declval<const typename TId::id_type&>())> &&
-            std::is_same_v<bool,
-                           decltype(std::declval<const TId&>().has_value())>,
-        std::void_t<typename TId::id_type, typename TId::type>>>
+    std::enable_if_t<matter::is_id_v<TId>, std::void_t<typename TId::type>>>
     : std::true_type
 {};
 
@@ -108,78 +77,67 @@ struct common_typed_id_type : impl::common_typed_id_type<T, TIds...>
 template<typename T, typename... TIds>
 using common_typed_id_type_t = typename common_typed_id_type<T, TIds...>::type;
 
-template<typename Id, typename C, Id Val>
-struct static_id
-{
-    using id_type = Id;
-    using type    = C;
-
-private:
-    static constexpr auto value_ = Val;
-
+template<typename Id, typename T>
+class typed_id : public Id {
 public:
-    constexpr static_id() noexcept = default;
+    using type = T;
 
-    constexpr auto value() const noexcept
+    using base_type = Id;
+
+    using Id::Id;
+
+    constexpr typed_id(const Id& id) noexcept : Id{id}
+    {}
+
+    constexpr typed_id(Id&& id) noexcept : Id{std::move(id)}
+    {}
+
+    constexpr const base_type& base() const noexcept
     {
-        return value_;
+        return *this;
     }
 
-    constexpr operator id_type() const noexcept
+    constexpr base_type& base() noexcept
     {
-        return value();
+        return *this;
     }
 
-    constexpr auto has_value() const noexcept
+    constexpr bool operator==(const typed_id&) const noexcept
     {
         return true;
     }
-};
 
-template<typename Id, typename C>
-struct runtime_id
-{
-    using id_type = Id;
-    using type    = C;
-
-private:
-    id_type value_;
-
-public:
-    /// \brief default initialize into an invalid state
-    constexpr runtime_id() noexcept
-        : value_{std::numeric_limits<id_type>::max()}
-    {}
-
-    constexpr runtime_id(id_type val) noexcept : value_{val}
-    {}
-
-    constexpr auto value() const noexcept
+    constexpr bool operator!=(const typed_id& other) const noexcept
     {
-        return value_;
+        return !(*this == other);
     }
 
-    constexpr operator id_type() const noexcept
+    template<typename U>
+    constexpr bool operator==(const typed_id<Id, U>&) const noexcept
     {
-        return value();
+        return false;
     }
 
-    constexpr auto has_value() const noexcept
+    template<typename U>
+    constexpr bool operator!=(const typed_id<Id, U>& other) const noexcept
     {
-        return value_ != std::numeric_limits<id_type>::max();
+        return !(*this == other);
     }
 };
+
+static_assert(
+    matter::is_typed_id_v<matter::typed_id<matter::signed_id<int>, int>>);
 
 template<typename Id, typename... Ts>
 class ordered_typed_ids;
 
+// id the is the id_type to use and Ts... are the types represented by the
+// stored ids.
 template<typename Id, typename... Ts>
 class unordered_typed_ids {
-    static_assert(sizeof...(Ts) >= 1, "Must hold at least one typed_id.");
-    static_assert((is_typed_id_v<Ts> && ...),
-                  "All Ts... must be of type 'typed_id'.");
-    static_assert((std::is_same_v<Id, typename Ts::id_type> && ...),
-                  "All id_type must be of the same type.");
+    static_assert(sizeof...(Ts) >= 1, "Cannot be empty");
+    static_assert(matter::is_id_v<Id>,
+                  "Id must be valid under the is_id concept");
 
     friend class ordered_typed_ids<Id, Ts...>;
 
@@ -189,82 +147,94 @@ public:
     using id_type = Id;
 
 private:
-    std::tuple<Ts...> ids_;
+    std::array<id_type, sizeof...(Ts)> ids_;
 
 public:
     constexpr unordered_typed_ids() noexcept : ids_{}
     {}
 
-    constexpr unordered_typed_ids(Ts... tids) noexcept : ids_{tids...}
+    constexpr unordered_typed_ids(const matter::typed_id<id_type, Ts>&... tids)
+        : ids_{tids...}
     {}
+
+    constexpr unordered_typed_ids(const Ts&... tids) noexcept : ids_{tids...}
+    {}
+
+    constexpr auto begin() const noexcept
+    {
+        return std::begin(ids_);
+    }
+
+    constexpr auto end() const noexcept
+    {
+        return std::end(ids_);
+    }
+
+    constexpr auto cbegin() const noexcept
+    {
+        return std::cbegin(ids_);
+    }
+
+    constexpr auto cend() const noexcept
+    {
+        return std::cend(ids_);
+    }
+
+    constexpr const id_type* data() const noexcept
+    {
+        return std::data(ids_);
+    }
 
     constexpr auto size() const noexcept
     {
-        return size_;
+        return std::size(ids_);
     }
 
-    constexpr auto has_value() const noexcept
+    explicit constexpr operator bool() const noexcept
     {
-        return (get<Ts>().has_value() && ...);
+        return (bool(get<Ts>()) && ...);
+    }
+
+    constexpr const id_type& operator[](std::size_t index) const noexcept
+    {
+        assert(index < sizeof...(Ts));
+        return ids_[index];
     }
 
     template<typename T>
-    constexpr std::enable_if_t<!matter::is_typed_id_v<T>,
-                               matter::common_typed_id_type_t<T, Ts...>>
-    get() const noexcept
+    constexpr auto get() const noexcept
     {
-        return std::get<matter::common_typed_id_type_t<T, Ts...>>(ids_);
-    }
+        constexpr auto opt_index = detail::type_index<T, Ts...>();
+        static_assert(bool(opt_index), "T is not contained in Ts...");
 
-    template<typename TId>
-    constexpr std::enable_if_t<matter::is_typed_id_v<TId>, TId> get() const
-        noexcept
-    {
-        auto tid = std::get<TId>(ids_);
-        assert(tid.has_value());
-        return tid;
+        constexpr auto index = *opt_index;
+
+        return this->template get<index>();
     }
 
     template<std::size_t I>
     constexpr auto get() const noexcept
     {
-        auto tid = std::get<I>(ids_);
-        assert(tid.has_value());
-        return tid;
+        const id_type& tid = std::get<I>(ids_);
+        assert(bool(tid));
+        return matter::typed_id<id_type, detail::nth_t<I, Ts...>>{tid};
     }
 
-    constexpr auto as_array() const noexcept
+    constexpr const std::array<id_type, sizeof...(Ts)> array() const noexcept
     {
-        assert(has_value());
-        return std::apply(
-            [](auto... ids) { return std::array{ids.value()...}; }, ids_);
+        return ids_;
     }
 };
 
-template<typename... Ts>
-unordered_typed_ids(Ts... tids) noexcept
-    ->unordered_typed_ids<typename detail::nth_t<0, Ts...>::id_type, Ts...>;
-
-template<typename T>
-struct is_unordered_typed_ids : std::false_type
-{};
-
-template<typename Id, typename... TIds>
-struct is_unordered_typed_ids<matter::unordered_typed_ids<Id, TIds...>>
-    : std::true_type
-{};
-
-template<typename T>
-static constexpr auto is_unordered_typed_ids_v =
-    is_unordered_typed_ids<T>::value;
+template<typename Id, typename... Ts>
+unordered_typed_ids(const matter::typed_id<Id, Ts>&... tids) noexcept
+    ->unordered_typed_ids<Id, Ts...>;
 
 template<typename Id, typename... Ts>
 class ordered_typed_ids {
-    static_assert(sizeof...(Ts) >= 1, "Must hold at least one typed_id.");
-    static_assert((is_typed_id_v<Ts> && ...),
-                  "All Ts... must be of type 'typed_id'.");
-    static_assert((std::is_same_v<Id, typename Ts::id_type> && ...),
-                  "All id_type must be of the same type.");
+    static_assert(sizeof...(Ts) >= 1, "Cannot be empty");
+    static_assert(matter::is_id_v<Id>,
+                  "Id must be valid under the is_id concept");
 
 public:
     using id_type = Id;
@@ -272,94 +242,117 @@ public:
     static constexpr auto size_ = sizeof...(Ts);
 
 private:
-    std::array<Id, size_> ordered_ids_;
+    std::array<id_type, sizeof...(Ts)> ordered_ids_{};
 
 public:
     /// \brief default initialize ordered ids into an invalid state
-    constexpr ordered_typed_ids() noexcept
-        : ordered_ids_{[] {
-              std::array<Id, size_> ids;
-              for (auto& id : ids)
-              {
-                  id = std::numeric_limits<id_type>::max();
-              }
+    constexpr ordered_typed_ids() noexcept = default;
 
-              return ids;
-          }()}
-    {}
-
-    constexpr ordered_typed_ids(Ts... types) noexcept
-        : ordered_ids_{[&]() -> std::array<id_type, size_> {
-              // no sorting required
-              if constexpr (size_ == 1)
-              {
-                  return {types...};
-              }
-              else
-              {
-                  // runtime sorting for runtime typed_ids
-                  std::array arr{types.value()...};
-                  matter::static_sort(arr);
-                  return arr;
-              }
+    constexpr ordered_typed_ids(
+        const matter::typed_id<id_type, Ts>&... tids) noexcept
+        : ordered_ids_{[&]() {
+              std::array<id_type, sizeof...(Ts)> arr{tids...};
+              matter::static_sort(arr);
+              return arr;
           }()}
     {}
 
     constexpr ordered_typed_ids(
-        const unordered_typed_ids<id_type, Ts...>& ids) noexcept
-        : ordered_ids_{[&]() -> std::array<id_type, size_> {
-              if constexpr (size_ == 1)
-              {
-                  // single element case doesn't require sorting
-                  return {ids.template get<0>()};
-              }
-              else
-              { // peasant runtime variables
-                  auto arr = ids.as_array();
-                  matter::static_sort(arr);
-                  return arr;
-              }
+        const matter::unordered_typed_ids<id_type, Ts...>& ids) noexcept
+        : ordered_ids_{[&]() {
+              auto arr = ids.array();
+              matter::static_sort(arr);
+              return arr;
           }()}
     {}
 
-    constexpr auto has_value() const noexcept
+    explicit constexpr operator bool() const noexcept
     {
-        if constexpr (sizeof...(Ts) == 0)
-        {
-            // an empty ordered_ids is always valid because it has no content
-            return true;
-        }
-        else
-        {
-            return ordered_ids_[0] == std::numeric_limits<id_type>::max();
-        }
+        return std::all_of(begin(), end(), [](auto&& id) { return bool(id); });
     }
 
     template<std::size_t N>
-    constexpr id_type get() const noexcept
+    constexpr const id_type& get() const noexcept
     {
         return std::get<N>(ordered_ids_);
     }
 
     constexpr auto begin() const noexcept
     {
-        return ordered_ids_.begin();
+        return std::begin(ordered_ids_);
     }
 
     constexpr auto end() const noexcept
     {
-        return ordered_ids_.end();
+        return std::end(ordered_ids_);
     }
 
-    static constexpr auto size() noexcept
+    constexpr auto cbegin() const noexcept
     {
-        return size_;
+        return std::cbegin(ordered_ids_);
     }
 
-    constexpr auto operator[](std::size_t idx) const noexcept
+    constexpr auto cend() const noexcept
+    {
+        return std::cend(ordered_ids_);
+    }
+
+    constexpr const id_type* data() const noexcept
+    {
+        return std::data(ordered_ids_);
+    }
+
+    constexpr std::size_t size() const noexcept
+    {
+        return std::size(ordered_ids_);
+    }
+
+    constexpr const id_type& operator[](std::size_t idx) const noexcept
     {
         assert(idx < size_);
         return ordered_ids_[idx];
+    }
+
+    // compare to a single id, only works if the ordered_ids only holds a single
+    // typed_id, otherwise returns false
+    constexpr bool operator==(const id_type& id) const noexcept
+    {
+        if constexpr (sizeof...(Ts) == 1)
+        {
+            return contains(id);
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    constexpr bool operator!=(const id_type& id) const noexcept
+    {
+        return (*this == id);
+    }
+
+    // compare with a typed_id, returns true if the type is equal to the type in
+    // ordered_ids. Otherwise returns false
+    template<typename U>
+    constexpr bool operator==(const matter::typed_id<id_type, U>&) const
+        noexcept
+    {
+        if constexpr (sizeof...(Ts) == 1)
+        {
+            return detail::type_in_list_v<U, Ts...>;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    template<typename U>
+    constexpr bool operator!=(const matter::typed_id<id_type, U>& tid) const
+        noexcept
+    {
+        return !(*this == tid);
     }
 
     constexpr bool operator==(const ordered_typed_ids&) const noexcept
@@ -367,20 +360,29 @@ public:
         return true;
     }
 
-    constexpr bool operator!=(const ordered_typed_ids&) const noexcept
+    constexpr bool operator!=(const ordered_typed_ids& other) const noexcept
     {
-        return false;
+        return !(*this == other);
     }
 
+    // compare to another ordered_ids object, if the sizes are unequal return
+    // false. if all types are in both, return true. Otherwise false
     template<typename... Us>
     constexpr bool
-    operator==(const matter::ordered_typed_ids<id_type, Us...>& other) const
-        noexcept
+    operator==(const matter::ordered_typed_ids<id_type, Us...>&) const noexcept
     {
-        constexpr auto other_size =
-            matter::ordered_typed_ids<id_type, Us...>::size_;
-        static_assert(size_ == other_size);
-        return std::equal(begin(), end(), other.begin(), other.end());
+        if constexpr (sizeof...(Ts) != sizeof...(Us))
+        {
+            return false;
+        }
+        else if constexpr ((detail::type_in_list_v<Ts, Us...> && ...))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     template<typename... Us>
@@ -392,14 +394,10 @@ public:
     }
 
     template<typename... Us>
-    constexpr bool
+    constexpr std::enable_if_t<sizeof...(Ts) == sizeof...(Us), bool>
     operator<(const matter::ordered_typed_ids<id_type, Us...>& other) const
         noexcept
     {
-        constexpr auto other_size =
-            matter::ordered_typed_ids<id_type, Us...>::size_;
-        static_assert(size_ == other_size);
-
         for (std::size_t i = 0; i < size(); ++i)
         {
             if (ordered_ids_[i] < other.ordered_ids_[i])
@@ -412,14 +410,10 @@ public:
     }
 
     template<typename... Us>
-    constexpr bool
+    constexpr std::enable_if_t<sizeof...(Ts) == sizeof...(Us), bool>
     operator>(const matter::ordered_typed_ids<id_type, Us...>& other) const
         noexcept
     {
-        constexpr auto other_size =
-            matter::ordered_typed_ids<id_type, Us...>::size_;
-        static_assert(size_ == other_size);
-
         for (std::size_t i = 0; i < size(); ++i)
         {
             if (ordered_ids_[i] > other.ordered_ids_[i])
@@ -431,6 +425,8 @@ public:
         return false;
     }
 
+    // forward this operation to the equals operator, should return true because
+    // all same types are contained
     constexpr bool contains(const ordered_typed_ids& other) const noexcept
     {
         return *this == other;
@@ -445,75 +441,53 @@ public:
             matter::ordered_typed_ids<id_type, Us...>::size_;
         static_assert(size_ >= other_size);
 
-        if constexpr (other_size == 1)
-        {
-            return contains(other[0]);
-        }
-        else
-        {
-            return std::includes(begin(), end(), other.begin(), other.end());
-        }
+        return std::includes(begin(), end(), other.begin(), other.end());
     }
 
     constexpr bool contains(const id_type& id) const noexcept
     {
-        auto it = std::lower_bound(begin(), end(), id);
+        return std::binary_search(begin(), end(), id);
+    }
 
-        if (it == end() || *it != id)
-        {
-            return false;
-        }
-
-        return true;
+    constexpr const std::array<id_type, sizeof...(Ts)> array() const noexcept
+    {
+        return ordered_ids_;
     }
 };
 
-template<typename... Ts>
-ordered_typed_ids(Ts... types) noexcept
-    ->ordered_typed_ids<typename detail::first_t<Ts...>::id_type, Ts...>;
-
 template<typename Id, typename... Ts>
-ordered_typed_ids(const unordered_typed_ids<Id, Ts...>& ids) noexcept
+ordered_typed_ids(const matter::typed_id<Id, Ts>&... tids) noexcept
     ->ordered_typed_ids<Id, Ts...>;
 
-template<typename T>
-struct is_ordered_typed_ids : std::false_type
-{};
-
-template<typename Id, typename... TIds>
-struct is_ordered_typed_ids<matter::ordered_typed_ids<Id, TIds...>>
-    : std::true_type
-{};
-
-template<typename T>
-static constexpr auto is_ordered_typed_ids_v = is_ordered_typed_ids<T>::value;
+template<typename Id, typename... Ts>
+ordered_typed_ids(const matter::unordered_typed_ids<Id, Ts...>& ids) noexcept
+    ->ordered_typed_ids<Id, Ts...>;
 } // namespace matter
 
 namespace std
 {
-template<typename Id, typename... TIds>
-struct tuple_size<matter::unordered_typed_ids<Id, TIds...>>
-    : std::integral_constant<std::size_t, sizeof...(TIds)>
+template<typename Id, typename... Ts>
+struct tuple_size<matter::unordered_typed_ids<Id, Ts...>>
+    : std::integral_constant<std::size_t, sizeof...(Ts)>
 {};
 
-template<std::size_t N, typename Id, typename... TIds>
-struct tuple_element<N, matter::unordered_typed_ids<Id, TIds...>>
+template<std::size_t N, typename Id, typename... Ts>
+struct tuple_element<N, matter::unordered_typed_ids<Id, Ts...>>
 {
-    using type =
-        decltype(std::declval<matter::unordered_typed_ids<Id, TIds...>>()
-                     .template get<N>());
+    using type = decltype(std::declval<matter::unordered_typed_ids<Id, Ts...>>()
+                              .template get<N>());
 };
 
-template<typename Id, typename... TIds>
-struct tuple_size<matter::ordered_typed_ids<Id, TIds...>>
-    : std::integral_constant<std::size_t, sizeof...(TIds)>
+template<typename Id, typename... Ts>
+struct tuple_size<matter::ordered_typed_ids<Id, Ts...>>
+    : std::integral_constant<std::size_t, sizeof...(Ts)>
 {};
 
-template<std::size_t N, typename Id, typename... TIds>
-struct tuple_element<N, matter::ordered_typed_ids<Id, TIds...>>
+template<std::size_t N, typename Id, typename... Ts>
+struct tuple_element<N, matter::ordered_typed_ids<Id, Ts...>>
 {
-    using type = decltype(std::declval<matter::ordered_typed_ids<Id, TIds...>>()
-                              .template get<N>());
+    using type = decltype(
+        std::declval<matter::ordered_typed_ids<Id, Ts...>>().template get<N>());
 };
 } // namespace std
 
