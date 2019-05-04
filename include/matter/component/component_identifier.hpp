@@ -84,7 +84,7 @@ public:
     {
         assert(!is_static<Component>());
         auto global_id = identifier_type::template get<Component>();
-        assert(runtime_ids_.size() <= global_id ||
+        assert(runtime_ids_.size() <= static_cast<std::size_t>(global_id) ||
                !bool(runtime_ids_[global_id]));
         auto local_id = next_local_id_++;
 
