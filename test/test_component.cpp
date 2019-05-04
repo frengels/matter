@@ -181,21 +181,22 @@ TEST_CASE("identifier")
 {
     SECTION("decay")
     {
-        REQUIRE(matter::identifier<test_tag<0>>::get<float>() ==
-                matter::identifier<test_tag<0>>::get<const float&&>());
+        REQUIRE(
+            matter::identifier<std::size_t, test_tag<0>>::get<float>() ==
+            matter::identifier<std::size_t, test_tag<0>>::get<const float&&>());
     }
 
     SECTION("different tag")
     {
-        REQUIRE(matter::identifier<test_tag<1>>::get<float>() ==
-                matter::identifier<test_tag<2>>::get<int>());
+        REQUIRE(matter::identifier<std::size_t, test_tag<1>>::get<float>() ==
+                matter::identifier<std::size_t, test_tag<2>>::get<int>());
     }
 
     SECTION("consecutive ids")
     {
-        auto id1 = matter::identifier<test_tag<3>>::get<int>();
-        auto id2 = matter::identifier<test_tag<3>>::get<float>();
-        auto id3 = matter::identifier<test_tag<3>>::get<uint8_t>();
+        auto id1 = matter::identifier<int, test_tag<3>>::get<int>();
+        auto id2 = matter::identifier<int, test_tag<3>>::get<float>();
+        auto id3 = matter::identifier<int, test_tag<3>>::get<uint8_t>();
 
         REQUIRE(id1 < id2);
         REQUIRE(id2 < id3);

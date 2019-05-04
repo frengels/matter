@@ -8,14 +8,16 @@
 
 namespace matter
 {
-template<typename Tag>
+template<typename T, typename Tag>
 struct identifier
 {
+    using value_type = T;
+
 private:
-    static std::atomic<std::size_t> m_next_id;
+    static std::atomic<value_type> m_next_id;
 
     template<typename... Ts>
-    static std::size_t _get() noexcept
+    static value_type _get() noexcept
     {
         static const std::size_t id = m_next_id++;
         return id;
@@ -23,15 +25,15 @@ private:
 
 public:
     template<typename... Ts>
-    static std::size_t get() noexcept
+    static value_type get() noexcept
     {
         return _get<typename std::remove_cv<
             typename std::remove_reference<Ts>::type>::type...>();
     }
 };
 
-template<typename Tag>
-std::atomic<std::size_t> identifier<Tag>::m_next_id = 0;
+template<typename T, typename Tag>
+std::atomic<T> identifier<T, Tag>::m_next_id = 0;
 } // namespace matter
 
 #endif
