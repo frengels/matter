@@ -51,11 +51,6 @@ public:
         identifier_.template register_type<C>();
     }
 
-    const matter::component_metadata& component_metadata(id_type id) noexcept
-    {
-        return identifier_.metadata(id);
-    }
-
     template<typename... Access>
     std::enable_if_t<
         (matter::is_access_v<Access,
