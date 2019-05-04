@@ -66,8 +66,8 @@ private:
     /// identifier and the value is the id used by the local
     /// component_identifier
     // std::unordered_map<std::size_t, std::size_t> runtime_ids_;
-    std::vector<id_value_type> runtime_ids_;
-    id_value_type              next_local_id_{constexpr_components_size};
+    std::vector<id_type> runtime_ids_;
+    id_value_type        next_local_id_{constexpr_components_size};
 
 public:
     constexpr component_identifier() = default;
@@ -80,23 +80,22 @@ public:
 
     /// \brief instructs the identifier to now identify this component
     template<typename Component>
-    id_type register_type() noexcept
+    const id_type& register_type() noexcept
     {
         assert(!is_static<Component>());
         auto global_id = identifier_type::template get<Component>();
         assert(runtime_ids_.size() <= global_id ||
-               runtime_ids_[global_id] == id_type::invalid_id);
+               !bool(runtime_ids_[global_id]));
         auto local_id = next_local_id_++;
 
         if (runtime_ids_.size() <= global_id)
         {
             // initialize to invalid state by default
-            runtime_ids_.resize(global_id + 1, id_type::invalid_id);
+            runtime_ids_.resize(global_id + 1, {});
         }
 
-        runtime_ids_[global_id] = local_id;
-        // store all available metadata for id -> data relation
-        return id_type{local_id};
+        return runtime_ids_[global_id] =
+                   id_type{static_cast<id_value_type>(local_id)};
     }
 
     template<typename Component>
@@ -108,8 +107,7 @@ public:
         }
 
         auto id = identifier_type::template get<Component>();
-        return runtime_ids_.size() > id &&
-               runtime_ids_[id] != id_type::invalid_id;
+        return runtime_ids_.size() > id && bool(runtime_ids_[id]);
     }
 
     /// \brief retrieve the local id for a component
@@ -118,15 +116,12 @@ public:
     {
         if constexpr (is_static<Component>())
         {
-            return matter::typed_id<id_type, Component>{
-                static_cast<matter::id_value_type_t<id_type>>(
-                    static_id<Component>())};
+            return matter::typed_id<id_type, Component>{static_id<Component>()};
         }
         else
         {
             return matter::typed_id<id_type, Component>{
-                static_cast<matter::id_value_type_t<id_type>>(
-                    runtime_id<Component>())};
+                runtime_id<Component>()};
         }
     }
 
@@ -151,7 +146,7 @@ private:
             "This component id should be retrieved using runtime_id() instead");
         constexpr auto res =
             detail::type_index<Component, Components...>().value();
-        return res;
+        return id_type{static_cast<id_value_type>(res)};
     }
 
     template<typename Component>
@@ -164,7 +159,7 @@ private:
 
         auto local_id = runtime_ids_[id];
 
-        if (local_id == id_type::invalid_id)
+        if (!bool(local_id))
         {
             throw matter::unregistered_component{
                 std::in_place_type_t<Component>{}};
