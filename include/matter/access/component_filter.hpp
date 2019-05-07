@@ -75,12 +75,12 @@ public:
 
 private:
     template<typename MetaAccess, typename ProcGroupRes, std::size_t... Is>
-    auto make_access_impl(MetaAccess&                    meta,
-                          matter::entity_handle<id_type> ent,
-                          [[maybe_unused]] ProcGroupRes& proc_res,
+    auto make_access_impl(MetaAccess&&                    meta,
+                          matter::entity_handle<id_type>  ent,
+                          [[maybe_unused]] ProcGroupRes&& proc_res,
                           std::index_sequence<Is...>) noexcept
     {
-        using req_types = matter::required_types_t<MetaAccess>;
+        using req_types = matter::required_types_t<std::decay_t<MetaAccess>>;
 
         static_assert(std::tuple_size_v<req_types> == sizeof...(Is),
                       "Must be same length");
@@ -88,13 +88,14 @@ private:
         // should always be true when we get to this point
         assert(bool(proc_res));
 
-        if constexpr (matter::is_optional_v<
-                          matter::process_group_result_t<MetaAccess>>)
+        if constexpr (matter::is_optional_v<ProcGroupRes>)
         {
-            return meta.make_access(
+            return std::forward<MetaAccess>(meta).make_access(
                 ent,
-                *proc_res,
-                matter::storage_handle{
+                *std::forward<ProcGroupRes>(proc_res),
+                matter::storage_handle<
+                    id_type,
+                    matter::meta::nth_tuple_type_t<Is, req_types>>{
                     get<matter::meta::nth_tuple_type_t<Is, req_types>>()}...);
         }
         else
@@ -110,16 +111,16 @@ private:
 
 public:
     template<typename MetaAccess, typename ProcGroupRes>
-    auto make_access(MetaAccess&                    meta,
-                     matter::entity_handle<id_type> ent,
-                     ProcGroupRes&                  proc_res) noexcept
+    auto make_access(MetaAccess&&                         meta,
+                     const matter::entity_handle<id_type> ent,
+                     ProcGroupRes&&                       proc_res) noexcept
     {
         return make_access_impl(
-            meta,
-            std::move(ent),
-            proc_res,
-            std::make_index_sequence<
-                std::tuple_size_v<matter::required_types_t<MetaAccess>>>{});
+            std::forward<MetaAccess>(meta),
+            ent,
+            std::forward<ProcGroupRes>(proc_res),
+            std::make_index_sequence<std::tuple_size_v<
+                matter::required_types_t<std::decay_t<MetaAccess>>>>{});
     }
 };
 } // namespace matter

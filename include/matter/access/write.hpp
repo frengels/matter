@@ -49,13 +49,6 @@ public:
     constexpr write_meta(registry_type&) noexcept
     {}
 
-    constexpr void process_group_vector(matter::group_vector<id_type>&) const
-        noexcept
-    {}
-
-    constexpr void process_group(const_any_group<id_type>) const noexcept
-    {}
-
     constexpr write<C> make_access(matter::entity_handle<id_type>,
                                    matter::storage_handle<id_type, C>) const
         noexcept
