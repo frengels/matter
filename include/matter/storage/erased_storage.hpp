@@ -258,67 +258,67 @@ public:
         return erased_ >= other.erased_;
     }
 
-    constexpr auto operator==(id_type id) const noexcept
+    constexpr auto operator==(const id_type& id) const noexcept
     {
         return erased_ == id;
     }
 
-    constexpr auto operator!=(id_type id) const noexcept
+    constexpr auto operator!=(const id_type& id) const noexcept
     {
         return !(*this == id);
     }
 
-    constexpr auto operator<(id_type id) const noexcept
+    constexpr auto operator<(const id_type& id) const noexcept
     {
         return erased_ < id;
     }
 
-    constexpr auto operator>(id_type id) const noexcept
+    constexpr auto operator>(const id_type& id) const noexcept
     {
         return erased_ > id;
     }
 
-    constexpr auto operator<=(id_type id) const noexcept
+    constexpr auto operator<=(const id_type& id) const noexcept
     {
         return erased_ <= id;
     }
 
-    constexpr auto operator>=(id_type id) const noexcept
+    constexpr auto operator>=(const id_type& id) const noexcept
     {
         return erased_ >= id;
     }
 
-    friend constexpr auto operator==(id_type               id,
+    friend constexpr auto operator==(const id_type&        id,
                                      const erased_storage& storage) noexcept
     {
         return id == storage.erased_;
     }
 
-    friend constexpr auto operator!=(id_type               id,
+    friend constexpr auto operator!=(const id_type&        id,
                                      const erased_storage& storage) noexcept
     {
         return !(id == storage);
     }
 
-    friend constexpr auto operator<(id_type               id,
+    friend constexpr auto operator<(const id_type&        id,
                                     const erased_storage& storage) noexcept
     {
         return id < storage.erased_;
     }
 
-    friend constexpr auto operator>(id_type               id,
+    friend constexpr auto operator>(const id_type&        id,
                                     const erased_storage& storage) noexcept
     {
         return id > storage.erased_;
     }
 
-    friend constexpr auto operator>=(id_type               id,
+    friend constexpr auto operator>=(const id_type&        id,
                                      const erased_storage& storage) noexcept
     {
         return id >= storage.erased_;
     }
 
-    friend constexpr auto operator<=(id_type               id,
+    friend constexpr auto operator<=(const id_type&        id,
                                      const erased_storage& storage) noexcept
     {
         return id <= storage.erased_;
