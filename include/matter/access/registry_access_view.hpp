@@ -79,109 +79,53 @@ public:
         }
 
         matter::for_each(it, end_, [&](matter::group_vector<id_type>& grp_vec) {
-            std::apply(
-                [&](auto&... meta) {
-                    // not sure how to store the results of process_group_vector
-                    // to pass on further yet
-                    // just make the void ones a bool
-                    auto process_group_vector = [](auto&& meta_access,
-                                                   matter::group_vector<
-                                                       id_type>& grp_vec) {
-                        using type = std::remove_const_t<
-                            std::remove_reference_t<decltype(meta_access)>>;
-
-                        if constexpr (std::is_same_v<
-                                          void,
-                                          matter::process_group_vector_result_t<
-                                              type>>)
-                        {
-                            return true;
-                        }
-                        else
-                        {
-                            return meta_access.process_group_vector(grp_vec);
-                        }
-                    };
-
-                    auto process_grp_vec_res =
-                        std::tuple{process_group_vector(meta, grp_vec)...};
-
-                    auto proceed = std::apply(
-                        [](const auto&... res) { return (bool(res) && ...); },
-                        process_grp_vec_res);
-
-                    // one of our filters didn't like the group_vector
-                    if (!proceed)
+            matter::for_each(
+                grp_vec.begin(),
+                grp_vec.end(),
+                [&](matter::any_group<id_type> grp) {
+                    if (!filter_.filter(grp))
                     {
+                        // if the filter wasn't successful return
+                        // early
                         return;
                     }
 
-                    matter::for_each(
-                        grp_vec.begin(),
-                        grp_vec.end(),
-                        [&](matter::any_group<id_type> grp) {
-                            if (!filter_.filter(grp))
-                            {
-                                // if the filter wasn't successful return
-                                // early
-                                return;
-                            }
+                    std::apply(
+                        [&](auto&... meta) {
+                            auto process_group =
+                                [](auto& meta,
+                                   [[maybe_unused]] matter::any_group<id_type>
+                                       grp) {
+                                    using current_meta_type =
+                                        std::decay_t<decltype(meta)>;
+                                    if constexpr (!matter::processes_group_v<
+                                                      current_meta_type>)
+                                    {
+                                        return true;
+                                    }
+                                    else if constexpr (
+                                        std::is_same_v<
+                                            void,
+                                            matter::process_group_result_t<
+                                                current_meta_type>>)
+                                    {
+                                        return true;
+                                    }
+                                    else
+                                    {
+                                        return meta.process_group(grp);
+                                    }
+                                };
+                            auto process_grp_res =
+                                std::tuple{process_group(meta, grp)...};
 
-                            auto process_group = [&](auto&& meta_access,
-                                                     auto&& proc_grp_vec_res,
-                                                     [[maybe_unused]] matter::
-                                                         any_group<id_type>
-                                                             grp) {
-                                using type =
-                                    std::remove_const_t<std::remove_reference_t<
-                                        decltype(meta_access)>>;
-
-                                // there is no return type so just return true
-                                if constexpr (
-                                    std::is_same_v<
-                                        void,
-                                        matter::process_group_result_t<type>>)
-                                {
-                                    return true;
-                                }
-                                // process_group_vector returned void or bool
-                                // which are both already processed and don't
-                                // need to be passed further
-                                else if constexpr (
-                                    std::is_same_v<
-                                        bool,
-                                        matter::process_group_vector_result_t<
-                                            type>> ||
-                                    std::is_same_v<
-                                        void,
-                                        matter::process_group_vector_result_t<
-                                            type>>)
-                                {
-                                    return meta_access.process_group(grp);
-                                }
-                                // dereference the optional from
-                                // process_group_vector and pass it on to
-                                // process_group
-                                else
-                                {
-                                    return meta_access.process_group(
-                                        grp, *proc_grp_vec_res);
-                                }
-                            };
-
-                            auto process_grp_res = std::apply(
-                                [&](auto&... res) {
-                                    return std::tuple{
-                                        process_group(meta, res, grp)...};
-                                },
-                                process_grp_vec_res);
-
-                            auto proceed = std::apply(
-                                [](const auto&... res) {
+                            bool proceed = std::apply(
+                                [](auto&&... res) {
                                     return (bool(res) && ...);
                                 },
                                 process_grp_res);
 
+                            // a processing condition failed
                             if (!proceed)
                             {
                                 return;
@@ -190,25 +134,26 @@ public:
                             auto size = grp.size();
 
 #pragma omp simd
-                            for (std::size_t i = 0; i < size; ++i)
+                            for (decltype(size) it = 0; it < size; ++it)
                             {
-                                auto handle = matter::entity_handle(grp, i);
+                                auto ent_handle =
+                                    matter::entity_handle(grp, it);
 
                                 auto access_tup = create_access_impl(
-                                    handle,
+                                    ent_handle,
                                     process_grp_res,
                                     std::index_sequence_for<Access...>{});
 
                                 call_fn(f, access_tup);
                             }
-                        });
-                },
-                meta_access_);
+                        },
+                        meta_access_);
+                });
         });
 
         return f;
     }
-};
+}; // namespace matter
 
 template<typename... MetaAccess>
 registry_access_view(

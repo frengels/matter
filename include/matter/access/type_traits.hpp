@@ -7,96 +7,31 @@
 
 #include "matter/access/entity_handle.hpp"
 #include "matter/access/storage_handle.hpp"
-#include "matter/component/group_vector.hpp"
 #include "matter/util/concepts.hpp"
 
 namespace matter
 {
 template<typename T, typename = void>
-struct processes_group_vector : std::false_type
-{};
-
-template<typename T>
-struct processes_group_vector<
-    T,
-    std::void_t<decltype(std::declval<T>().process_group_vector(
-        std::declval<matter::group_vector<typename T::id_type>&>()))>>
-    : std::true_type
-{};
-
-template<typename T>
-constexpr bool processes_group_vector_v = processes_group_vector<T>::value;
-
-// gives the result type of invoke process_group_vector on T
-template<typename T>
-struct process_group_vector_result
-{
-    using type = decltype(std::declval<T>().process_group_vector(
-        std::declval<matter::group_vector<typename T::id_type>&>()));
-};
-
-template<typename T>
-using process_group_vector_result_t =
-    typename process_group_vector_result<T>::type;
-
-template<typename T, typename = void>
 struct processes_group : std::false_type
 {};
 
-// this is the version where process_group_vector returns void/bool
+// check whether the meta_access implements ::process_group(any_group)
 template<typename T>
 struct processes_group<
     T,
-    std::enable_if_t<
-        std::is_same_v<void, matter::process_group_vector_result_t<T>> ||
-            std::is_same_v<bool, matter::process_group_vector_result_t<T>>,
-        std::void_t<decltype(std::declval<T>().process_group(
-            std::declval<matter::any_group<typename T::id_type>>()))>>>
-    : std::true_type
-{};
-
-// if process_group_vector returns non void then we dereference its result and
-// pass it to process_group
-template<typename T>
-struct processes_group<
-    T,
-    std::enable_if_t<
-        !std::is_same_v<void, matter::process_group_vector_result_t<T>>,
-        std::void_t<decltype(std::declval<T>().process_group(
-            std::declval<matter::any_group<typename T::id_type>>(),
-            *std::declval<matter::process_group_vector_result_t<T>>()))>>>
+    std::void_t<decltype(std::declval<T>().process_group(
+        std::declval<matter::any_group<typename T::id_type>>()))>>
     : std::true_type
 {};
 
 template<typename T>
 constexpr bool processes_group_v = processes_group<T>::value;
 
-template<typename T, typename = void>
-struct process_group_result;
-
-// in case the process_group_vector result type is void then we don't pass this
-// to process_group
 template<typename T>
-struct process_group_result<
-    T,
-    std::enable_if_t<
-        std::is_same_v<void, matter::process_group_vector_result_t<T>>>>
+struct process_group_result
 {
     using type = decltype(std::declval<T>().process_group(
         std::declval<matter::any_group<typename T::id_type>>()));
-};
-
-// in case the process_group_vector result type is not void then we dereference
-// it and pass the result to process_group.
-template<typename T>
-struct process_group_result<
-    T,
-    std::enable_if_t<
-        !std::is_same_v<void, matter::process_group_vector_result_t<T>>>>
-{
-    using type = decltype(std::declval<T>().process_group(
-        std::declval<matter::any_group<typename T::id_type>>(),
-        *std::declval<matter::process_group_vector_result_t<T>>()));
 };
 
 template<typename T>
@@ -111,9 +46,40 @@ template<typename MetaAccess, typename TupComponents, typename = void>
 struct makes_access_impl : std::false_type
 {};
 
-// case where process_group result is void so doesn't get passed
+// if the meta access processes the group then we can go further and check for
+// the return type, that's what this class is for. if we don't use this class
+// then process_group_result template will get evaluated and there will be a
+// compile error in case the metaaccess doesn't have the process_group function.
+template<typename MetaAccess, typename TupComponents, typename = void>
+struct makes_access_impl_impl : std::false_type
+{};
+
+// case where there's no process_group function
 template<typename MetaAccess, typename... Components>
 struct makes_access_impl<
+    MetaAccess,
+    std::tuple<Components...>,
+    std::enable_if_t<
+        !matter::processes_group_v<MetaAccess>,
+        std::void_t<decltype(std::declval<MetaAccess>().make_access(
+            std::declval<matter::entity_handle<typename MetaAccess::id_type>>(),
+            std::declval<matter::storage_handle<typename MetaAccess::id_type,
+                                                Components>>()...))>>>
+    : std::true_type
+{};
+
+// case where process_group result is void or bool so doesn't get passed
+template<typename MetaAccess, typename... Components>
+struct makes_access_impl<
+    MetaAccess,
+    std::tuple<Components...>,
+    std::enable_if_t<matter::processes_group_v<MetaAccess>>>
+    : makes_access_impl_impl<MetaAccess, std::tuple<Components...>>
+{};
+
+// case where process_group returns and these returns are of void/bool type
+template<typename MetaAccess, typename... Components>
+struct makes_access_impl_impl<
     MetaAccess,
     std::tuple<Components...>,
     std::enable_if_t<
@@ -126,10 +92,10 @@ struct makes_access_impl<
     : std::true_type
 {};
 
-// case where group_vector return isn't void and gets dereferenced when calling
+// case where process_group return isn't void and gets dereferenced when calling
 // make_access.
 template<typename MetaAccess, typename... Components>
-struct makes_access_impl<
+struct makes_access_impl_impl<
     MetaAccess,
     std::tuple<Components...>,
     std::enable_if_t<
@@ -159,9 +125,33 @@ namespace detail
 template<typename MetaAccess, typename TupComponents, typename = void>
 struct make_access_result_impl;
 
-// for void/bool return type from process_group
+template<typename MetaAccess, typename TupComponents, typename = void>
+struct make_access_result_impl_impl;
+
+// case for no MetaAccess::process_group function present
 template<typename MetaAccess, typename... Components>
 struct make_access_result_impl<
+    MetaAccess,
+    std::tuple<Components...>,
+    std::enable_if_t<!matter::processes_group_v<MetaAccess>>>
+{
+    using type = decltype(std::declval<MetaAccess>().make_access(
+        std::declval<matter::entity_handle<typename MetaAccess::id_type>>(),
+        std::declval<matter::storage_handle<typename MetaAccess::id_type,
+                                            Components>>()...));
+};
+
+template<typename MetaAccess, typename... Components>
+struct make_access_result_impl<
+    MetaAccess,
+    std::tuple<Components...>,
+    std::enable_if_t<matter::processes_group_v<MetaAccess>>>
+    : make_access_result_impl_impl<MetaAccess, std::tuple<Components...>>
+{};
+
+// for void/bool return type from process_group
+template<typename MetaAccess, typename... Components>
+struct make_access_result_impl_impl<
     MetaAccess,
     std::tuple<Components...>,
     std::enable_if_t<
@@ -176,10 +166,11 @@ struct make_access_result_impl<
 
 // case where return from process_group is optional type
 template<typename MetaAccess, typename... Components>
-struct make_access_result_impl<MetaAccess,
-                               std::tuple<Components...>,
-                               std::enable_if_t<matter::is_optional_v<
-                                   matter::process_group_result_t<MetaAccess>>>>
+struct make_access_result_impl_impl<
+    MetaAccess,
+    std::tuple<Components...>,
+    std::enable_if_t<
+        matter::is_optional_v<matter::process_group_result_t<MetaAccess>>>>
 {
     using type = decltype(std::declval<MetaAccess>().make_access(
         std::declval<matter::entity_handle<typename MetaAccess::id_type>>(),
@@ -187,7 +178,6 @@ struct make_access_result_impl<MetaAccess,
         std::declval<matter::storage_handle<typename MetaAccess::id_type,
                                             Components>>()...));
 };
-
 } // namespace detail
 
 template<typename MetaAccess>
@@ -208,7 +198,6 @@ template<typename T>
 struct is_meta_access<
     T,
     std::enable_if_t<std::is_constructible_v<T, typename T::registry_type&> &&
-                         matter::processes_group_v<T> &&
                          matter::makes_access_v<T> &&
                          std::is_same_v<typename T::id_type,
                                         typename T::registry_type::id_type>,

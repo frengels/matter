@@ -43,13 +43,6 @@ public:
     constexpr read_meta(registry_type&) noexcept
     {}
 
-    constexpr void process_group_vector(matter::group_vector<id_type>&) const
-        noexcept
-    {}
-
-    constexpr void process_group(const_any_group<id_type>) const noexcept
-    {}
-
     constexpr read<C>
     make_access(matter::entity_handle<id_type>     ent,
                 matter::storage_handle<id_type, C> component) noexcept
@@ -58,7 +51,7 @@ public:
     }
 
     // there are no commands to produce
-    constexpr void make_commands(read<C>&& r) const noexcept
+    constexpr void make_commands(read<C>&&) const noexcept
     {
         return;
     }

@@ -28,10 +28,6 @@ struct meta_access
 
     constexpr meta_access(registry_type&);
 
-    constexpr void process_group_vector(matter::group_vector<id_type>&);
-
-    constexpr void process_group(matter::any_group<id_type>);
-
     constexpr void make_access(matter::entity_handle<id_type>);
 };
 
@@ -44,12 +40,8 @@ struct meta_access_other
 
     constexpr meta_access_other(registry_type&);
 
-    constexpr std::optional<float>
-    process_group_vector(matter::group_vector<id_type>&);
-
     // take any group and the derefed result of process_group_vector if not void
-    constexpr std::optional<char> process_group(matter::any_group<id_type>,
-                                                float);
+    constexpr std::optional<char> process_group(matter::any_group<id_type>);
 
     // this function gets the handle, the dereferenced return value of
     // process_group, or process_group_vector if process_group function is not
@@ -57,15 +49,18 @@ struct meta_access_other
     // required_types.
     // required_types is also used in filtering groups for presence.
     constexpr matter::prototype::access
-    make_access(matter::entity_handle<id_type>, char, int&);
+    make_access(matter::entity_handle<id_type>,
+                char,
+                matter::storage_handle<id_type, int>);
 };
 
 static_assert(
-    matter::is_access_v<matter::prototype::access, matter::registry<>>);
-static_assert(matter::is_meta_access_v<
-              matter::prototype::meta_access<matter::registry<>>>);
-static_assert(matter::is_meta_access_v<
-              matter::prototype::meta_access_other<matter::registry<>>>);
+    matter::is_access_v<matter::prototype::access,
+                        matter::registry<matter::unsigned_id<std::size_t>>>);
+static_assert(matter::is_meta_access_v<matter::prototype::meta_access<
+                  matter::registry<matter::unsigned_id<std::size_t>>>>);
+static_assert(matter::is_meta_access_v<matter::prototype::meta_access_other<
+                  matter::registry<matter::unsigned_id<std::size_t>>>>);
 } // namespace prototype
 } // namespace matter
 
