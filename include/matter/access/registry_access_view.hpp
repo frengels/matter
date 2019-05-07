@@ -5,7 +5,6 @@
 
 #include "matter/access/component_filter.hpp"
 #include "matter/access/type_traits.hpp"
-#include "matter/component/group_vector.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
@@ -14,13 +13,9 @@ namespace matter
 template<typename Registry, typename... Access>
 class registry_access_view {
 public:
-    using registry_type = Registry;
-    using id_type       = typename registry_type::id_type;
-
-    using group_vector_container_iterator_type =
-        matter::iterator_t<std::vector<matter::group_vector<id_type>>>;
-    using group_vector_container_sentinel_type =
-        matter::sentinel_t<std::vector<matter::group_vector<id_type>>>;
+    using registry_type        = Registry;
+    using id_type              = typename registry_type::id_type;
+    using group_container_type = typename registry_type::group_container_type;
 
     using required_types =
         matter::meta::merge_tuple_types_t<matter::required_types_t<
@@ -31,8 +26,7 @@ public:
         matter::component_filter<registry_type, ReqTypes...>;
 
 private:
-    group_vector_container_iterator_type begin_;
-    group_vector_container_sentinel_type end_;
+    std::reference_wrapper<group_container_type> container_;
 
     std::tuple<matter::meta_type_t<Access, Registry>...> meta_access_;
 
@@ -41,10 +35,8 @@ private:
         filter_;
 
 public:
-    constexpr registry_access_view(group_vector_container_iterator_type beg,
-                                   group_vector_container_sentinel_type end,
-                                   registry_type& reg) noexcept
-        : begin_{std::move(beg)}, end_{std::move(end)},
+    constexpr registry_access_view(registry_type& reg) noexcept
+        : container_{reg.group_container()},
           meta_access_{matter::meta_type_t<Access, registry_type>{reg}...},
           filter_{reg}
     {}
@@ -72,17 +64,22 @@ public:
     {
         constexpr auto min_group_size = std::tuple_size_v<required_types>;
 
-        auto it = begin_ + min_group_size;
-        if (it >= end_)
+        auto& container        = container_.get();
+        auto  max_present_size = container.groups_size();
+
+        auto curr_grp_size = min_group_size;
+
+        if (curr_grp_size > max_present_size)
         {
             return f;
         }
 
-        matter::for_each(it, end_, [&](matter::group_vector<id_type>& grp_vec) {
+        for (; curr_grp_size <= max_present_size; ++curr_grp_size)
+        {
+            auto rng = container.range(curr_grp_size);
+
             matter::for_each(
-                grp_vec.begin(),
-                grp_vec.end(),
-                [&](matter::any_group<id_type> grp) {
+                rng.begin(), rng.end(), [&](matter::any_group<id_type> grp) {
                     if (!filter_.filter(grp))
                     {
                         // if the filter wasn't successful return
@@ -149,22 +146,11 @@ public:
                         },
                         meta_access_);
                 });
-        });
+        }
 
         return f;
     }
 }; // namespace matter
-
-template<typename... MetaAccess>
-registry_access_view(
-    matter::iterator_t<std::vector<matter::group_vector<
-        typename matter::detail::first_t<MetaAccess...>::id_type>>> begin,
-    matter::sentinel_t<std::vector<matter::group_vector<
-        typename matter::detail::first_t<MetaAccess...>::id_type>>> end,
-    MetaAccess&&... acc) noexcept
-    ->registry_access_view<
-        typename detail::first_t<MetaAccess...>::registry_type,
-        typename matter::make_access_result<MetaAccess>::type...>;
 } // namespace matter
 
 #endif

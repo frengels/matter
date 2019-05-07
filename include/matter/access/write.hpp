@@ -8,7 +8,6 @@
 #include "matter/access/entity_handle.hpp"
 #include "matter/access/storage_handle.hpp"
 #include "matter/access/type_traits.hpp"
-#include "matter/component/group_vector.hpp"
 #include "matter/component/registry.hpp"
 
 namespace matter
