@@ -8,7 +8,6 @@
 #include "matter/access/entity_handle.hpp"
 #include "matter/access/storage_handle.hpp"
 #include "matter/component/any_group.hpp"
-#include "matter/component/group_vector.hpp"
 
 namespace matter
 {
@@ -53,13 +52,6 @@ public:
 
 public:
     constexpr readwrite_meta(registry_type&) noexcept
-    {}
-
-    constexpr void process_group_vector(matter::group_vector<id_type>&) const
-        noexcept
-    {}
-
-    constexpr void process_group(const_any_group<id_type>) const noexcept
     {}
 
     constexpr readwrite<C>

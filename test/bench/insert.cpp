@@ -46,7 +46,7 @@ void insert_single_dynamic(benchmark::State& state)
 
 BENCHMARK(insert_single_dynamic)->Range(1, 1);
 
-void insert_multiple_static(benchmark::State& state)
+void insert_triple_static(benchmark::State& state)
 {
     matter::registry<matter::unsigned_id<std::size_t>, int, float, char> reg;
 
@@ -58,9 +58,9 @@ void insert_multiple_static(benchmark::State& state)
     }
 }
 
-BENCHMARK(insert_multiple_static)->Range(1, 1);
+BENCHMARK(insert_triple_static)->Range(1, 1);
 
-void insert_multiple_static_out_of_order(benchmark::State& state)
+void insert_triple_static_out_of_order(benchmark::State& state)
 {
     matter::registry<matter::unsigned_id<std::size_t>, int, float, char> reg;
 
@@ -72,9 +72,9 @@ void insert_multiple_static_out_of_order(benchmark::State& state)
     }
 }
 
-BENCHMARK(insert_multiple_static_out_of_order)->Range(1, 1);
+BENCHMARK(insert_triple_static_out_of_order)->Range(1, 1);
 
-void insert_multiple_mixed(benchmark::State& state)
+void insert_triple_mixed(benchmark::State& state)
 {
     matter::registry<matter::unsigned_id<std::size_t>, int, float, char> reg;
     reg.register_component<uint16_t>();
@@ -88,9 +88,9 @@ void insert_multiple_mixed(benchmark::State& state)
     }
 }
 
-BENCHMARK(insert_multiple_mixed)->Range(1, 1);
+BENCHMARK(insert_triple_mixed)->Range(1, 1);
 
-void insert_multiple_runtime(benchmark::State& state)
+void insert_triple_runtime(benchmark::State& state)
 {
     matter::registry<matter::unsigned_id<std::size_t>, float, char> reg;
     reg.register_component<int>();
@@ -105,7 +105,7 @@ void insert_multiple_runtime(benchmark::State& state)
     }
 }
 
-BENCHMARK(insert_multiple_runtime)->Range(1, 1);
+BENCHMARK(insert_triple_runtime)->Range(1, 1);
 
 int main(int argc, char** argv)
 {

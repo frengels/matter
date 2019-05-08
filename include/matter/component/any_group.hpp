@@ -24,16 +24,14 @@ public:
 private:
     static constexpr auto is_const = Const;
 
+    friend class any_group<Id, true>;
+
+public:
     using erased_type =
         std::conditional_t<is_const,
-                           const matter::erased_storage<id_type>*,
-                           matter::erased_storage<id_type>*>;
-    using erased_type_ref =
-        std::conditional_t<is_const,
-                           const matter::erased_storage<id_type>&,
-                           matter::erased_storage<id_type>&>;
-
-    friend class any_group<Id, true>;
+                           const matter::erased_storage<id_type>,
+                           matter::erased_storage<id_type>>;
+    using erased_type_ref = erased_type&;
 
 public:
     using size_type = typename matter::erased_storage<id_type>::size_type;
@@ -47,13 +45,13 @@ public:
     using reverse_iterator       = std::reverse_iterator<iterator>;
 
 private:
-    erased_type ptr_;
-    std::size_t group_size_;
+    erased_type* ptr_;
+    std::size_t  group_size_;
 
 public:
     constexpr any_group() noexcept = default;
 
-    constexpr any_group(erased_type ptr, std::size_t group_size) noexcept
+    constexpr any_group(erased_type* ptr, std::size_t group_size) noexcept
         : ptr_{ptr}, group_size_{group_size}
     {
         // when explicitly initialized group_size must be over 0
@@ -66,7 +64,7 @@ public:
     {}
 
     constexpr any_group(const any_group<id_type, false>& mutable_grp)
-        : ptr_{mutable_grp.ptr_}, group_size_{mutable_grp.group_size_}
+        : any_group{mutable_grp.ptr_, mutable_grp.group_size()}
     {}
 
     iterator begin() noexcept
@@ -129,12 +127,12 @@ public:
         return const_reverse_iterator{cbegin()};
     }
 
-    constexpr erased_type data() noexcept
+    constexpr erased_type* data() noexcept
     {
         return ptr_;
     }
 
-    constexpr const erased_type data() const noexcept
+    constexpr std::add_const_t<erased_type>* data() const noexcept
     {
         return ptr_;
     }
@@ -480,6 +478,12 @@ public:
         return std::includes(ptr_, ptr_ + group_size(), ids.begin(), ids.end());
     }
 
+    constexpr bool
+    contains(const matter::ordered_untyped_ids<id_type> ids) const noexcept
+    {
+        return std::includes(ptr_, ptr_ + group_size(), ids.begin(), ids.end());
+    }
+
     constexpr bool contains(const any_group& other) const noexcept
     {
         return *this == other;
@@ -536,7 +540,7 @@ public:
         swap(lhs.size_, rhs.size_);
     }
 
-    erased_type find_id(const id_type& id) noexcept
+    erased_type* find_id(const id_type& id) noexcept
     {
         auto it = matter::lower_bound(begin(), end(), id);
 
@@ -548,8 +552,7 @@ public:
         return it;
     }
 
-    const matter::erased_storage<id_type>* find_id(const id_type& id) const
-        noexcept
+    std::add_const_t<erased_type>* find_id(const id_type& id) const noexcept
     {
         auto it = matter::lower_bound(begin(), end(), id);
 

@@ -9,8 +9,7 @@
 
 #include "matter/access/registry_access_view.hpp"
 #include "matter/access/type_traits.hpp"
-#include "matter/component/group_vector.hpp"
-#include "matter/component/registry_view.hpp"
+#include "matter/component/group_container.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
@@ -21,14 +20,14 @@ class registry {
     static_assert((matter::is_component_v<Components> && ...));
 
 public:
-    using identifier_type = component_identifier<Id, Components...>;
-    using id_type         = typename identifier_type::id_type;
+    using identifier_type      = component_identifier<Id, Components...>;
+    using id_type              = typename identifier_type::id_type;
+    using group_container_type = matter::group_container<id_type>;
 
 private:
     identifier_type identifier_{};
 
-    /// index indicates the length of the groups stored.
-    std::vector<matter::group_vector<id_type>> group_vectors_;
+    group_container_type container_;
 
 public:
     constexpr registry() noexcept = default;
@@ -51,39 +50,21 @@ public:
         identifier_.template register_type<C>();
     }
 
-    const matter::component_metadata& component_metadata(id_type id) noexcept
-    {
-        return identifier_.metadata(id);
-    }
-
     template<typename... Access>
-    std::enable_if_t<
-        (matter::is_access_v<Access,
-                             matter::registry<id_type, Components...>> &&
-         ...),
-        registry_access_view<matter::registry<id_type, Components...>,
-                             Access...>>
-    view() noexcept
+    auto view() noexcept
     {
         return registry_access_view<matter::registry<id_type, Components...>,
-                                    Access...>{
-            group_vectors_.begin(), group_vectors_.end(), *this};
+                                    Access...>{*this};
     }
 
-    template<typename... Cs>
-    auto view() noexcept(false) -> std::enable_if_t<
-        (!matter::is_access_v<Cs, matter::registry<id_type, Components...>> &&
-         ...),
-        decltype(view(std::declval<registry<id_type, Components...>>()
-                          .template component_ids<Cs...>()))>
+    group_container_type& group_container() noexcept
     {
-        return view(component_ids<Cs...>());
+        return container_;
     }
 
-    template<typename... Ts>
-    auto view(const matter::unordered_typed_ids<id_type, Ts...>& ids) noexcept
+    const group_container_type& group_container() const noexcept
     {
-        return registry_view{ids, group_vectors_.begin(), group_vectors_.end()};
+        return container_;
     }
 
     template<typename... Cs, typename... TupArgs>
@@ -99,11 +80,7 @@ public:
 
         auto ids = identifier_.template ids<Cs...>();
 
-        auto opt_ideal_group = find_group_from_ids(ids);
-
-        auto ideal_group = opt_ideal_group ?
-                               std::move(opt_ideal_group).value() :
-                               create_group(ids);
+        auto ideal_group = try_emplace_group(ids);
 
         ideal_group.template emplace_back(std::forward<TupArgs>(args)...);
     }
@@ -125,12 +102,7 @@ public:
     void insert(const matter::insert_buffer<id_type, Ts...>& buffer) noexcept(
         (std::is_nothrow_copy_constructible_v<Ts> && ...))
     {
-        auto opt_ideal_group = find_group_from_ids(buffer.ids());
-
-        auto ideal_group = opt_ideal_group ?
-                               std::move(opt_ideal_group).value() :
-                               create_group(buffer.ids());
-
+        auto ideal_group = try_emplace_group(buffer.ids());
         ideal_group.insert_back(buffer);
     }
 
@@ -145,45 +117,10 @@ public:
 
 private:
     template<typename... Ts>
-    group<id_type, Ts...>
-    create_group(const matter::unordered_typed_ids<id_type, Ts...>&
-                     ids) noexcept((std::
-                                        is_nothrow_default_constructible_v<
-                                            matter::component_storage_t<Ts>> &&
-                                    ...))
+    constexpr matter::group<id_type, Ts...> try_emplace_group(
+        const matter::unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
-        assert(!find_group_from_ids(ids));
-
-        auto& vec            = get_group_vector(ids.size());
-        auto  inserted_group = vec.emplace(ids);
-
-        return inserted_group;
-    }
-
-    // gets the group vector for i components, automatically creates the vector
-    // if it doesn't exist
-    group_vector<id_type>& get_group_vector(std::size_t i) noexcept
-    {
-        // allocate if non existant
-        for (std::size_t it = group_vectors_.size(); it <= i; ++it)
-        {
-            group_vectors_.emplace_back(it);
-        }
-
-        auto& grp_vec = group_vectors_[i];
-        assert(grp_vec.group_size() == i);
-        return grp_vec;
-    }
-
-    // gets the group vector for i components, does not create the group vector
-    // if it doesn't exist
-    const group_vector<id_type>& get_group_vector(std::size_t i) const noexcept
-    {
-        assert(i < group_vectors_.size());
-
-        auto& grp_vec = group_vectors_[i];
-        assert(grp_vec.group_size() == i);
-        return grp_vec;
+        return container_.try_emplace_group(ids);
     }
 
     constexpr any_group<id_type>
@@ -196,48 +133,26 @@ private:
     }
 
     template<typename... Ts>
-    constexpr std::optional<group<id_type, Ts...>> find_group_from_ids(
-        const unordered_typed_ids<id_type, Ts...>& ids,
-        const ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
+    constexpr std::optional<group<id_type, Ts...>>
+    find_group(const unordered_typed_ids<id_type, Ts...>& ids,
+               const ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
     {
-        auto& vec = get_group_vector(ids.size());
-        return vec.find_group(ids, ordered_ids);
+        return container_.find_group(ids, ordered_ids);
     }
 
     template<typename... Ts>
     constexpr std::optional<group<id_type, Ts...>>
-    find_group_from_ids(const unordered_typed_ids<id_type, Ts...>& ids) noexcept
+    find_group(const unordered_typed_ids<id_type, Ts...>& ids) noexcept
     {
-        return find_group_from_ids(ids, ordered_typed_ids{ids});
+        return find_group(ids, matter::ordered_typed_ids{ids});
     }
 
     template<typename... Cs>
     constexpr std::optional<group<id_type, Cs...>> find_group() noexcept
     {
-        auto ids         = component_ids<Cs...>();
-        auto ordered_ids = identifier_.template sorted_ids<Cs...>();
-        return find_group_from_ids(ids, ordered_ids);
-    }
-
-    /// returns true if the vector at this index exists, the group_vector at
-    /// this index can be empty. All this query indicates is that the
-    /// group_vector was constructed
-    bool has_groups_sized(std::size_t group_size) const noexcept
-    {
-        return group_size < group_vectors_.size();
+        return find_group(component_ids<Cs...>());
     }
 };
-
-template<typename T>
-struct is_registry : std::false_type
-{};
-
-template<typename Id, typename... Cs>
-struct is_registry<matter::registry<Id, Cs...>> : std::true_type
-{};
-
-template<typename T>
-static constexpr auto is_registry_v = is_registry<T>::value;
 } // namespace matter
 
 #endif

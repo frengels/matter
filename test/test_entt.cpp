@@ -8,7 +8,6 @@
 #include "matter/access/readwrite.hpp"
 #include "matter/access/write.hpp"
 #include "matter/component/registry.hpp"
-#include "matter/component/registry_view.hpp"
 
 struct position
 {
@@ -86,24 +85,6 @@ TEST_CASE("benchmarks")
 
         reg.insert(pos);
 
-        SECTION("const")
-        {
-            timer t{"Iterating over 1000000 single components - const"};
-
-            auto pos_view = reg.view<position>();
-
-            pos_view.for_each([](const auto&) {});
-        }
-
-        SECTION("mutable")
-        {
-            timer t{"Iterating over 1000000 single components - mut"};
-
-            auto pos_view = reg.view<position>();
-
-            pos_view.for_each([](position& pos) { pos.x = {}; });
-        }
-
         SECTION("access read")
         {
             timer t{"Iterating over 1000000 single components - read access"};
@@ -126,42 +107,6 @@ TEST_CASE("benchmarks")
                 rwpos.stage(pos);
             });
         }
-
-        SECTION("group_view_iterator const")
-        {
-            timer t{"Iterating over 1000000 single components - const "
-                    "group_view_iterator"};
-
-            auto pos_view = reg.view<position>();
-
-            matter::for_each(
-                pos_view.begin(), pos_view.end(), [](auto grp_view) {
-                    auto sz = grp_view.size();
-#pragma omp simd
-                    for (std::size_t i = 0; i < sz; ++i)
-                    {
-                        grp_view[i].invoke([](const position&) {});
-                    }
-                });
-        }
-
-        SECTION("group_view_iterator const")
-        {
-            timer t{"Iterating over 1000000 single components - const "
-                    "group_view_iterator"};
-
-            auto pos_view = reg.view<position>();
-
-            matter::for_each(
-                pos_view.begin(), pos_view.end(), [](auto grp_view) {
-                    auto sz = grp_view.size();
-#pragma omp simd
-                    for (std::size_t i = 0; i < sz; ++i)
-                    {
-                        grp_view[i].invoke([](position& pos) { pos.x = {}; });
-                    }
-                });
-        }
     }
 
     SECTION("destroy")
@@ -175,6 +120,7 @@ TEST_CASE("benchmarks")
 
         timer t{"Destroying 1000000 entities"};
 
+        /*
         auto pos_view = reg.view<position>();
         auto it       = pos_view.begin();
         for (std::size_t i = 999999; i != 0; --i)
@@ -183,6 +129,7 @@ TEST_CASE("benchmarks")
         }
 
         pos_view.erase(it, 0);
+        */
     }
 
     SECTION("iterate_double")
@@ -193,27 +140,6 @@ TEST_CASE("benchmarks")
         posvel.resize(1000000);
 
         reg.insert(posvel);
-
-        SECTION("const")
-        {
-            timer t{"Iterating over 1000000 double components - const"};
-
-            auto view = reg.view<position, velocity>();
-
-            view.for_each([](const position&, const velocity&) {});
-        }
-
-        SECTION("mutable")
-        {
-            timer t{"Iterating over 1000000 double components - mut"};
-
-            auto view = reg.view<position, velocity>();
-
-            view.for_each([](position& pos, velocity& vel) {
-                pos.x = {};
-                vel.x = {};
-            });
-        }
 
         SECTION("read access")
         {
@@ -260,29 +186,6 @@ TEST_CASE("benchmarks")
 
         reg.insert(posvel);
 
-        SECTION("const")
-        {
-            timer t{"Iterating over 1000000 double components, only half "
-                    "double - const"};
-
-            auto view = reg.view<position, velocity>();
-
-            view.for_each([](const position&, const velocity&) {});
-        }
-
-        SECTION("mutable")
-        {
-            timer t{"Iterating over 1000000 double components, only half "
-                    "double - mut"};
-
-            auto view = reg.view<position, velocity>();
-
-            view.for_each([](position& pos, velocity& vel) {
-                pos.x = {};
-                vel.x = {};
-            });
-        }
-
         SECTION("read access")
         {
             timer t{"Iterating over 1000000 double components, only half "
@@ -326,27 +229,6 @@ TEST_CASE("benchmarks")
 
         reg.create<position, velocity>(std::forward_as_tuple(),
                                        std::forward_as_tuple());
-
-        SECTION("const")
-        {
-            timer t{"Iterating over 1000000 components, only one has both "
-                    "- const"};
-
-            auto view = reg.view<position, velocity>();
-            view.for_each([](const position&, const velocity&) {});
-        }
-
-        SECTION("mutable")
-        {
-            timer t{"Iterating over 1000000 components, only one has both "
-                    "- mut"};
-
-            auto view = reg.view<position, velocity>();
-            view.for_each([](position& pos, velocity& vel) {
-                pos.x = {};
-                vel.x = {};
-            });
-        }
 
         SECTION("read access")
         {
