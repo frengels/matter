@@ -17,12 +17,16 @@ TEST_CASE("group_container")
     // fill up with groups
     cont.try_emplace(ident.ids<char>());
 
+    CHECK(1 == cont.range().size());
     CHECK(1 == cont.size());
     cont.try_emplace(ident.ids<float>());
+    CHECK(2 == cont.range().size());
     CHECK(2 == cont.size());
     cont.try_emplace_group(ident.ids<int, float, char, double>());
+    CHECK(3 == cont.range().size());
     CHECK(6 == cont.size());
     cont.try_emplace_group(ident.ids<float>()); // is already inserted
+    CHECK(3 == cont.range().size());
     CHECK(6 == cont.size());
 
     auto ordered_typed   = ident.ordered_ids<int, float, char>();

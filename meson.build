@@ -13,6 +13,8 @@ matter_inc = include_directories('include')
 
 omp_dep = dependency('openmp')
 
+range_v3_dep = dependency('range', fallback: ['range-v3', 'range_dep'])
+
 if get_option('build_tests')
     catch2_dep = dependency('catch2', fallback: ['catch2', 'catch2_dep'])
 endif
@@ -23,7 +25,7 @@ endif
 
 matter = declare_dependency(
   include_directories: matter_inc,
-  dependencies: [omp_dep],
+  dependencies: [omp_dep, range_v3_dep],
 )
 
 if get_option('build_tests')

@@ -500,10 +500,8 @@ public:
     }
 
     template<typename T>
-    constexpr
-
-        const matter::component_storage_t<T>&
-        storage(const matter::typed_id<id_type, T>& tid) const noexcept
+    constexpr const matter::component_storage_t<T>&
+    storage(const matter::typed_id<id_type, T>& tid) const noexcept
     {
         assert(contains(tid));
 
