@@ -4,33 +4,13 @@
 #pragma once
 
 #include <optional>
+#include <tuple>
 #include <type_traits>
 
 namespace matter
 {
 namespace detail
 {
-namespace impl
-{
-template<typename T, std::size_t... Is, typename... Args>
-constexpr T construct_from_tuple_impl(
-    std::index_sequence<Is...>,
-    [[maybe_unused]] std::tuple<Args...>
-        targs) noexcept(std::is_nothrow_constructible_v<T, Args...>)
-{
-    return T(std::forward<Args>(std::get<Is>(targs))...);
-}
-} // namespace impl
-
-/// \brief create T from a forward_as_tuple
-template<typename T, typename TupArgs>
-constexpr T construct_from_tuple(TupArgs&& targs) noexcept
-{
-    return impl::construct_from_tuple_impl<T>(
-        std::make_index_sequence<std::tuple_size<TupArgs>::value>{},
-        std::forward<TupArgs>(targs));
-}
-
 /// \brief same as enable_if_t but with is_same check, for void_t
 template<typename T1, typename T2, typename U = void>
 using enable_if_same_t = std::enable_if_t<std::is_same_v<T1, T2>, U>;
@@ -185,7 +165,7 @@ struct is_nothrow_constructible_expand_tuple<T, std::tuple<Args...>>
 {};
 
 template<typename T, typename TupArgs>
-constexpr auto is_nothrow_constructible_expand_tuple_v =
+constexpr bool is_nothrow_constructible_expand_tuple_v =
     is_nothrow_constructible_expand_tuple<T, TupArgs>::value;
 
 template<typename Callable, typename TupArgs>
@@ -215,6 +195,89 @@ struct make_index_range_impl<End, End, Is...>
 
 template<std::size_t Begin, std::size_t End>
 using make_index_range = typename impl::make_index_range_impl<Begin, End>::type;
+
+namespace impl
+{
+template<typename T, std::size_t... Is, typename... Args>
+constexpr T construct_from_tuple_impl(
+    std::index_sequence<Is...>,
+    [[maybe_unused]] std::tuple<Args...>
+        targs) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+{
+    return T(std::forward<Args>(std::get<Is>(targs))...);
+}
+} // namespace impl
+
+/// \brief create T from a forward_as_tuple
+template<typename T, typename TupArgs>
+constexpr T construct_from_tuple(TupArgs&& targs) noexcept(
+    matter::detail::is_nothrow_constructible_expand_tuple_v<T, TupArgs>)
+{
+    return impl::construct_from_tuple_impl<T>(
+        std::make_index_sequence<std::tuple_size<TupArgs>::value>{},
+        std::forward<TupArgs>(targs));
+}
+
+// tries a regular constructor first and if that doesn't work then we utilize
+// construct_from_tuple
+template<typename T, typename Arg>
+constexpr T construct_from_ambiguous(Arg&& arg) noexcept(
+    std::conditional_t<
+        std::is_constructible_v<T, Arg>,
+        std::is_nothrow_constructible<T, Arg>,
+        matter::detail::is_nothrow_constructible_expand_tuple<T, Arg>>::value)
+{
+    if constexpr (std::is_constructible_v<T, Arg>)
+    {
+        return T(std::forward<Arg>(arg));
+    }
+    else
+    {
+        return construct_from_tuple<T>(std::forward<Arg>(arg));
+    }
+}
+
+namespace impl
+{
+template<typename Container, typename TupleArgs, std::size_t... Is>
+constexpr decltype(auto) emplace_back_from_tuple_impl(
+    Container&  cont,
+    TupleArgs&& tup_args,
+    std::index_sequence<
+        Is...>) noexcept(noexcept(cont.emplace_back(std::get<Is>(tup_args)...)))
+{
+    return cont.emplace_back(std::get<Is>(tup_args)...);
+}
+} // namespace impl
+
+template<typename Container, typename TupleArgs>
+constexpr decltype(auto)
+emplace_back_from_tuple(Container& cont, TupleArgs&& tup_args) noexcept(
+    noexcept(matter::detail::impl::emplace_back_from_tuple_impl(
+        cont,
+        std::forward<TupleArgs>(tup_args),
+        std::make_index_sequence<
+            std::tuple_size_v<std::decay_t<TupleArgs>>>{})))
+{
+    return matter::detail::impl::emplace_back_from_tuple_impl(
+        cont,
+        std::forward<TupleArgs>(tup_args),
+        std::make_index_sequence<std::tuple_size_v<std::decay_t<TupleArgs>>>{});
+}
+
+template<typename Container, typename Arg>
+constexpr decltype(auto) emplace_back_ambiguous(Container& cont, Arg&& arg)
+{
+    if constexpr (std::is_constructible_v<typename Container::value_type, Arg>)
+    {
+        return cont.emplace_back(std::forward<Arg>(arg));
+    }
+    else
+    {
+        return matter::detail::emplace_back_from_tuple(cont,
+                                                       std::forward<Arg>(arg));
+    }
+}
 } // namespace detail
 
 namespace meta
@@ -331,6 +394,23 @@ struct nth_tuple_type<N, std::tuple<Ts...>> : matter::detail::nth<N, Ts...>
 
 template<std::size_t N, typename Tuple>
 using nth_tuple_type_t = typename nth_tuple_type<N, Tuple>::type;
+
+template<typename... Ts, typename UnaryFunction>
+UnaryFunction
+for_each_tuple_element(std::tuple<Ts...> tup, UnaryFunction f) noexcept(
+    (std::is_nothrow_invocable_v<UnaryFunction, Ts> && ...))
+{
+    (f(std::get<Ts>(tup)), ...);
+    return f;
+}
+
+template<typename... Ts, typename UnaryFunction>
+[[nodiscard]] auto
+transform_tuple(std::tuple<Ts...> tuple, UnaryFunction f) noexcept(
+    (std::is_nothrow_invocable_v<UnaryFunction, Ts> && ...))
+{
+    return std::tuple{f(std::get<Ts>(tuple))...};
+}
 } // namespace meta
 } // namespace matter
 
