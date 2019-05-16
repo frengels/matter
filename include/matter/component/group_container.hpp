@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <range/v3/view/all.hpp>
+
 #include "matter/component/any_group.hpp"
 #include "matter/component/group.hpp"
 #include "matter/component/typed_id.hpp"
@@ -342,6 +344,13 @@ private:
     // stored in index = 0.
     std::vector<std::size_t> begin_indices_;
 
+    // stores views to all groups managed by this group_container.
+    // This cache is required to allow efficient iteration over all groups in
+    // the container. Iterating otherwise would require conditional checks on
+    // each increment of the iterator because we don't know when the group_size
+    // might change.
+    std::vector<matter::any_group<id_type>> view_cache_;
+
 public:
     group_container() noexcept = default;
 
@@ -375,6 +384,11 @@ public:
     constexpr std::size_t groups_size() const noexcept
     {
         return begin_indices_.size();
+    }
+
+    constexpr auto range() noexcept
+    {
+        return ranges::view::all(view_cache_);
     }
 
     constexpr sized_group_range<id_type> range(std::size_t grp_size) noexcept
@@ -596,6 +610,8 @@ private:
         // increment all following index values
         increment_indices(grp_size);
 
+        view_cache_.push_back({*new_pos, grp_size});
+
         // return where the inserted element is at
         return {new_pos, grp_size};
     }
@@ -651,7 +667,7 @@ private:
             }
         }
 
-	// verify we have all the elements in our buffer
+        // verify we have all the elements in our buffer
         assert(stores_buffer_.size() == grp_size);
 
         auto move_beg = stores_buffer_.begin();
