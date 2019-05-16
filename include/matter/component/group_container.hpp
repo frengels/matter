@@ -566,6 +566,7 @@ private:
 
     {
         constexpr auto grp_size = sizeof...(Ts);
+        assert(pos.group_size() == grp_size);
 
         // assert that the ids don't already exist
         // and the element at the position is greater than our ids.
@@ -604,6 +605,7 @@ private:
             const matter::const_any_group<id_type>     storage_source,
             const matter::ordered_untyped_ids<id_type> copy_ids) noexcept
     {
+        assert(pos.group_size() == copy_ids.size());
         assert(stores_buffer_.empty());
         assert(storage_source.contains(copy_ids));
         assert([&] {
