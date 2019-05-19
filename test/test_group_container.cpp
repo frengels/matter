@@ -1,7 +1,9 @@
 #include <catch2/catch.hpp>
 
 #include "matter/component/component_identifier.hpp"
+#include "matter/component/group.hpp"
 #include "matter/component/group_container.hpp"
+#include "matter/component/group_slice.hpp"
 
 TEST_CASE("group_container")
 {
@@ -29,19 +31,25 @@ TEST_CASE("group_container")
     CHECK(3 == cont.range().size());
     CHECK(6 == cont.size());
 
-    auto ordered_typed   = ident.ordered_ids<int, float, char>();
-    auto ordered_untyped = matter::ordered_untyped_ids{ordered_typed};
-
     // get here because can get invalidated before
     auto ifcdgrp_opt = cont.find_group(ident.ids<int, float, char, double>());
     CHECK(ifcdgrp_opt);
     auto ifcdgrp = *std::move(ifcdgrp_opt);
-    cont.try_emplace_group(ifcdgrp.underlying_group(), ordered_untyped);
-    CHECK(9 == cont.size());
     // old groups possibly invalidated here
 
     ifcdgrp   = *cont.find_group(ident.ids<int, float, char, double>());
     auto fgrp = *cont.find_group(ident.ids<float>());
+
+    auto fgrp_it = cont.find(ident.ordered_ids<float>());
+    CHECK(fgrp_it != cont.end());
+
+    // obtain the group a different way
+    auto fgrp2 = *matter::make_group(*fgrp_it, ident.ids<float>());
+    CHECK(fgrp == fgrp2);
+
+    // obtain a slice as well
+    auto fgrp_slice = *matter::make_group_slice(*fgrp_it, ident.ids<float>());
+    CHECK(fgrp2 == fgrp_slice);
 
     SECTION("contains")
     {

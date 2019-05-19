@@ -490,13 +490,140 @@ public:
     }
 
     template<typename T>
+    constexpr matter::component_storage_t<T>*
+    maybe_storage(const matter::typed_id<id_type, T>& tid) noexcept
+    {
+        auto ptr = find_id(tid);
+        return ptr ? std::addressof(ptr->template get<T>()) : nullptr;
+    }
+
+    template<typename T>
+    constexpr const matter::component_storage<T>*
+    maybe_storage(const matter::typed_id<id_type, T>& tid) const noexcept
+    {
+        auto ptr = find_id(tid);
+        return ptr ? std::addressof(ptr->template get<T>()) : nullptr;
+    }
+
+private:
+    template<typename... Ts, std::size_t... Is>
+    constexpr std::optional<
+        std::tuple<const matter::component_storage_t<Ts>&...>>
+    maybe_storage_impl(const matter::unordered_typed_ids<id_type, Ts...>& ids,
+                       std::index_sequence<Is...>) const noexcept
+    {
+        // use an assertion because other checks should be done in the calling
+        // function
+        assert(ids.size() <= group_size());
+
+        // used to store intermediate result from fold expression
+        std::tuple<matter::component_storage_t<Ts>*...> tmp_buffer;
+
+        auto get_store = [&](auto index_constant) {
+            using index_constant_type = std::decay_t<decltype(index_constant)>;
+            constexpr auto idx        = index_constant_type::value;
+
+            auto* maybe_store = maybe_storage(ids.template get<idx>());
+            if (maybe_store)
+            {
+                std::get<idx>(tmp_buffer) = maybe_store;
+                return true;
+            }
+            else
+            {
+                // short circuits the fold expression
+                return false;
+            }
+        };
+
+        // trick to short circuit the fold expression upon first occurrence of
+        // nullptr
+        if ((get_store(std::integral_constant<std::size_t, Is>{}) && ...))
+        {
+            return std::apply(
+                [](auto*... stores) {
+                    return std::tuple<
+                        const matter::component_storage_t<Ts>&...>{stores...};
+                },
+                tmp_buffer);
+        }
+        else
+        {
+            return std::nullopt;
+        }
+    }
+
+    template<typename... Ts, std::size_t... Is>
+    constexpr std::optional<std::tuple<matter::component_storage_t<Ts>&...>>
+    maybe_storage_impl(const matter::unordered_typed_ids<id_type, Ts...>& ids,
+                       std::index_sequence<Is...>) noexcept
+    {
+        // use an assertion because other checks should be done in the calling
+        // function
+        assert(ids.size() <= group_size());
+
+        // used to store intermediate result from fold expression
+        std::tuple<matter::component_storage_t<Ts>*...> tmp_buffer;
+
+        auto get_store = [&](auto index_constant) {
+            using index_constant_type = std::decay_t<decltype(index_constant)>;
+            constexpr auto idx        = index_constant_type::value;
+
+            auto* maybe_store = maybe_storage(ids.template get<idx>());
+            if (maybe_store)
+            {
+                std::get<idx>(tmp_buffer) = maybe_store;
+                return true;
+            }
+            else
+            {
+                // short circuits the fold expression
+                return false;
+            }
+        };
+
+        // trick to short circuit the fold expression upon first occurrence of
+        // nullptr
+        if ((get_store(std::integral_constant<std::size_t, Is>{}) && ...))
+        {
+            return std::apply(
+                [](auto*... stores) {
+                    return std::tuple<matter::component_storage_t<Ts>&...>{
+                        *stores...};
+                },
+                tmp_buffer);
+        }
+        else
+        {
+            return std::nullopt;
+        }
+    }
+
+public:
+    template<typename... Ts>
+    constexpr std::optional<
+        std::tuple<const matter::component_storage_t<Ts>&...>>
+    maybe_storage(const matter::unordered_typed_ids<id_type, Ts...>& ids) const
+        noexcept
+    {
+        return maybe_storage_impl(ids, std::index_sequence_for<Ts...>{});
+    }
+
+    template<typename... Ts>
+    constexpr std::optional<std::tuple<matter::component_storage_t<Ts>&...>>
+    maybe_storage(
+        const matter::unordered_typed_ids<id_type, Ts...>& ids) noexcept
+    {
+        return maybe_storage_impl(ids, std::index_sequence_for<Ts...>{});
+    }
+
+    template<typename T>
     constexpr matter::component_storage_t<T>&
     storage(const matter::typed_id<id_type, T>& tid) noexcept
     {
         assert(contains(tid));
 
-        auto ptr = find_id(tid);
-        return ptr->template get<T>();
+        return *maybe_storage(tid);
     }
 
     template<typename T>
@@ -505,8 +632,7 @@ public:
     {
         assert(contains(tid));
 
-        auto ptr = find_id(tid);
-        return ptr->template get<T>();
+        return *maybe_storage(tid);
     }
 
     template<typename... Ts>

@@ -427,10 +427,10 @@ public:
 
         if (it != rng.end())
         {
-            return matter::group{ids, *it};
+            return matter::group{*it, ids};
         }
 
-        return {};
+        return std::nullopt;
     }
 
     template<typename... Ts>
@@ -553,7 +553,7 @@ public:
         const matter::ordered_typed_ids<id_type, Ts...>&   ordered_ids) noexcept
     {
         auto it = try_emplace(ids, ordered_ids);
-        return matter::group{ids, *it};
+        return matter::group{*it, ids};
     }
 
     /// \sa same as try_emplace but will construct ordered_ids from the

@@ -10,7 +10,7 @@ namespace matter
 template<typename... Cs>
 struct component_view
 {
-    static_assert((matter::is_component_v<Cs> && ...),
+    static_assert((matter::is_component_v<std::remove_const_t<Cs>> && ...),
                   "One of the Cs... is not a valid component");
 
 private:
