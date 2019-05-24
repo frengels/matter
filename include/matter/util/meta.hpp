@@ -7,6 +7,9 @@
 #include <tuple>
 #include <type_traits>
 
+#include <boost/hana/set.hpp>
+#include <boost/hana/tuple.hpp>
+
 namespace matter
 {
 namespace detail
@@ -305,6 +308,21 @@ struct decay_tuple_types<std::tuple<Ts...>>
 template<typename Tuple>
 using decay_tuple_types_t = typename decay_tuple_types<Tuple>::type;
 
+template<typename T>
+struct tuplify
+{
+    using type = std::tuple<T>;
+};
+
+template<typename... Ts>
+struct tuplify<std::tuple<Ts...>>
+{
+    using type = std::tuple<Ts...>;
+};
+
+template<typename T>
+using tuplify_t = typename tuplify<T>::type;
+
 template<typename... Tuples>
 struct merge_tuple_types;
 
@@ -411,6 +429,86 @@ transform_tuple(std::tuple<Ts...> tuple, UnaryFunction f) noexcept(
 {
     return std::tuple{f(std::get<Ts>(tuple))...};
 }
+
+template<template<typename> typename TTemplate, typename Tuple>
+struct apply_tuple_types;
+
+template<template<typename> typename TTemplate, typename... Ts>
+struct apply_tuple_types<TTemplate, std::tuple<Ts...>>
+{
+    using type = std::tuple<TTemplate<Ts>...>;
+};
+
+template<template<typename> typename TTemplate, typename Tuple>
+using apply_tuple_types_t = typename apply_tuple_types<TTemplate, Tuple>::type;
+
+template<template<typename> typename TTemplate, typename Tuple>
+struct require_all_tuple;
+
+template<template<typename> typename TTemplate, typename... Ts>
+struct require_all_tuple<TTemplate, std::tuple<Ts...>>
+    : std::bool_constant<(TTemplate<Ts>::value && ...)>
+{};
+
+template<template<typename> typename TTemplate, typename Tuple>
+constexpr bool require_all_tuple_v = require_all_tuple<TTemplate, Tuple>::value;
+
+namespace detail
+{
+template<typename HanaTuple>
+struct to_value_tuple;
+
+template<typename... TypeTs>
+struct to_value_tuple<boost::hana::tuple<TypeTs...>>
+{
+    using type = boost::hana::tuple<typename TypeTs::type...>;
+};
+
+template<typename HanaTuple>
+using to_value_tuple_t = typename to_value_tuple<HanaTuple>::type;
+
+template<typename HanaTuple>
+struct to_std_tuple;
+
+template<typename... Ts>
+struct to_std_tuple<boost::hana::tuple<Ts...>>
+{
+    using type = std::tuple<Ts...>;
+};
+
+template<typename HanaTuple>
+using to_std_tuple_t = typename to_std_tuple<HanaTuple>::type;
+} // namespace detail
+
+template<typename Tuple>
+struct unique_tuple;
+
+template<typename... Ts>
+struct unique_tuple<std::tuple<Ts...>>
+{
+private:
+    using set_type = decltype(boost::hana::to<boost::hana::set_tag>(
+        std::declval<boost::hana::tuple<boost::hana::type<Ts>...>>()));
+
+    using tuple_type = decltype(
+        boost::hana::to<boost::hana::tuple_tag>(std::declval<set_type>()));
+
+    static constexpr decltype(auto)
+    get_tuple_type(boost::hana::tuple<boost::hana::type<Ts>...> type_list)
+    {
+        auto type_set   = boost::hana::to<boost::hana::set_tag>(type_list);
+        auto type_tuple = boost::hana::to<boost::hana::tuple_tag>(type_set);
+        return type_tuple;
+    }
+
+public:
+    using type =
+        detail::to_std_tuple_t<detail::to_value_tuple_t<decltype(get_tuple_type(
+            std::declval<boost::hana::tuple<boost::hana::type<Ts>...>>()))>>;
+};
+
+template<typename Tuple>
+using unique_tuple_t = typename unique_tuple<Tuple>::type;
 } // namespace meta
 } // namespace matter
 
