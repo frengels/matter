@@ -69,9 +69,12 @@ struct is_optional : std::false_type
 {};
 
 template<typename T>
-struct is_optional<T,
-                   std::void_t<decltype(bool(std::declval<const T>())),
-                               decltype(*std::declval<T>())>> : std::true_type
+struct is_optional<
+    T,
+    std::enable_if_t<std::is_default_constructible_v<T>,
+                     std::void_t<decltype(bool(std::declval<const T>())),
+                                 decltype(*std::declval<T>())>>>
+    : std::true_type
 {};
 
 template<typename T>
