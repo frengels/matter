@@ -5,20 +5,19 @@
 
 #include <algorithm>
 
-#include "component_identifier.hpp"
+#include "matter/id/component_identifier.hpp"
 
 #include "matter/component/group_container.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
 {
-template<typename Id, typename... Components>
+template<typename Identifier>
 class registry {
-    static_assert(matter::is_id_v<Id>);
-    static_assert((matter::is_component_v<Components> && ...));
+    static_assert(matter::is_component_identifier_v<Identifier>);
 
 public:
-    using identifier_type      = component_identifier<Id, Components...>;
+    using identifier_type      = Identifier;
     using id_type              = typename identifier_type::id_type;
     using group_container_type = matter::group_container<id_type>;
 

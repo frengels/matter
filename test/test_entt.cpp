@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "matter/component/registry.hpp"
+#include "matter/id/default_component_identifier.hpp"
 
 struct position
 {
@@ -46,8 +47,10 @@ TEST_CASE("benchmarks")
 {
     SECTION("assign_comp_static")
     {
-        matter::registry<matter::unsigned_id<std::size_t>, position, velocity>
-            reg;
+        auto reg = matter::registry<matter::default_component_identifier<
+            matter::unsigned_id<std::size_t>,
+            position,
+            velocity>>{};
 
         timer t{"Constructing 1000000 static component pairs of position and "
                 "velocity"};
@@ -60,7 +63,8 @@ TEST_CASE("benchmarks")
 
     SECTION("assign_comp_runtime")
     {
-        matter::registry<matter::unsigned_id<std::size_t>> reg;
+        auto reg = matter::registry<matter::default_component_identifier<
+            matter::unsigned_id<std::size_t>>>{};
         reg.register_component<position>();
         reg.register_component<velocity>();
 
@@ -75,8 +79,10 @@ TEST_CASE("benchmarks")
 
     SECTION("iterate_single")
     {
-        matter::registry<matter::unsigned_id<std::size_t>, position, velocity>
-             reg;
+        auto reg = matter::registry<matter::default_component_identifier<
+            matter::unsigned_id<std::size_t>,
+            position,
+            velocity>>{};
         auto pos = reg.create_buffer_for<position>();
         pos.resize(1000000);
 
@@ -112,7 +118,9 @@ TEST_CASE("benchmarks")
 
     SECTION("destroy")
     {
-        matter::registry<matter::unsigned_id<std::size_t>, position> reg;
+        auto reg = matter::registry<matter::default_component_identifier<
+            matter::unsigned_id<std::size_t>,
+            position>>{};
 
         auto buff = reg.create_buffer_for<position>();
         buff.resize(1000000);
@@ -135,8 +143,10 @@ TEST_CASE("benchmarks")
 
     SECTION("iterate_double")
     {
-        matter::registry<matter::unsigned_id<std::size_t>, position, velocity>
-             reg;
+        auto reg    = matter::registry<matter::default_component_identifier<
+            matter::unsigned_id<std::size_t>,
+            position,
+            velocity>>{};
         auto posvel = reg.create_buffer_for<position, velocity>();
         posvel.resize(1000000);
 
@@ -179,8 +189,10 @@ TEST_CASE("benchmarks")
 
     SECTION("iterate_double,half")
     {
-        matter::registry<matter::unsigned_id<std::size_t>, position, velocity>
-             reg;
+        auto reg = matter::registry<matter::default_component_identifier<
+            matter::unsigned_id<std::size_t>,
+            position,
+            velocity>>{};
         auto vel = reg.create_buffer_for<velocity>();
         vel.resize(1000000);
 
@@ -229,8 +241,10 @@ TEST_CASE("benchmarks")
 
     SECTION("iterate_single")
     {
-        matter::registry<matter::unsigned_id<std::size_t>, position, velocity>
-             reg;
+        auto reg = matter::registry<matter::default_component_identifier<
+            matter::unsigned_id<std::size_t>,
+            position,
+            velocity>>{};
         auto vel = reg.create_buffer_for<velocity>();
         vel.resize(1000000);
 

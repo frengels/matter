@@ -5,7 +5,7 @@
 
 #include <numeric>
 
-#include "matter/component/id.hpp"
+#include "matter/id/id.hpp"
 #include "matter/util/erased.hpp"
 
 namespace matter

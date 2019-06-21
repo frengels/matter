@@ -1,13 +1,15 @@
 #include <catch2/catch.hpp>
 
-#include "matter/component/component_identifier.hpp"
 #include "matter/component/insert_buffer.hpp"
+#include "matter/id/default_component_identifier.hpp"
 
 TEST_CASE("insert_buffer")
 {
-    matter::component_identifier<matter::unsigned_id<std::size_t>, float, int>
+    matter::default_component_identifier<matter::unsigned_id<std::size_t>,
+                                         float,
+                                         int>
          ident{};
-    auto buf = matter::insert_buffer{ident.ids<float, int>()};
+    auto buf = matter::insert_buffer{ident.template ids<float, int>()};
     buf.reserve(10000);
 
     SECTION("emplace_back")

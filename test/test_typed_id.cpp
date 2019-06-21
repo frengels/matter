@@ -1,18 +1,18 @@
 #include <catch2/catch.hpp>
 
-#include "matter/component/component_identifier.hpp"
-#include "matter/component/typed_id.hpp"
+#include "matter/id/default_component_identifier.hpp"
+#include "matter/id/typed_id.hpp"
 
 TEST_CASE("typed_id")
 {
     SECTION("contains")
     {
-        matter::component_identifier<matter::signed_id<int>,
-                                     char,
-                                     int,
-                                     float,
-                                     short,
-                                     long>
+        matter::default_component_identifier<matter::signed_id<int>,
+                                             char,
+                                             int,
+                                             float,
+                                             short,
+                                             long>
             ident{};
         ident.register_type<unsigned char>();
         ident.register_type<double>();

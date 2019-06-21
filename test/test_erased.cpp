@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "matter/component/component_identifier.hpp"
+#include "matter/id/default_component_identifier.hpp"
 #include "matter/storage/erased_storage.hpp"
 #include "matter/util/erased.hpp"
 
@@ -102,7 +102,7 @@ TEST_CASE("erased")
 
 TEST_CASE("erased_storage")
 {
-    matter::component_identifier<matter::signed_id<int>> ident;
+    matter::default_component_identifier<matter::signed_id<int>> ident;
     ident.register_type<int_comp>();
     ident.register_type<float_comp>();
 

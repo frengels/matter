@@ -4,6 +4,7 @@
 
 #include "matter/component/registry.hpp"
 #include "matter/component/traits.hpp"
+#include "matter/id/default_component_identifier.hpp"
 #include "matter/util/erased.hpp"
 
 struct float_comp
@@ -31,7 +32,11 @@ TEST_CASE("registry")
 {
     using id_type = matter::unsigned_id<std::size_t>;
 
-    matter::registry<id_type, float_comp, int_comp, string_comp> reg;
+    auto reg =
+        matter::registry<matter::default_component_identifier<id_type,
+                                                              float_comp,
+                                                              int_comp,
+                                                              string_comp>>{};
 
     SECTION("group comparison")
     {

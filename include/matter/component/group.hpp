@@ -13,7 +13,7 @@
 #include "matter/component/group_slice.hpp"
 #include "matter/component/insert_buffer.hpp"
 #include "matter/component/traits.hpp"
-#include "matter/component/typed_id.hpp"
+#include "matter/id/typed_id.hpp"
 #include "matter/storage/erased_storage.hpp"
 #include "matter/util/container.hpp"
 #include "matter/util/id_erased.hpp"

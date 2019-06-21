@@ -4,7 +4,7 @@
 #pragma once
 
 #include "matter/component/traits.hpp"
-#include "matter/component/typed_id.hpp"
+#include "matter/id/typed_id.hpp"
 #include "matter/util/id_erased.hpp"
 
 namespace matter

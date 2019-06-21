@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "matter/component/id.hpp"
+#include "matter/id/id.hpp"
 #include "matter/util/algorithm.hpp"
 #include "matter/util/meta.hpp"
 
@@ -87,9 +87,6 @@ public:
     using Id::Id;
 
     constexpr typed_id(const Id& id) noexcept : Id{id}
-    {}
-
-    constexpr typed_id(Id&& id) noexcept : Id{std::move(id)}
     {}
 
     constexpr const base_type& base() const noexcept

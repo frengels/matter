@@ -6,7 +6,7 @@
 #include "matter/component/any_group.hpp"
 #include "matter/component/component_view.hpp"
 #include "matter/component/traits.hpp"
-#include "matter/component/typed_id.hpp"
+#include "matter/id/typed_id.hpp"
 
 namespace matter
 {

@@ -7,7 +7,7 @@
 
 #include "matter/component/any_group.hpp"
 #include "matter/component/group.hpp"
-#include "matter/component/typed_id.hpp"
+#include "matter/id/typed_id.hpp"
 
 namespace matter
 {

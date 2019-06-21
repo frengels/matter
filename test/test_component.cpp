@@ -1,11 +1,11 @@
 #include <catch2/catch.hpp>
 
-#include "matter/component/component_identifier.hpp"
-#include "matter/component/identifier.hpp"
 #include "matter/component/registry.hpp"
 #include "matter/component/traits.hpp"
 #include "matter/entity/entity.hpp"
 #include "matter/entity/entity_manager.hpp"
+#include "matter/id/default_component_identifier.hpp"
+#include "matter/id/identifier.hpp"
 #include "matter/storage/sparse_vector_storage.hpp"
 
 #include <string_view>
@@ -144,11 +144,11 @@ TEST_CASE("component")
 
     SECTION("component_identifier")
     {
-        matter::component_identifier<matter::unsigned_id<std::size_t>,
-                                     float,
-                                     int,
-                                     std::string_view,
-                                     empty_component>
+        matter::default_component_identifier<matter::unsigned_id<std::size_t>,
+                                             float,
+                                             int,
+                                             std::string_view,
+                                             empty_component>
             cident;
 
         static_assert(cident.id<float>().value() == 0);
