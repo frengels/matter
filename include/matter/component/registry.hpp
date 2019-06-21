@@ -7,8 +7,6 @@
 
 #include "component_identifier.hpp"
 
-#include "matter/access/registry_access_view.hpp"
-#include "matter/access/type_traits.hpp"
 #include "matter/component/group_container.hpp"
 #include "matter/util/meta.hpp"
 
@@ -48,13 +46,6 @@ public:
     void register_component() noexcept
     {
         identifier_.template register_type<C>();
-    }
-
-    template<typename... Access>
-    auto view() noexcept
-    {
-        return registry_access_view<matter::registry<id_type, Components...>,
-                                    Access...>{*this};
     }
 
     group_container_type& group_container() noexcept

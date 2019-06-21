@@ -11,7 +11,6 @@ tests = [
   'algo',
   'group_container',
   'insert_buffer',
-  'access',
 ]
 
 catch_lib = static_library(
