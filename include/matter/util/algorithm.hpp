@@ -76,52 +76,6 @@ for_each(ForwardIt first, Sentinel last, UnaryFunction f) noexcept(
     return f;
 }
 
-template<typename ExecutionPolicy,
-         typename ForwardIt,
-         typename Sentinel,
-         typename UnaryFunction>
-std::enable_if_t<
-    matter::is_execution_policy<std::decay_t<ExecutionPolicy>>::value,
-    UnaryFunction>
-for_each(ExecutionPolicy&&,
-         ForwardIt first,
-         Sentinel  last,
-         UnaryFunction
-             f) noexcept(std::is_nothrow_invocable_v<UnaryFunction,
-                                                     matter::iter_reference_t<
-                                                         ForwardIt>>)
-{
-    using exec_pol_type = std::decay_t<ExecutionPolicy>;
-    if constexpr (std::is_same_v<matter::execution::sequenced_policy,
-                                 exec_pol_type>)
-    {
-        for (; last != first; ++first)
-        {
-            f(*first);
-        }
-
-        return f;
-    }
-    else if constexpr (std::is_same_v<matter::execution::unsequenced_policy,
-                                      exec_pol_type>)
-    {
-        static_assert(matter::is_simd_iterator<ForwardIt, Sentinel>::value,
-                      "This iterator/sentinel pair is not simdable");
-
-        // This loop construct is necessary for omp to vectorize the loop as it
-        // needs to know the amount of iterations that will happen beforehand to
-        // calculate the bounds of vectorization
-
-#pragma omp simd
-        for (auto it = first; it < last; ++it)
-        {
-            f(*it);
-        }
-
-        return f;
-    }
-}
-
 namespace detail
 {
 // used to have constexpr property until c++20
