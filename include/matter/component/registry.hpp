@@ -30,15 +30,21 @@ public:
     constexpr registry() noexcept = default;
 
     template<typename C>
-    constexpr auto component_id() const
+    constexpr std::enable_if_t<
+        matter::is_component_identifier_for_v<identifier_type, C>,
+        matter::typed_id<id_type, C>>
+    component_id() const
     {
         return identifier_.template id<C>();
     }
 
     template<typename... Cs>
-    constexpr auto component_ids() const
+    constexpr std::enable_if_t<
+        (matter::is_component_identifier_for_v<identifier_type, Cs> && ...),
+        matter::unordered_typed_ids<id_type, Cs...>>
+    component_ids() const
     {
-        return identifier_.template ids<Cs...>();
+        return matter::unordered_typed_ids{identifier_.template id<Cs>()...};
     }
 
     template<typename C>
