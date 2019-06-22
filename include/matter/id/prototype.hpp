@@ -38,9 +38,6 @@ struct component_identifier
 
     template<typename T>
     bool contains() const;
-
-    template<typename T>
-    matter::typed_id<id_type, T> id() const;
 };
 
 static_assert(
@@ -55,13 +52,31 @@ struct dynamic_component_identifier
 
     template<typename T>
     matter::typed_id<id_type, T> register_component();
-
-    template<typename T>
-    matter::typed_id<id_type, T> id() const;
 };
 
 static_assert(matter::is_dynamic_component_identifier_v<
               matter::prototype::dynamic_component_identifier>);
+
+template<typename Component>
+struct component_identifier_for : matter::prototype::component_identifier
+{
+    template<typename C>
+    std::enable_if_t<
+        std::is_same_v<Component, C>,
+        matter::typed_id<
+            typename matter::prototype::component_identifier::id_type,
+            C>>
+    id() const;
+};
+
+static_assert(!matter::is_component_identifier_for_v<
+              matter::prototype::component_identifier_for<int>,
+              float>);
+
+static_assert(matter::is_component_identifier_for_v<
+              matter::prototype::component_identifier_for<
+                  matter::prototype::component>,
+              matter::prototype::component>);
 } // namespace prototype
 } // namespace matter
 
