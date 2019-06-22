@@ -103,8 +103,8 @@ TEST_CASE("erased")
 TEST_CASE("erased_storage")
 {
     matter::default_component_identifier<matter::signed_id<int>> ident;
-    ident.register_type<int_comp>();
-    ident.register_type<float_comp>();
+    ident.register_component<int_comp>();
+    ident.register_component<float_comp>();
 
     matter::erased_storage store{ident.id<int_comp>()};
 

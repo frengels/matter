@@ -14,9 +14,9 @@ TEST_CASE("typed_id")
                                              short,
                                              long>
             ident{};
-        ident.register_type<unsigned char>();
-        ident.register_type<double>();
-        ident.register_type<unsigned int>();
+        ident.register_component<unsigned char>();
+        ident.register_component<double>();
+        ident.register_component<unsigned int>();
 
         SECTION("same size")
         {

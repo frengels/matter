@@ -42,9 +42,18 @@ public:
     }
 
     template<typename C>
-    void register_component() noexcept
+    constexpr std::enable_if_t<
+        matter::is_dynamic_component_identifier_v<identifier_type>,
+        matter::typed_id<id_type, C>>
+    register_component() noexcept
     {
-        identifier_.template register_type<C>();
+        return identifier_.template register_component<C>();
+    }
+
+    template<typename C>
+    constexpr bool contains() const noexcept
+    {
+        return identifier_.template contains<C>();
     }
 
     group_container_type& group_container() noexcept

@@ -7,10 +7,10 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "matter/id/identifier.hpp"
 #include "matter/component/metadata.hpp"
 #include "matter/component/traits.hpp"
 #include "matter/id/id.hpp"
+#include "matter/id/identifier.hpp"
 #include "matter/id/typed_id.hpp"
 
 namespace matter
@@ -80,7 +80,7 @@ public:
 
     /// \brief instructs the identifier to now identify this component
     template<typename Component>
-    matter::typed_id<id_type, Component> register_type() noexcept
+    matter::typed_id<id_type, Component> register_component() noexcept
     {
         assert(!is_static<Component>());
         auto global_id = identifier_type::template get<Component>();
@@ -100,7 +100,7 @@ public:
     }
 
     template<typename Component>
-    constexpr bool is_registered() const noexcept
+    constexpr bool contains() const noexcept
     {
         if constexpr (is_static<Component>())
         {

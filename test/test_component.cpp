@@ -160,12 +160,12 @@ TEST_CASE("component")
                       cident.id<std::string_view>());
 
         // we test whether the global id doesn't affect the local id
-        CHECK(!cident.is_registered<std::wstring_view>()); // this will
-                                                           // generate a
-                                                           // global id
-        cident.register_type<random_component>(); // this will generate a local
+        CHECK(!cident.contains<std::wstring_view>()); // this will
+                                                      // generate a
+                                                      // global id
+        cident.register_component<random_component>(); // this will generate a local
                                                   // id of num+0
-        cident.register_type<std::wstring_view>();
+        cident.register_component<std::wstring_view>();
         CHECK(cident.id<random_component>().value() ==
               decltype(cident)::constexpr_components_size);
         CHECK(cident.id<std::wstring_view>().value() ==
