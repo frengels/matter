@@ -9,27 +9,6 @@
 
 namespace matter
 {
-template<typename Identifier, typename T, typename Access, typename Presence>
-constexpr decltype(auto) filter_group(
-    matter::any_group<typename Identifier::id_type> grp,
-    const Identifier&                               ident,
-    boost::hana::basic_type<matter::typed_access<T, Access, Presence>>) noexcept
-{
-    using element_type          = T;
-    using storage_modifier_type = typename Access::storage_modifier;
-    using storage_filter_type   = typename Presence::storage_filter;
-
-    auto type_id = ident.template id<element_type>();
-
-    auto* store = grp.maybe_storage(type_id);
-
-    auto modifier = storage_modifier_type{};
-    auto filter   = storage_filter_type{};
-
-    auto modified_store = modifier(store);
-    return filter(modified_store);
-}
-
 // filter the group for the specified access.
 // this function will return a result of the form
 // std::optional<std::tuple<component_storage<T>, ...>>. Where nullopt means the
