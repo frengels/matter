@@ -3,6 +3,8 @@
 #include "matter/component/registry.hpp"
 #include "matter/id/default_component_identifier.hpp"
 #include "matter/id/id_cache.hpp"
+#include "matter/query/entities.hpp"
+#include "matter/query/entity_query_processor.hpp"
 #include "matter/query/primitives/concurrency.hpp"
 #include "matter/query/primitives/exclude.hpp"
 #include "matter/query/primitives/filter.hpp"
@@ -12,6 +14,24 @@
 #include "matter/query/primitives/require.hpp"
 #include "matter/query/primitives/write.hpp"
 #include "matter/query/typed_access.hpp"
+
+namespace test
+{
+template<typename T>
+using write =
+    matter::typed_access<T, matter::prim::write, matter::prim::require>;
+
+template<typename T>
+using read = matter::typed_access<T, matter::prim::read, matter::prim::require>;
+
+template<typename T>
+using opt_write =
+    matter::typed_access<T, matter::prim::write, matter::prim::optional>;
+
+template<typename T>
+using opt_read =
+    matter::typed_access<T, matter::prim::read, matter::prim::optional>;
+} // namespace test
 
 TEST_CASE("query")
 {
@@ -118,7 +138,9 @@ TEST_CASE("query")
                 static_assert(
                     std::is_same_v<
                         matter::empty,
-                        std::decay_t<decltype(*std::move(filtered_group))>>);
+                        std::tuple_element_t<0,
+                                             std::decay_t<decltype(*std::move(
+                                                 filtered_group))>>>);
                 ++matched;
             }
         }
@@ -178,6 +200,55 @@ TEST_CASE("query")
             }
 
             REQUIRE(matched == 1);
+        }
+
+        SECTION("entity_query_processor")
+        {
+            using boost::hana::type_c;
+
+            auto matched = 0;
+
+            auto eq = matter::entities{
+                type_c<test::write<int>>}; // match [int] and [int, float]
+
+            auto eq_proc = matter::entity_query_processor{};
+
+            for (auto [i] : eq(boost::hana::unpack(
+                     eq.query_types(), [&](auto... query_types) {
+                         return eq_proc(grp_range, cache, query_types...);
+                     })))
+            {
+                ++matched;
+            }
+
+            REQUIRE(matched == 2);
+
+            matched = 0;
+
+            auto eq1 = matter::entities{type_c<test::read<float>>,
+                                        type_c<test::opt_read<int>>};
+
+            // should match 2 groups, [float] and [float, int]
+
+            auto opt_present = 0;
+
+            for (auto [f_store, i_store] : eq1(boost::hana::unpack(
+                     eq1.query_types(), [&](auto... query_types) {
+                         return eq_proc(grp_range, cache, query_types...);
+                     })))
+            {
+                ++matched;
+
+                // check if the integer store is present, which should only be
+                // one case
+                if (i_store)
+                {
+                    ++opt_present;
+                }
+            }
+
+            REQUIRE(matched == 2);
+            REQUIRE(opt_present == 1);
         }
     }
 }
