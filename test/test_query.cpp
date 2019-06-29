@@ -14,6 +14,7 @@
 #include "matter/query/primitives/require.hpp"
 #include "matter/query/primitives/write.hpp"
 #include "matter/query/type_query.hpp"
+#include "matter/query/type_traits.hpp"
 
 TEST_CASE("query")
 {
@@ -63,6 +64,14 @@ TEST_CASE("query")
             REQUIRE(winte_descr.can_access_concurrent(winto_descr));
             REQUIRE(iintr_descr.can_access_concurrent(wintr_descr));
         }
+    }
+
+    SECTION("type_traits")
+    {
+        static_assert(matter::traits::is_entity_query(
+            boost::hana::type_c<matter::entities<matter::write<int>>>));
+        static_assert(
+            !matter::traits::is_entity_query(boost::hana::type_c<int>));
     }
 
     SECTION("filter")

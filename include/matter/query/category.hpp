@@ -5,6 +5,8 @@
 
 #include <type_traits>
 
+#include <boost/hana/type.hpp>
+
 namespace matter
 {
 struct entity_query_tag
@@ -17,6 +19,18 @@ struct is_query_category : std::false_type
 template<>
 struct is_query_category<entity_query_tag> : std::true_type
 {};
+
+namespace traits
+{
+template<typename T>
+constexpr auto query_category(boost::hana::basic_type<T>) noexcept
+{
+    return boost::hana::type_c<typename T::query_category>;
+}
+
+constexpr auto has_query_category = boost::hana::is_valid([
+](auto t) -> boost::hana::type<typename decltype(t)::type::query_category>{});
+} // namespace traits
 } // namespace matter
 
 #endif

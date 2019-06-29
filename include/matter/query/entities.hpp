@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "matter/query/category.hpp"
 #include "matter/query/type_query.hpp"
 #include "matter/util/filter_transform.hpp"
 
@@ -13,6 +14,9 @@ class entities;
 
 template<typename... Ts, typename... Access, typename... Presence>
 class entities<matter::type_query<Ts, Access, Presence>...> {
+public:
+    using query_category = matter::entity_query_tag;
+
 public:
     constexpr entities(boost::hana::basic_type<
                        matter::type_query<Ts, Access, Presence>>...) noexcept
