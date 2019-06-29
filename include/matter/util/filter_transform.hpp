@@ -18,9 +18,8 @@ constexpr decltype(auto) filter_transform(Pred p)
     return ranges::view::transform([p = std::move(p)](auto&& element) {
                return p(std::forward<decltype(element)>(element));
            }) |
-           ranges::view::filter([](auto&& opt_element) -> bool {
-               return opt_element.has_value();
-           }) |
+           ranges::view::filter(
+               [](auto&& opt_element) -> bool { return bool(opt_element); }) |
            ranges::view::transform([](auto&& opt_element) {
                return *std::forward<decltype(opt_element)>(opt_element);
            });
