@@ -7,7 +7,7 @@
 #include <array>
 #include <vector>
 
-#include "matter/component/typed_id.hpp"
+#include "matter/id/typed_id.hpp"
 #include "matter/util/algorithm.hpp"
 
 namespace matter

@@ -5,20 +5,19 @@
 
 #include <algorithm>
 
-#include "component_identifier.hpp"
+#include "matter/id/component_identifier.hpp"
 
 #include "matter/component/group_container.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
 {
-template<typename Id, typename... Components>
+template<typename Identifier>
 class registry {
-    static_assert(matter::is_id_v<Id>);
-    static_assert((matter::is_component_v<Components> && ...));
+    static_assert(matter::is_component_identifier_v<Identifier>);
 
 public:
-    using identifier_type      = component_identifier<Id, Components...>;
+    using identifier_type      = Identifier;
     using id_type              = typename identifier_type::id_type;
     using group_container_type = matter::group_container<id_type>;
 
@@ -31,21 +30,36 @@ public:
     constexpr registry() noexcept = default;
 
     template<typename C>
-    constexpr auto component_id() const
+    constexpr std::enable_if_t<
+        matter::is_component_identifier_for_v<identifier_type, C>,
+        matter::typed_id<id_type, C>>
+    component_id() const
     {
         return identifier_.template id<C>();
     }
 
     template<typename... Cs>
-    constexpr auto component_ids() const
+    constexpr std::enable_if_t<
+        (matter::is_component_identifier_for_v<identifier_type, Cs> && ...),
+        matter::unordered_typed_ids<id_type, Cs...>>
+    component_ids() const
     {
-        return identifier_.template ids<Cs...>();
+        return matter::unordered_typed_ids{identifier_.template id<Cs>()...};
     }
 
     template<typename C>
-    void register_component() noexcept
+    constexpr std::enable_if_t<
+        matter::is_dynamic_component_identifier_v<identifier_type>,
+        matter::typed_id<id_type, C>>
+    register_component() noexcept
     {
-        identifier_.template register_type<C>();
+        return identifier_.template register_component<C>();
+    }
+
+    template<typename C>
+    constexpr bool contains() const noexcept
+    {
+        return identifier_.template contains<C>();
     }
 
     group_container_type& group_container() noexcept

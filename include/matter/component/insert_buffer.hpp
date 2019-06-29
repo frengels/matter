@@ -5,7 +5,7 @@
 
 #include <vector>
 
-#include "matter/component/typed_id.hpp"
+#include "matter/id/typed_id.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter

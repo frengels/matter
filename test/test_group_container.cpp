@@ -1,18 +1,19 @@
 #include <catch2/catch.hpp>
 
-#include "matter/component/component_identifier.hpp"
 #include "matter/component/group.hpp"
 #include "matter/component/group_container.hpp"
 #include "matter/component/group_slice.hpp"
+#include "matter/id/default_component_identifier.hpp"
 
 TEST_CASE("group_container")
 {
 
-    matter::component_identifier<matter::unsigned_id<std::size_t>> ident;
-    ident.register_type<int>();
-    ident.register_type<float>();
-    ident.register_type<char>();
-    ident.register_type<double>();
+    matter::default_component_identifier<matter::unsigned_id<std::size_t>>
+        ident;
+    ident.register_component<int>();
+    ident.register_component<float>();
+    ident.register_component<char>();
+    ident.register_component<double>();
 
     matter::group_container<matter::unsigned_id<std::size_t>> cont;
 

@@ -1,5 +1,5 @@
-#ifndef MATTER_COMPONENT_ID_TYPE_HPP
-#define MATTER_COMPONENT_ID_TYPE_HPP
+#ifndef MATTER_ID_ID_TYPE_HPP
+#define MATTER_ID_ID_TYPE_HPP
 
 #pragma once
 
@@ -10,21 +10,6 @@
 
 namespace matter
 {
-
-template<typename Id, typename = void>
-struct id_value_type
-{};
-
-template<typename Id>
-struct id_value_type<Id,
-                     std::void_t<decltype(std::declval<const Id>().value())>>
-{
-    using type = std::decay_t<decltype(std::declval<const Id>().value())>;
-};
-
-template<typename Id>
-using id_value_type_t = typename id_value_type<Id>::type;
-
 template<typename Id, typename = void>
 struct is_id : std::false_type
 {};
@@ -41,7 +26,6 @@ struct is_id<
     Id,
     std::enable_if_t<
         std::is_default_constructible_v<Id> &&
-        std::is_constructible_v<Id, id_value_type_t<Id>> &&
         std::is_nothrow_copy_constructible_v<Id> &&
         std::is_nothrow_copy_assignable_v<Id> && matter::is_swappable_v<Id> &&
         std::is_same_v<bool,
@@ -90,11 +74,12 @@ public:
     explicit constexpr unsigned_id(const value_type& id) noexcept : value_{id}
     {}
 
-    constexpr const value_type& value() const noexcept
+    constexpr value_type value() const noexcept
     {
         return value_;
     }
 
+public:
     constexpr explicit operator bool() const noexcept
     {
         return value_ != invalid_id;
@@ -184,7 +169,7 @@ public:
     explicit constexpr signed_id(const value_type& id) noexcept : value_{id}
     {}
 
-    constexpr const value_type& value() const noexcept
+    constexpr value_type value() const noexcept
     {
         return value_;
     }

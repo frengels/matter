@@ -7,11 +7,11 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "matter/component/id.hpp"
-#include "matter/component/identifier.hpp"
 #include "matter/component/metadata.hpp"
 #include "matter/component/traits.hpp"
-#include "matter/component/typed_id.hpp"
+#include "matter/id/id.hpp"
+#include "matter/id/identifier.hpp"
+#include "matter/id/typed_id.hpp"
 
 namespace matter
 {
@@ -44,7 +44,7 @@ struct unregistered_component : std::logic_error
 /// you use multiple instances of `component_identifier`. To avoid this we map
 /// the global ids to a local id. This way we get a clean array of ids.
 template<typename Id, typename... Components>
-class component_identifier {
+class default_component_identifier {
     static_assert(matter::is_id_v<Id>, "Id must fulfil the is_id concept");
     static_assert((matter::is_component_v<Components> && ...),
                   "All types must be valid components");
@@ -54,7 +54,7 @@ class component_identifier {
 
 public:
     using id_type       = Id;
-    using id_value_type = matter::id_value_type_t<id_type>;
+    using id_value_type = typename Id::value_type;
 
     static constexpr id_value_type constexpr_components_size =
         sizeof...(Components);
@@ -70,7 +70,7 @@ private:
     id_value_type        next_local_id_{constexpr_components_size};
 
 public:
-    constexpr component_identifier() = default;
+    constexpr default_component_identifier() = default;
 
     template<typename Component>
     static constexpr bool is_static() noexcept
@@ -80,7 +80,7 @@ public:
 
     /// \brief instructs the identifier to now identify this component
     template<typename Component>
-    const id_type& register_type() noexcept
+    matter::typed_id<id_type, Component> register_component() noexcept
     {
         assert(!is_static<Component>());
         auto global_id = identifier_type::template get<Component>();
@@ -94,12 +94,13 @@ public:
             runtime_ids_.resize(global_id + 1, {});
         }
 
-        return runtime_ids_[global_id] =
-                   id_type{static_cast<id_value_type>(local_id)};
+        auto id = runtime_ids_[global_id] =
+            id_type{static_cast<id_value_type>(local_id)};
+        return matter::typed_id<id_type, Component>{id};
     }
 
     template<typename Component>
-    constexpr bool is_registered() const noexcept
+    constexpr bool contains() const noexcept
     {
         if constexpr (is_static<Component>())
         {
@@ -112,7 +113,7 @@ public:
 
     /// \brief retrieve the local id for a component
     template<typename Component>
-    constexpr auto id() const
+    constexpr matter::typed_id<id_type, Component> id() const
     {
         if constexpr (is_static<Component>())
         {
@@ -126,13 +127,13 @@ public:
     }
 
     template<typename... Cs>
-    constexpr auto ids() const
+    constexpr matter::unordered_typed_ids<id_type, Cs...> ids() const
     {
         return matter::unordered_typed_ids{id<Cs>()...};
     }
 
     template<typename... Cs>
-    constexpr auto ordered_ids() const
+    constexpr matter::ordered_typed_ids<id_type, Cs...> ordered_ids() const
     {
         return matter::ordered_typed_ids{ids<Cs...>()};
     }
