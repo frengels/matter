@@ -11,7 +11,6 @@ tests = [
   'algo',
   'group_container',
   'insert_buffer',
-  'access',
 ]
 
 catch_lib = static_library(
@@ -25,7 +24,7 @@ foreach t : tests
     t,
     'test_@0@.cpp'.format(t),
     link_with: catch_lib,
-    dependencies: [matter, catch2_dep],
+    dependencies: [matter_dep, catch2_dep],
   )
   test(t, test_exe)
 endforeach

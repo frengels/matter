@@ -4,9 +4,6 @@
 #include <iostream>
 #include <string_view>
 
-#include "matter/access/read.hpp"
-#include "matter/access/readwrite.hpp"
-#include "matter/access/write.hpp"
 #include "matter/component/registry.hpp"
 
 struct position
@@ -89,9 +86,11 @@ TEST_CASE("benchmarks")
         {
             timer t{"Iterating over 1000000 single components - read access"};
 
+            /*
             auto pos_view = reg.view<matter::read<position>>();
 
             pos_view.for_each([](auto) {});
+            */
         }
 
         SECTION("access write")
@@ -99,6 +98,7 @@ TEST_CASE("benchmarks")
             timer t{
                 "Iterating over 1000000 single components - readwrite access"};
 
+            /*
             auto pos_view = reg.view<matter::readwrite<position>>();
 
             pos_view.for_each([](auto rwpos) {
@@ -106,6 +106,7 @@ TEST_CASE("benchmarks")
                 pos.x        = {};
                 rwpos.stage(pos);
             });
+            */
         }
     }
 
@@ -145,10 +146,12 @@ TEST_CASE("benchmarks")
         {
             timer t{"Iterating over 1000000 double components - read access"};
 
+            /*
             auto view =
                 reg.view<matter::read<position>, matter::read<velocity>>();
 
             view.for_each([](auto, auto) {});
+            */
         }
 
         SECTION("write access")
@@ -156,6 +159,7 @@ TEST_CASE("benchmarks")
             timer t{
                 "Iterating over 1000000 double components - readwrite access"};
 
+            /*
             auto view = reg.view<matter::readwrite<position>,
                                  matter::readwrite<velocity>>();
 
@@ -169,6 +173,7 @@ TEST_CASE("benchmarks")
                 rwpos.stage(pos);
                 rwvel.stage(vel);
             });
+            */
         }
     }
 
@@ -191,10 +196,12 @@ TEST_CASE("benchmarks")
             timer t{"Iterating over 1000000 double components, only half "
                     "double - read"};
 
+            /*
             auto view =
                 reg.view<matter::read<position>, matter::read<velocity>>();
 
             view.for_each([](auto, auto) {});
+            */
         }
 
         SECTION("readwrite access")
@@ -202,6 +209,7 @@ TEST_CASE("benchmarks")
             timer t{"Iterating over 1000000 double components, only half "
                     "double - readwrite access"};
 
+            /*
             auto view = reg.view<matter::readwrite<position>,
                                  matter::readwrite<velocity>>();
 
@@ -215,6 +223,7 @@ TEST_CASE("benchmarks")
                 rwpos.stage(pos);
                 rwvel.stage(vel);
             });
+            */
         }
     }
 
@@ -235,9 +244,11 @@ TEST_CASE("benchmarks")
             timer t{"Iterating over 1000000 components, only one has both - "
                     "read access"};
 
+            /*
             auto view =
                 reg.view<matter::read<position>, matter::read<velocity>>();
             view.for_each([](auto, auto) {});
+            */
         }
 
         SECTION("readwrite access")
@@ -245,6 +256,7 @@ TEST_CASE("benchmarks")
             timer t{"Iterating over 1000000 components, only one has both - "
                     "readwrite access"};
 
+            /*
             auto view = reg.view<matter::readwrite<position>,
                                  matter::readwrite<velocity>>();
             view.for_each([](auto rwpos, auto rwvel) {
@@ -257,6 +269,7 @@ TEST_CASE("benchmarks")
                 rwpos.stage(pos);
                 rwvel.stage(vel);
             });
+            */
         }
     }
 }
