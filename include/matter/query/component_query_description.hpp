@@ -8,7 +8,7 @@
 #include "matter/query/access.hpp"
 #include "matter/query/presence.hpp"
 #include "matter/query/runtime.hpp"
-#include "matter/query/typed_access.hpp"
+#include "matter/query/type_query.hpp"
 
 namespace matter
 {
@@ -38,7 +38,7 @@ public:
     constexpr component_query_description(
         const Identifier& ident,
         boost::hana::basic_type<
-            matter::typed_access<T, Access, Presence>>) noexcept
+            matter::type_query<T, Access, Presence>>) noexcept
         : id_{ident.template id<T>()}, access_{Access::access_enum()},
           pres_{Presence::presence_enum()}
     {
@@ -130,7 +130,7 @@ public:
 template<typename Identifier, typename T, typename Access, typename Presence>
 component_query_description(
     const Identifier& ident,
-    boost::hana::basic_type<matter::typed_access<T, Access, Presence>>)
+    boost::hana::basic_type<matter::type_query<T, Access, Presence>>)
     ->component_query_description<typename Identifier::id_type>;
 } // namespace matter
 

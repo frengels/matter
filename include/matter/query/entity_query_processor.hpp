@@ -8,7 +8,7 @@
 
 #include "matter/id/id_cache.hpp"
 #include "matter/query/primitives/filter.hpp"
-#include "matter/query/typed_access.hpp"
+#include "matter/query/type_query.hpp"
 
 namespace matter
 {
@@ -25,7 +25,7 @@ public:
         Range&&           group_range,
         const Identifier& ident,
         boost::hana::basic_type<
-            matter::typed_access<Ts, Access, Presence>>... query_types) const
+            matter::type_query<Ts, Access, Presence>>... query_types) const
         noexcept
     {
         // use the filter_group function to determine whether the group is

@@ -8,7 +8,7 @@
 #include "matter/id/id.hpp"
 #include "matter/id/typed_id.hpp"
 #include "matter/query/component_query_description.hpp"
-#include "matter/query/typed_access.hpp"
+#include "matter/query/type_query.hpp"
 
 namespace matter
 {
@@ -26,9 +26,9 @@ public:
              typename UAccess,
              typename UPresence>
     constexpr mock_component_identifier(
-        boost::hana::basic_type<matter::typed_access<T, TAccess, TPresence>>,
+        boost::hana::basic_type<matter::type_query<T, TAccess, TPresence>>,
         boost::hana::basic_type<
-            matter::typed_access<U, UAccess, UPresence>>) noexcept
+            matter::type_query<U, UAccess, UPresence>>) noexcept
     {}
 
     template<typename V>
@@ -69,8 +69,8 @@ template<typename T,
          typename UAccess,
          typename UPresence>
 constexpr bool can_access_concurrent(
-    boost::hana::basic_type<matter::typed_access<T, TAccess, TPresence>> lhs,
-    boost::hana::basic_type<matter::typed_access<U, UAccess, UPresence>>
+    boost::hana::basic_type<matter::type_query<T, TAccess, TPresence>> lhs,
+    boost::hana::basic_type<matter::type_query<U, UAccess, UPresence>>
         rhs) noexcept
 {
     constexpr auto ident = matter::detail::mock_component_identifier{lhs, rhs};

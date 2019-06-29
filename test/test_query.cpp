@@ -13,44 +13,26 @@
 #include "matter/query/primitives/read.hpp"
 #include "matter/query/primitives/require.hpp"
 #include "matter/query/primitives/write.hpp"
-#include "matter/query/typed_access.hpp"
-
-namespace test
-{
-template<typename T>
-using write =
-    matter::typed_access<T, matter::prim::write, matter::prim::require>;
-
-template<typename T>
-using read = matter::typed_access<T, matter::prim::read, matter::prim::require>;
-
-template<typename T>
-using opt_write =
-    matter::typed_access<T, matter::prim::write, matter::prim::optional>;
-
-template<typename T>
-using opt_read =
-    matter::typed_access<T, matter::prim::read, matter::prim::optional>;
-} // namespace test
+#include "matter/query/type_query.hpp"
 
 TEST_CASE("query")
 {
     SECTION("concurrency")
     {
         using boost::hana::type_c;
-        auto winte = type_c<matter::typed_access<int,
-                                                 matter::prim::write,
-                                                 matter::prim::exclude>>;
-        auto wintr = type_c<matter::typed_access<int,
-                                                 matter::prim::write,
-                                                 matter::prim::require>>;
-        auto winto = type_c<matter::typed_access<int,
-                                                 matter::prim::write,
-                                                 matter::prim::optional>>;
+        auto winte = type_c<matter::type_query<int,
+                                               matter::prim::write,
+                                               matter::prim::exclude>>;
+        auto wintr = type_c<matter::type_query<int,
+                                               matter::prim::write,
+                                               matter::prim::require>>;
+        auto winto = type_c<matter::type_query<int,
+                                               matter::prim::write,
+                                               matter::prim::optional>>;
 
-        auto iintr = type_c<matter::typed_access<int,
-                                                 matter::prim::inaccessible,
-                                                 matter::prim::require>>;
+        auto iintr = type_c<matter::type_query<int,
+                                               matter::prim::inaccessible,
+                                               matter::prim::require>>;
 
         SECTION("static")
         {
@@ -108,10 +90,9 @@ TEST_CASE("query")
             auto filtered_group = matter::filter_group(
                 grp,
                 cache,
-                boost::hana::type_c<
-                    matter::typed_access<int,
-                                         matter::prim::write,
-                                         matter::prim::require>>);
+                boost::hana::type_c<matter::type_query<int,
+                                                       matter::prim::write,
+                                                       matter::prim::require>>);
 
             if (filtered_group) // [int] and [int, float] should match
             {
@@ -129,9 +110,9 @@ TEST_CASE("query")
                 grp,
                 cache,
                 boost::hana::type_c<
-                    matter::typed_access<float,
-                                         matter::prim::inaccessible,
-                                         matter::prim::exclude>>);
+                    matter::type_query<float,
+                                       matter::prim::inaccessible,
+                                       matter::prim::exclude>>);
 
             if (filtered_group)
             {
@@ -158,13 +139,13 @@ TEST_CASE("query")
                     grp,
                     cache,
                     boost::hana::type_c<
-                        matter::typed_access<float,
-                                             matter::prim::read,
-                                             matter::prim::optional>>,
+                        matter::type_query<float,
+                                           matter::prim::read,
+                                           matter::prim::optional>>,
                     boost::hana::type_c<
-                        matter::typed_access<int,
-                                             matter::prim::write,
-                                             matter::prim::require>>);
+                        matter::type_query<int,
+                                           matter::prim::write,
+                                           matter::prim::require>>);
 
                 // should match on [int, float] and [int]
                 if (res)
@@ -184,12 +165,12 @@ TEST_CASE("query")
                 auto res = matter::filter_group(
                     grp,
                     cache,
-                    type_c<matter::typed_access<float,
-                                                matter::prim::read,
-                                                matter::prim::exclude>>,
-                    type_c<matter::typed_access<int,
-                                                matter::prim::read,
-                                                matter::prim::require>>);
+                    type_c<matter::type_query<float,
+                                              matter::prim::read,
+                                              matter::prim::exclude>>,
+                    type_c<matter::type_query<int,
+                                              matter::prim::read,
+                                              matter::prim::require>>);
 
                 if (res)
                 {
@@ -209,7 +190,7 @@ TEST_CASE("query")
             auto matched = 0;
 
             auto eq = matter::entities{
-                type_c<test::write<int>>}; // match [int] and [int, float]
+                type_c<matter::write<int>>}; // match [int] and [int, float]
 
             auto eq_proc = matter::entity_query_processor{};
 
@@ -225,8 +206,8 @@ TEST_CASE("query")
 
             matched = 0;
 
-            auto eq1 = matter::entities{type_c<test::read<float>>,
-                                        type_c<test::opt_read<int>>};
+            auto eq1 = matter::entities{type_c<matter::read<float>>,
+                                        type_c<matter::opt_read<int>>};
 
             // should match 2 groups, [float] and [float, int]
 
