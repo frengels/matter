@@ -3,7 +3,6 @@ tests = [
   'registry',
   'component',
   'storage',
-  'ecs',
   'entity',
   'util',
   'erased',
