@@ -2,8 +2,6 @@
 
 #include "matter/component/registry.hpp"
 #include "matter/component/traits.hpp"
-#include "matter/entity/entity.hpp"
-#include "matter/entity/entity_manager.hpp"
 #include "matter/id/default_component_identifier.hpp"
 #include "matter/id/identifier.hpp"
 #include "matter/storage/sparse_vector_storage.hpp"
