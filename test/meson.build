@@ -12,6 +12,7 @@ tests = [
   'group_container',
   'insert_buffer',
   'id_cache',
+  'query',
 ]
 
 catch_lib = static_library(

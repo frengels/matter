@@ -585,7 +585,9 @@ private:
         // assert that the ids don't already exist
         // and the element at the position is greater than our ids.
         assert([&] {
-            if (pos != end())
+            // we need the check with range end or we compare to a subgroup
+            // which might match
+            if (pos != end() && pos != range(grp_size).end())
             {
                 auto ordered_ids = matter::ordered_typed_ids{ids};
                 return *pos != ordered_ids && *pos > ordered_ids;
@@ -610,7 +612,8 @@ private:
         // increment all following index values
         increment_indices(grp_size);
 
-        view_cache_.push_back({*new_pos, grp_size});
+        update_cache(matter::any_group<id_type>{*new_pos, grp_size});
+        // view_cache_.push_back({*new_pos, grp_size});
 
         // return where the inserted element is at
         return {new_pos, grp_size};
@@ -684,6 +687,8 @@ private:
         // increment all begin indices to match up again
         increment_indices(grp_size);
 
+        update_cache({*new_pos, grp_size});
+
         return {new_pos, grp_size};
     }
 
@@ -726,6 +731,28 @@ private:
     constexpr auto end_index_iterator(std::size_t group_size) const noexcept
     {
         return begin_indices_.begin() + group_size;
+    }
+
+    /// update our view_cache_, called after every emplace.
+    /// Currently the cache gets rebuild after every new group. This doesn't
+    /// scale well but after a few cycles there shouldn't be many groups being
+    /// inserted so this should never become a bottleneck.
+    constexpr void update_cache([
+        [maybe_unused]] matter::any_group<id_type> new_group) noexcept
+    {
+        view_cache_.clear(); // clear old cache
+
+        // redo the cache
+        auto sz = groups_size();
+        for (auto i = 1u; i <= sz; ++i)
+        {
+            auto rng = range(i);
+
+            for (auto grp : rng)
+            {
+                view_cache_.emplace_back(grp);
+            }
+        }
     }
 };
 } // namespace matter
