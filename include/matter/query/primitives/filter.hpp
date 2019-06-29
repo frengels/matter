@@ -5,7 +5,7 @@
 
 #include "matter/component/any_group.hpp"
 #include "matter/query/component_query_description.hpp"
-#include "matter/query/typed_access.hpp"
+#include "matter/query/type_query.hpp"
 
 namespace matter
 {
@@ -21,7 +21,7 @@ constexpr auto filter_group(
     matter::any_group<typename Identifier::id_type> grp,
     const Identifier&                               ident,
     boost::hana::basic_type<
-        matter::typed_access<Ts, Access, Presence>>... access_types) noexcept
+        matter::type_query<Ts, Access, Presence>>... access_types) noexcept
 {
     auto process_storage = [&](auto tid, auto access_type) {
         using storage_modifier_type =
