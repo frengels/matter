@@ -4,17 +4,11 @@
 #include "matter/id/default_component_identifier.hpp"
 #include "matter/id/id_cache.hpp"
 #include "matter/query/entities.hpp"
-#include "matter/query/entity_query_processor.hpp"
 #include "matter/query/primitives/concurrency.hpp"
-#include "matter/query/primitives/exclude.hpp"
-#include "matter/query/primitives/filter.hpp"
-#include "matter/query/primitives/inaccessible.hpp"
-#include "matter/query/primitives/optional.hpp"
-#include "matter/query/primitives/read.hpp"
-#include "matter/query/primitives/require.hpp"
-#include "matter/query/primitives/write.hpp"
+#include "matter/query/processor.hpp"
 #include "matter/query/type_query.hpp"
 #include "matter/query/type_traits.hpp"
+#include "matter/world.hpp"
 
 TEST_CASE("query")
 {
@@ -42,6 +36,9 @@ TEST_CASE("query")
             static_assert(matter::can_access_concurrent(winte, winto));
 
             static_assert(matter::can_access_concurrent(wintr, iintr));
+
+            static_assert(matter::traits::has_query_category(
+                type_c<matter::entities<matter::write<int>>>));
         }
 
         SECTION("dynamic")
@@ -72,29 +69,33 @@ TEST_CASE("query")
             boost::hana::type_c<matter::entities<matter::write<int>>>));
         static_assert(
             !matter::traits::is_entity_query(boost::hana::type_c<int>));
+
+        static_assert(matter::traits::is_query_category(
+            boost::hana::type_c<matter::entity_query_tag>));
+
+        static_assert(
+            matter::traits::is_query_category<matter::entity_query_tag>());
     }
 
     SECTION("filter")
     {
-        auto reg = matter::registry<
-            matter::default_component_identifier<matter::signed_id<int>>>{};
-        reg.register_component<int>();
-        reg.register_component<float>();
+        // auto reg = matter::registry<
+        //     matter::default_component_identifier<matter::signed_id<int>>>{};
 
-        reg.create<int, float>(
-            std::make_tuple(1),
-            std::make_tuple(5.0f));               // create [int, float] group
-        reg.create<float>(std::make_tuple(5.0f)); // create [float] group
-        reg.create<int>(std::make_tuple(3));      // create [int] group
+        auto w = matter::world{};
+        w.register_component<int>();
+        w.register_component<float>();
 
-        auto grp_range = reg.group_container().range();
+        w.create_entity<int, float>(1, float{});
+        w.create_entity<float>(5.0f);
+        w.create_entity<int>(3);
 
-        auto cache = matter::id_cache{reg.component_id<int>(),
-                                      reg.component_id<float>()};
+        auto cache =
+            matter::id_cache{w.component_id<int>(), w.component_id<float>()};
 
         auto matched = 0;
 
-        for (auto grp : grp_range)
+        for (auto grp : w.group_range())
         {
             auto filtered_group = matter::filter_group(
                 grp,
@@ -112,7 +113,7 @@ TEST_CASE("query")
         REQUIRE(matched == 2); // the number of matched groups
         matched = 0;
 
-        for (auto grp : grp_range)
+        for (auto grp : w.group_range())
         {
             // match all without float, so should be 1 [int]
             auto filtered_group = matter::filter_group(
@@ -142,7 +143,7 @@ TEST_CASE("query")
         {
             matched = 0;
 
-            for (auto grp : grp_range)
+            for (auto grp : w.group_range())
             {
                 auto res = matter::filter_group(
                     grp,
@@ -167,7 +168,7 @@ TEST_CASE("query")
 
             matched = 0;
 
-            for (auto grp : grp_range)
+            for (auto grp : w.group_range())
             {
                 // match all with int and without float, so [int]
                 using boost::hana::type_c;
@@ -192,7 +193,7 @@ TEST_CASE("query")
             REQUIRE(matched == 1);
         }
 
-        SECTION("entity_query_processor")
+        SECTION("process_entity_query")
         {
             using boost::hana::type_c;
 
@@ -201,12 +202,7 @@ TEST_CASE("query")
             auto eq = matter::entities{
                 type_c<matter::write<int>>}; // match [int] and [int, float]
 
-            auto eq_proc = matter::entity_query_processor{};
-
-            for (auto [i] : eq(boost::hana::unpack(
-                     eq.query_types(), [&](auto... query_types) {
-                         return eq_proc(grp_range, cache, query_types...);
-                     })))
+            for (auto [i] : matter::process_query(eq, w, cache))
             {
                 ++matched;
             }
@@ -222,15 +218,10 @@ TEST_CASE("query")
 
             auto opt_present = 0;
 
-            for (auto [f_store, i_store] : eq1(boost::hana::unpack(
-                     eq1.query_types(), [&](auto... query_types) {
-                         return eq_proc(grp_range, cache, query_types...);
-                     })))
+            for (auto [f_store, i_store] : matter::process_query(eq1, w, cache))
             {
                 ++matched;
 
-                // check if the integer store is present, which should only be
-                // one case
                 if (i_store)
                 {
                     ++opt_present;

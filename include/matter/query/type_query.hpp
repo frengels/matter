@@ -53,8 +53,16 @@ using opt_write =
     matter::type_query<T, matter::prim::write, matter::prim::optional>;
 
 template<typename T>
-using exclude =
+using has_not =
     matter::type_query<T, matter::prim::inaccessible, matter::prim::exclude>;
+
+template<typename T>
+using has =
+    matter::type_query<T, matter::prim::inaccessible, matter::prim::require>;
+
+template<typename T>
+using opt_has =
+    matter::type_query<T, matter::prim::inaccessible, matter::prim::optional>;
 } // namespace matter
 
 #endif

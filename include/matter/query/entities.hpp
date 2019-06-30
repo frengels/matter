@@ -16,6 +16,7 @@ template<typename... Ts, typename... Access, typename... Presence>
 class entities<matter::type_query<Ts, Access, Presence>...> {
 public:
     using query_category = matter::entity_query_tag;
+    using query_types = std::tuple<matter::type_query<Ts, Access, Presence>...>;
 
 public:
     constexpr entities(boost::hana::basic_type<
@@ -33,13 +34,6 @@ public:
                filter_transform([](auto&& opt_result) {
                    return std::forward<decltype(opt_result)>(opt_result);
                });
-    }
-
-    constexpr auto query_types() const noexcept
-    {
-
-        return boost::hana::tuple_t<
-            matter::type_query<Ts, Access, Presence>...>;
     }
 };
 

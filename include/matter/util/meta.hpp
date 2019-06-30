@@ -7,6 +7,7 @@
 #include <tuple>
 #include <type_traits>
 
+#include <boost/hana/ext/std/tuple.hpp>
 #include <boost/hana/set.hpp>
 #include <boost/hana/tuple.hpp>
 
@@ -277,6 +278,12 @@ constexpr decltype(auto) emplace_back_ambiguous(Container& cont, Arg&& arg)
     }
     else
     {
+        static_assert(
+            boost::hana::is_valid([&]() {
+                matter::detail::emplace_back_from_tuple(cont,
+                                                        std::forward<Arg>(arg));
+            })(),
+            "Cannot emplace_back from neither forwarding nor tuple unpacking");
         return matter::detail::emplace_back_from_tuple(cont,
                                                        std::forward<Arg>(arg));
     }
@@ -510,6 +517,18 @@ public:
 template<typename Tuple>
 using unique_tuple_t = typename unique_tuple<Tuple>::type;
 } // namespace meta
+
+namespace traits
+{
+template<typename Tuple>
+constexpr auto to_hana_tuple_t() noexcept
+{
+    return decltype(
+        boost::hana::unpack(std::declval<Tuple>(), [](auto&&... vals) {
+            return boost::hana::make_tuple(boost::hana::typeid_(vals)...);
+        })){};
+}
+} // namespace traits
 } // namespace matter
 
 #endif
