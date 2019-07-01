@@ -7,7 +7,6 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "matter/component/metadata.hpp"
 #include "matter/component/traits.hpp"
 #include "matter/id/id.hpp"
 #include "matter/id/identifier.hpp"
@@ -100,7 +99,7 @@ public:
     }
 
     template<typename Component>
-    constexpr bool contains() const noexcept
+    constexpr bool contains_component() const noexcept
     {
         if constexpr (is_static<Component>())
         {
@@ -108,12 +107,14 @@ public:
         }
 
         auto id = identifier_type::template get<Component>();
-        return runtime_ids_.size() > id && bool(runtime_ids_[id]);
+        return static_cast<decltype(id)>(runtime_ids_.size()) > id &&
+               bool(runtime_ids_[id]);
     }
 
     /// \brief retrieve the local id for a component
     template<typename Component>
-    constexpr matter::typed_id<id_type, Component> id() const
+    constexpr matter::typed_id<id_type, Component> component_id() const
+        noexcept(is_static<Component>())
     {
         if constexpr (is_static<Component>())
         {
@@ -126,16 +127,18 @@ public:
         }
     }
 
-    template<typename... Cs>
-    constexpr matter::unordered_typed_ids<id_type, Cs...> ids() const
+    template<typename... Ts>
+    constexpr matter::unordered_typed_ids<id_type, Ts...> component_ids() const
+        noexcept((is_static<Ts>() && ...))
     {
-        return matter::unordered_typed_ids{id<Cs>()...};
+        return matter::unordered_typed_ids{component_id<Ts>()...};
     }
 
-    template<typename... Cs>
-    constexpr matter::ordered_typed_ids<id_type, Cs...> ordered_ids() const
+    template<typename... Ts>
+    constexpr matter::ordered_typed_ids<id_type, Ts...>
+    ordered_component_ids() const noexcept((is_static<Ts>() && ...))
     {
-        return matter::ordered_typed_ids{ids<Cs...>()};
+        return matter::ordered_typed_ids{component_ids<Ts...>()};
     }
 
 private:

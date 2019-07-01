@@ -11,6 +11,7 @@ tests = [
   'insert_buffer',
   'id_cache',
   'query',
+  'job',
 ]
 
 catch_lib = static_library(

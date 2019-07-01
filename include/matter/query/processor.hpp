@@ -21,8 +21,9 @@ constexpr decltype(auto) process_entity_query(EntityQuery&      eq,
 {
     static_assert(matter::traits::is_entity_query(boost::hana::typeid_(eq)));
 
-    auto query_primitives = matter::traits::to_hana_tuple_t<
-        matter::meta::tuplify_t<typename EntityQuery::query_types>>();
+    auto query_primitives = decltype(matter::traits::to_hana_tuple_t(
+        std::declval<
+            matter::meta::tuplify_t<typename EntityQuery::query_types>>())){};
 
     return boost::hana::unpack(query_primitives, [&](auto... query_types) {
         auto transformed_range =
@@ -40,25 +41,38 @@ constexpr decltype(auto) process_entity_query(EntityQuery&      eq,
     });
 }
 
-template<typename Query, typename World, typename Meta>
-constexpr decltype(auto)
-process_query(Query& q, World& w, Meta&& meta_info) noexcept
+template<typename Query, typename World>
+constexpr decltype(auto) process_query(Query& q, World& w) noexcept
 {
     constexpr auto query_type = boost::hana::typeid_(q);
 
     if constexpr (matter::traits::is_entity_query(query_type))
     {
         static_assert(
-            matter::is_component_identifier_v<std::decay_t<Meta>>,
-            "Meta for entity query must be a valid ComponentIdentifier");
+            matter::is_component_identifier_v<World>,
+            "World for entity query must be a valid ComponentIdentifier");
 
-        return process_entity_query(
-            q, w.group_range(), std::forward<Meta>(meta_info));
+        return process_entity_query(q, w.group_range(), w);
     }
     // TODO: group query, meta information will contain handle to the group
     // TODO: group filter query, no metainformation will be passed
     // TODO: world query, no metainformation will be passed
 }
+
+namespace traits
+{
+template<typename Query, typename World>
+constexpr auto process_query_result(boost::hana::basic_type<Query>,
+                                    boost::hana::basic_type<World>) noexcept
+{
+    using boost::hana::type_c;
+
+    using process_query_result_type =
+        decltype(process_query(std::declval<Query&>(), std::declval<World&>()));
+
+    return type_c<process_query_result_type>;
+}
+} // namespace traits
 } // namespace matter
 
 #endif

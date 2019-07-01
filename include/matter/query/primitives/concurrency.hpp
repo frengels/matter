@@ -32,7 +32,7 @@ public:
     {}
 
     template<typename V>
-    constexpr bool contains() const noexcept
+    constexpr bool contains_component() const noexcept
     {
         if constexpr (std::is_same_v<V, T> || std::is_same_v<V, U>)
         {
@@ -48,7 +48,7 @@ public:
     template<typename V>
     constexpr std::enable_if_t<std::is_same_v<V, T> || std::is_same_v<V, U>,
                                matter::typed_id<id_type, V>>
-    id() const noexcept
+    component_id() const noexcept
     {
         if constexpr (std::is_same_v<V, T>)
         {

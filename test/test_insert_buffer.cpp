@@ -9,7 +9,9 @@ TEST_CASE("insert_buffer")
                                          float,
                                          int>
          ident{};
-    auto buf = matter::insert_buffer{ident.template ids<float, int>()};
+    auto buf = matter::insert_buffer{
+        matter::unordered_typed_ids{ident.template component_id<float>(),
+                                    ident.template component_id<int>()}};
     buf.reserve(10000);
 
     SECTION("emplace_back")

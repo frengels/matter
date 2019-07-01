@@ -202,7 +202,7 @@ TEST_CASE("query")
             auto eq = matter::entities{
                 type_c<matter::write<int>>}; // match [int] and [int, float]
 
-            for (auto [i] : matter::process_query(eq, w, cache))
+            for (auto [i] : matter::process_query(eq, w))
             {
                 ++matched;
             }
@@ -218,7 +218,7 @@ TEST_CASE("query")
 
             auto opt_present = 0;
 
-            for (auto [f_store, i_store] : matter::process_query(eq1, w, cache))
+            for (auto [f_store, i_store] : matter::process_query(eq1, w))
             {
                 ++matched;
 

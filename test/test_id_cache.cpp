@@ -18,7 +18,8 @@ TEST_CASE("id_cache")
         // create from hana types
         auto cache = matter::id_cache{ident, type_c<int>, type_c<float>};
         // create from typed ids
-        auto cache1 = matter::id_cache{ident.id<float>(), ident.id<int>()};
+        auto cache1 = matter::id_cache{ident.component_id<float>(),
+                                       ident.component_id<int>()};
         // create without any deduction
         auto cache2 =
             matter::id_cache<typename decltype(ident)::id_type, float, int>{
@@ -33,10 +34,10 @@ TEST_CASE("id_cache")
                       decltype(cache),
                       matter::prototype::component>);
 
-        REQUIRE(ident.id<int>() == cache.id<int>());
-        REQUIRE(cache.id<float>() == cache1.id<float>());
+        REQUIRE(ident.component_id<int>() == cache.component_id<int>());
+        REQUIRE(cache.component_id<float>() == cache1.component_id<float>());
 
-        REQUIRE(cache.contains<int>());
-        REQUIRE(!cache.contains<char>());
+        REQUIRE(cache.contains_component<int>());
+        REQUIRE(!cache.contains_component<char>());
     }
 }
