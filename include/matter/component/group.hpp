@@ -58,23 +58,12 @@ public:
         return *this;
     }
 
-    /*
-      constexpr iterator erase(iterator pos) noexcept
-      {
-          std::apply(
-              [&](auto... stores) {
-                  (stores.erase(pos.template get<Cs>()), ...);
-              },
-              stores_);
-      }
-    */
-
     template<typename... Args>
     constexpr matter::component_view<Cs...>
     emplace_back(Args&&... args) noexcept
     {
         static_assert(sizeof...(Args) == sizeof...(Cs),
-                      "Must pass constructor argument for each component");
+                      "Must pass one argument for each component");
         std::apply(
             [&](auto&&... stores) {
                 (matter::detail::emplace_back_ambiguous(
