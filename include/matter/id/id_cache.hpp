@@ -5,6 +5,8 @@
 
 #include <array>
 
+#include <boost/hana/contains.hpp>
+#include <boost/hana/set.hpp>
 #include <boost/hana/tuple.hpp>
 
 #include "matter/id/component_identifier.hpp"
@@ -26,6 +28,9 @@ public:
     using id_type = Id;
 
 private:
+    [[no_unique_address]] decltype(
+        boost::hana::to_set(boost::hana::tuple_t<Cs...>)) component_types_{};
+
     std::tuple<matter::typed_id<id_type, Cs>...> ids_;
 
 public:
@@ -35,14 +40,14 @@ public:
 
     template<typename Identifier>
     constexpr id_cache(const Identifier& ident)
-        : id_cache{ident.template id<Cs>()...}
+        : id_cache{ident.template component_id<Cs>()...}
     {
         static_assert(matter::is_component_identifier_v<Identifier>);
     }
 
     template<typename Identifier>
     constexpr id_cache(const Identifier& ident, boost::hana::basic_type<Cs>...)
-        : id_cache{ident.template id<Cs>()...}
+        : id_cache{ident.template component_id<Cs>()...}
     {
         static_assert(matter::is_component_identifier_v<Identifier>);
     }
@@ -50,15 +55,15 @@ public:
     template<typename T>
     constexpr std::enable_if_t<matter::detail::type_in_list_v<T, Cs...>,
                                matter::typed_id<id_type, T>>
-    id() const noexcept
+    component_id() const noexcept
     {
         return std::get<matter::typed_id<id_type, T>>(ids_);
     }
 
     template<typename T>
-    constexpr bool contains() const noexcept
+    constexpr bool contains_component() const noexcept
     {
-        return matter::detail::type_in_list_v<T, Cs...>;
+        return boost::hana::contains(component_types_, boost::hana::type_c<T>);
     }
 };
 template<typename Identifier, typename... Cs>

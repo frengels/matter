@@ -37,18 +37,15 @@ struct component_identifier
     using id_type = matter::signed_id<int>;
 
     template<typename T>
-    bool contains() const;
+    bool contains_component() const;
 };
 
 static_assert(
     matter::is_component_identifier_v<matter::prototype::component_identifier>);
 
-struct dynamic_component_identifier
+struct dynamic_component_identifier : matter::prototype::component_identifier
 {
     using id_type = matter::prototype::id;
-
-    template<typename T>
-    bool contains() const;
 
     template<typename T>
     matter::typed_id<id_type, T> register_component();
@@ -66,7 +63,7 @@ struct component_identifier_for : matter::prototype::component_identifier
         matter::typed_id<
             typename matter::prototype::component_identifier::id_type,
             C>>
-    id() const;
+    component_id() const;
 };
 
 static_assert(!matter::is_component_identifier_for_v<

@@ -149,24 +149,24 @@ TEST_CASE("component")
                                              empty_component>
             cident;
 
-        static_assert(cident.id<float>().value() == 0);
+        static_assert(cident.component_id<float>().value() == 0);
         static_assert(cident.is_static<std::string_view>());
         static_assert(!cident.is_static<std::wstring_view>());
-        CHECK(cident.template id<float>().value() == 0);
+        CHECK(cident.template component_id<float>().value() == 0);
 
-        static_assert(cident.id<std::string_view>() ==
-                      cident.id<std::string_view>());
+        static_assert(cident.component_id<std::string_view>() ==
+                      cident.component_id<std::string_view>());
 
         // we test whether the global id doesn't affect the local id
-        CHECK(!cident.contains<std::wstring_view>()); // this will
-                                                      // generate a
-                                                      // global id
-        cident.register_component<random_component>(); // this will generate a local
-                                                  // id of num+0
+        CHECK(!cident.contains_component<std::wstring_view>()); // this will
+                                                                // generate a
+                                                                // global id
+        cident.register_component<random_component>(); // this will generate a
+                                                       // local id of num+0
         cident.register_component<std::wstring_view>();
-        CHECK(cident.id<random_component>().value() ==
+        CHECK(cident.component_id<random_component>().value() ==
               decltype(cident)::constexpr_components_size);
-        CHECK(cident.id<std::wstring_view>().value() ==
+        CHECK(cident.component_id<std::wstring_view>().value() ==
               decltype(cident)::constexpr_components_size + 1);
     }
 }

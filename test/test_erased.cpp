@@ -106,14 +106,14 @@ TEST_CASE("erased_storage")
     ident.register_component<int_comp>();
     ident.register_component<float_comp>();
 
-    matter::erased_storage store{ident.id<int_comp>()};
+    matter::erased_storage store{ident.component_id<int_comp>()};
 
     SECTION("push back")
     {
         int_comp icomp1{50};
 
         store.push_back(
-            matter::erased_component{ident.id<int_comp>(), &icomp1});
+            matter::erased_component{ident.component_id<int_comp>(), &icomp1});
 
         auto  er_comp    = store[0];
         auto& icomp1_ref = *static_cast<int_comp*>(er_comp.get());
@@ -123,7 +123,7 @@ TEST_CASE("erased_storage")
         int_comp icomp2{42};
 
         store.push_back(
-            matter::erased_component{ident.id<int_comp>(), &icomp2});
+            matter::erased_component{ident.component_id<int_comp>(), &icomp2});
 
         er_comp                = store[0];
         auto& icomp1_ref_again = *static_cast<int_comp*>(er_comp.get());

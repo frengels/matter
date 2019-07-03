@@ -34,8 +34,9 @@ public:
         matter::is_component_identifier_for_v<identifier_type, C>,
         matter::typed_id<id_type, C>>
     component_id() const
+        noexcept(noexcept(identifier_.template component_id<C>()))
     {
-        return identifier_.template id<C>();
+        return identifier_.template component_id<C>();
     }
 
     template<typename... Cs>
@@ -44,22 +45,24 @@ public:
         matter::unordered_typed_ids<id_type, Cs...>>
     component_ids() const
     {
-        return matter::unordered_typed_ids{identifier_.template id<Cs>()...};
+        return matter::unordered_typed_ids{component_id<Cs>()...};
     }
 
     template<typename C>
     constexpr std::enable_if_t<
         matter::is_dynamic_component_identifier_v<identifier_type>,
         matter::typed_id<id_type, C>>
-    register_component() noexcept
+    register_component() noexcept(
+        noexcept(identifier_.template register_component<C>()))
     {
         return identifier_.template register_component<C>();
     }
 
     template<typename C>
-    constexpr bool contains() const noexcept
+    constexpr bool contains_component() const
+        noexcept(noexcept(identifier_.template contains_component<C>()))
     {
-        return identifier_.template contains<C>();
+        return identifier_.template contains_component<C>();
     }
 
     group_container_type& group_container() noexcept
@@ -78,7 +81,7 @@ public:
         static_assert(sizeof...(Cs) == sizeof...(TupArgs),
                       "Did not provide Component for each Argument.");
 
-        auto ids = identifier_.template ids<Cs...>();
+        auto ids = component_ids<Cs...>();
 
         auto ideal_group = try_emplace_group(ids);
 

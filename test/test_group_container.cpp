@@ -18,38 +18,40 @@ TEST_CASE("group_container")
     matter::group_container<matter::unsigned_id<std::size_t>> cont;
 
     // fill up with groups
-    cont.try_emplace(ident.ids<char>());
+    cont.try_emplace(ident.component_ids<char>());
 
     CHECK(1 == cont.range().size());
     CHECK(1 == cont.size());
-    cont.try_emplace(ident.ids<float>());
+    cont.try_emplace(ident.component_ids<float>());
     CHECK(2 == cont.range().size());
     CHECK(2 == cont.size());
-    cont.try_emplace_group(ident.ids<int, float, char, double>());
+    cont.try_emplace_group(ident.component_ids<int, float, char, double>());
     CHECK(3 == cont.range().size());
     CHECK(6 == cont.size());
-    cont.try_emplace_group(ident.ids<float>()); // is already inserted
+    cont.try_emplace_group(ident.component_ids<float>()); // is already inserted
     CHECK(3 == cont.range().size());
     CHECK(6 == cont.size());
 
     // get here because can get invalidated before
-    auto ifcdgrp_opt = cont.find_group(ident.ids<int, float, char, double>());
+    auto ifcdgrp_opt =
+        cont.find_group(ident.component_ids<int, float, char, double>());
     CHECK(ifcdgrp_opt);
     auto ifcdgrp = *std::move(ifcdgrp_opt);
     // old groups possibly invalidated here
 
-    ifcdgrp   = *cont.find_group(ident.ids<int, float, char, double>());
-    auto fgrp = *cont.find_group(ident.ids<float>());
+    ifcdgrp = *cont.find_group(ident.component_ids<int, float, char, double>());
+    auto fgrp = *cont.find_group(ident.component_ids<float>());
 
-    auto fgrp_it = cont.find(ident.ordered_ids<float>());
+    auto fgrp_it = cont.find(ident.ordered_component_ids<float>());
     CHECK(fgrp_it != cont.end());
 
     // obtain the group a different way
-    auto fgrp2 = *matter::make_group(*fgrp_it, ident.ids<float>());
+    auto fgrp2 = *matter::make_group(*fgrp_it, ident.component_ids<float>());
     CHECK(fgrp == fgrp2);
 
     // obtain a slice as well
-    auto fgrp_slice = *matter::make_group_slice(*fgrp_it, ident.ids<float>());
+    auto fgrp_slice =
+        *matter::make_group_slice(*fgrp_it, ident.component_ids<float>());
     CHECK(fgrp2 == fgrp_slice);
 
     SECTION("contains")
@@ -74,7 +76,7 @@ TEST_CASE("group_container")
 
     SECTION("find")
     {
-        auto ids         = ident.ids<double>();
+        auto ids         = ident.component_ids<double>();
         auto ordered_ids = matter::ordered_typed_ids{ids};
 
         auto ordered_untyped_ids = matter::ordered_untyped_ids{ordered_ids};

@@ -15,7 +15,7 @@ struct is_component_identifier : std::false_type
 {};
 
 /// A ComponentIdentifier generates a unique id for each component registered.
-/// the base allows to check if a component is contained through ::contains<T>()
+/// the base allows to check if a component is contained through ::contains_component<T>()
 template<typename T>
 struct is_component_identifier<
     T,
@@ -23,7 +23,7 @@ struct is_component_identifier<
         matter::is_id_v<typename T::id_type> &&
             std::is_same_v<bool,
                            decltype(std::declval<const T>()
-                                        .template contains<
+                                        .template contains_component<
                                             matter::prototype::component>())>,
         std::void_t<typename T::id_type>>> : std::true_type
 {};
@@ -60,10 +60,10 @@ template<typename T, typename U>
 struct is_component_identifier_for<
     T,
     U,
-    std::enable_if_t<
-        matter::is_component_identifier_v<T> &&
-        std::is_same_v<matter::typed_id<typename T::id_type, U>,
-                       decltype(std::declval<const T>().template id<U>())>>>
+    std::enable_if_t<matter::is_component_identifier_v<T> &&
+                     std::is_same_v<matter::typed_id<typename T::id_type, U>,
+                                    decltype(std::declval<const T>()
+                                                 .template component_id<U>())>>>
     : std::true_type
 {};
 

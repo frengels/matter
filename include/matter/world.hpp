@@ -13,6 +13,7 @@ class world {
 public:
     using registry_type   = Registry;
     using identifier_type = typename registry_type::identifier_type;
+    using id_type         = typename identifier_type::id_type;
 
 private:
     registry_type registry_;
@@ -21,13 +22,20 @@ public:
     world() noexcept = default;
 
     template<typename T>
-    constexpr auto
-    component_id() noexcept(noexcept(registry_.template component_id<T>()))
-        -> std::enable_if_t<
-            matter::is_component_identifier_for_v<identifier_type, T>,
-            decltype(registry_.template component_id<T>())>
+    constexpr auto component_id() const
+        noexcept(noexcept(registry_.template component_id<T>()))
+            -> std::enable_if_t<
+                matter::is_component_identifier_for_v<identifier_type, T>,
+                decltype(registry_.template component_id<T>())>
     {
         return registry_.template component_id<T>();
+    }
+
+    template<typename T>
+    constexpr bool contains_component() const
+        noexcept(noexcept(registry_.template contains_component<T>()))
+    {
+        return registry_.template contains_component<T>();
     }
 
     template<typename T>

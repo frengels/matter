@@ -39,7 +39,7 @@ constexpr auto filter_group(
     };
 
     auto results = std::tuple<decltype(
-        process_storage(ident.template id<Ts>(), access_types))...>{};
+        process_storage(ident.template component_id<Ts>(), access_types))...>{};
 
     auto shortcircuit = [&](auto tid, auto access_type) {
         auto filter_res = process_storage(tid, access_type);
@@ -53,7 +53,8 @@ constexpr auto filter_group(
     // this will terminate prematurely on false result.
     // because if one filter doesn't pass then we can throw away the result
     // either way
-    auto success = (shortcircuit(ident.template id<Ts>(), access_types) && ...);
+    auto success =
+        (shortcircuit(ident.template component_id<Ts>(), access_types) && ...);
 
     auto dereference_results = [](auto&& result) {
         return std::apply(

@@ -19,6 +19,7 @@ public:
     using query_types = std::tuple<matter::type_query<Ts, Access, Presence>...>;
 
 public:
+    constexpr entities() noexcept = default;
     constexpr entities(boost::hana::basic_type<
                        matter::type_query<Ts, Access, Presence>>...) noexcept
     {}

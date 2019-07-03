@@ -20,13 +20,16 @@ TEST_CASE("typed_id")
 
         SECTION("same size")
         {
-            auto unordered1  = ident.ids<char, short, float>();
-            auto unordered2  = ident.ids<short, char, float>();
-            auto rt_unorder1 = ident.ids<unsigned char, double, char>();
-            auto rt_unorder2 = ident.ids<double, unsigned char, char>();
+            auto unordered1 = ident.component_ids<char, short, float>();
+            auto unordered2 = ident.component_ids<short, char, float>();
+            auto rt_unorder1 =
+                ident.component_ids<unsigned char, double, char>();
+            auto rt_unorder2 =
+                ident.component_ids<double, unsigned char, char>();
 
-            auto ordered1  = ident.ordered_ids<float, short, char>();
-            auto rt_order1 = ident.ordered_ids<char, unsigned char, double>();
+            auto ordered1 = ident.ordered_component_ids<float, short, char>();
+            auto rt_order1 =
+                ident.ordered_component_ids<char, unsigned char, double>();
 
             SECTION("get")
             {
@@ -75,11 +78,14 @@ TEST_CASE("typed_id")
 
         SECTION("smaller")
         {
-            auto unordered1 = ident.ids<char, short>();
-            auto no_match   = ident.ids<int, short, float>();
+            auto unordered1 = ident.component_ids<char, short>();
+            auto no_match   = ident.component_ids<int, short, float>();
 
-            auto ordered =
-                ident.ordered_ids<char, double, unsigned int, float, short>();
+            auto ordered = ident.ordered_component_ids<char,
+                                                       double,
+                                                       unsigned int,
+                                                       float,
+                                                       short>();
 
             CHECK(ordered.contains(matter::ordered_typed_ids{unordered1}));
             CHECK(!ordered.contains(matter::ordered_typed_ids{no_match}));

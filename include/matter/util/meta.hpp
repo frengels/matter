@@ -521,12 +521,12 @@ using unique_tuple_t = typename unique_tuple<Tuple>::type;
 namespace traits
 {
 template<typename Tuple>
-constexpr auto to_hana_tuple_t() noexcept
+constexpr auto to_hana_tuple_t(Tuple&& tup) noexcept
 {
-    return decltype(
-        boost::hana::unpack(std::declval<Tuple>(), [](auto&&... vals) {
-            return boost::hana::make_tuple(boost::hana::typeid_(vals)...);
-        })){};
+
+    return boost::hana::unpack(std::forward<Tuple>(tup), [](auto&&... vals) {
+        return boost::hana::make_tuple(boost::hana::typeid_(vals)...);
+    });
 }
 } // namespace traits
 } // namespace matter

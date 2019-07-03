@@ -39,7 +39,7 @@ public:
         const Identifier& ident,
         boost::hana::basic_type<
             matter::type_query<T, Access, Presence>>) noexcept
-        : id_{ident.template id<T>()}, access_{Access::access_enum()},
+        : id_{ident.template component_id<T>()}, access_{Access::access_enum()},
           pres_{Presence::presence_enum()}
     {
         static_assert(matter::is_component_identifier_v<Identifier>);
