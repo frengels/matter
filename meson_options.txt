@@ -1,9 +1,9 @@
 option('build_tests',
        type: 'boolean',
-       value: false,
+       value: true,
        description: 'Build the unit tests')
 
 option('build_benchmarks',
        type: 'boolean',
-       value: false,
+       value: true,
        description: 'Build microbenchmarks')
