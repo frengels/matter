@@ -1,17 +1,20 @@
 tests = [
-  'entt',
-  'registry',
-  'component',
-  'storage',
-  'util',
-  'erased',
-  'typed_id',
-  'algo',
-  'group_container',
-  'insert_buffer',
-  'id_cache',
-  'query',
-  'job',
+  'test_entt',
+  'test_registry',
+  'test_component',
+  'test_storage',
+  'test_util',
+  'test_erased',
+  'test_typed_id',
+  'test_algo',
+  'test_group_container',
+  'test_insert_buffer',
+  'test_id_cache',
+  'test_query',
+  'test_job',
+  'test_begin_end',
+  'test_soa',
+  'test_emplace_back'
 ]
 
 catch_lib = static_library(
@@ -23,7 +26,7 @@ catch_lib = static_library(
 foreach t : tests
   test_exe = executable(
     t,
-    'test_@0@.cpp'.format(t),
+    '@0@.cpp'.format(t),
     link_with: catch_lib,
     dependencies: [matter_dep, catch2_dep],
   )

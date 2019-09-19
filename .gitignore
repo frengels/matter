@@ -12,3 +12,4 @@ CMakeSettings.json
 .cquery_cached_index/
 .cquery
 compile_flags.txt
+.vscode/
