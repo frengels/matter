@@ -29,7 +29,10 @@ public:
     constexpr ordered_untyped_ids(const id_type* ids, size_type size) noexcept
         : ids_{ids}, size_{size}
     {
+        // passed ids must be sorted
         assert(std::is_sorted(ids_, ids_ + size));
+        // passed ids must all be unique
+        assert(std::adjacent_find(ids, ids_ + size) == (ids_ + size));
     }
 
     explicit constexpr ordered_untyped_ids(
@@ -154,6 +157,10 @@ public:
         assert(idx < size());
         return ids_[idx];
     }
+
+    constexpr bool contains(matter::ordered_untyped_ids<Id> other) const
+        noexcept
+    {}
 };
 } // namespace matter
 
