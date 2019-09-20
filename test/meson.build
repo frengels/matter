@@ -14,7 +14,8 @@ tests = [
   'test_job',
   'test_begin_end',
   'test_soa',
-  'test_emplace_back'
+  'test_emplace_back',
+  'test_span'
 ]
 
 catch_lib = static_library(
