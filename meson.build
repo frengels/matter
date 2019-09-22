@@ -16,6 +16,7 @@ hana_proj = subproject('hana')
 range_v3_dep = dependency('range', fallback: ['range-v3', 'range_dep'])
 hana_dep = hana_proj.get_variable('hana_dep')
 hera_dep = dependency('hera', method: 'cmake', modules: ['hera::hera'])
+nameof_dep = dependency('nameof', method: 'cmake', modules: ['nameof::nameof'])
 
 
 if get_option('build_tests')
@@ -28,7 +29,7 @@ endif
 
 matter_dep = declare_dependency(
   include_directories: matter_inc,
-  dependencies: [range_v3_dep, hana_dep, hera_dep],
+  dependencies: [range_v3_dep, hana_dep, hera_dep, nameof_dep],
 )
 
 if get_option('build_tests')

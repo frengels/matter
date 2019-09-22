@@ -7,6 +7,11 @@
 #include <type_traits>
 #include <vector>
 
+#include <hera/algorithm/sort.hpp>
+#include <hera/container/type_list.hpp>
+#include <nameof.hpp>
+
+#include "matter/container/soa.hpp"
 #include "matter/util/meta.hpp"
 
 namespace matter
@@ -236,6 +241,37 @@ struct component_storage<
 
 template<typename Component>
 using component_storage_t = typename component_storage<Component>::type;
+
+template<typename... Components>
+constexpr auto make_component_soa()
+{
+    // first sort the types by name
+    hera::type_list<Components...> comp_tl{};
+
+    // now sort this type list
+    auto sorted_types = hera::sort(comp_tl, [](auto lhs_ident, auto rhs_ident) {
+        using lhs_type = typename decltype(lhs_ident)::type;
+        using rhs_type = typename decltype(rhs_ident)::type;
+
+        constexpr auto lhs_name = ::nameof::nameof_type<lhs_type>();
+        constexpr auto rhs_name = ::nameof::nameof_type<rhs_type>();
+
+        constexpr auto less_than = lhs_name.compare(rhs_name) < 0;
+
+        return std::bool_constant<less_than>{};
+    });
+
+    // with all types sorted in sorted_types, creating the soa can now take
+    // place
+    return hera::unpack(sorted_types, [](auto... type_idents) {
+        return matter::soa<
+            component_storage_t<typename decltype(type_idents)::type>...>{
+            component_storage_t<typename decltype(type_idents)::type>{}...};
+    });
+}
+
+template<typename... Components>
+using component_soa_t = decltype(make_component_soa<Components...>());
 } // namespace matter
 
 #endif

@@ -1,0 +1,43 @@
+pkgname=nameof
+pkgver=0.9.0
+_branch="$pkgname-$pkgver"
+pkgrel=1
+pkgdesc="Nameof operator for modern C++"
+arch=('any')
+url="https://github.com/Neargye/nameof"
+license=('MIT')
+makedepends=('cmake' 'ninja')
+source=('https://github.com/Neargye/nameof/archive/v0.9.0.tar.gz')
+sha256sums=('cf1c9e6ff933cd296c0a3d6f7f6e4b266f95fd74fd428f1d9f9ed38cea07ac71')
+
+prepare() {
+    if [ -d _build ]; then
+        rm -rf _build
+    fi
+    mkdir _build
+}
+
+build() {
+    cd "_build"
+
+    cmake $srcdir/$_branch -G Ninja \
+        -D CMAKE_CXX_FLAGS="${CXXFLAGS}" \
+        -D CMAKE_BUILD_TYPE=Release \
+        -D CMAKE_INSTALL_PREFIX=/usr
+    ninja
+}
+
+# skip check for now, nameof_enum fails but I don't use that anyway
+# check() {
+#    cd "_build"
+#    ninja test
+# }
+
+package() {
+    cd "_build"
+
+    DESTDIR="$pkgdir" ninja install
+
+    install -Dm644 "$srcdir/$_branch/LICENSE" \
+        "$pkgdir/usr/share/licenses/nameof/LICENSE"
+}

@@ -2,6 +2,7 @@
 
 #include <hera/type_identity.hpp>
 
+#include "matter/component/traits.hpp"
 #include "matter/container/soa.hpp"
 #include "matter/iterator/begin.hpp"
 
@@ -112,5 +113,19 @@ TEST_CASE("soa")
         auto end2 = s2.end(hera::type_identity<uint8_t>{});
 
         REQUIRE(end2 == ++beg2);
+    }
+
+    SECTION("components")
+    {
+        // check how making the soa per component works
+        auto cs = matter::make_component_soa<char, bool, int>();
+
+        static_assert(
+            matter::same_as<matter::soa<matter::component_storage_t<bool>,
+                                        matter::component_storage_t<char>,
+                                        matter::component_storage_t<int>>,
+                            decltype(cs)>);
+        static_assert(matter::same_as<matter::component_soa_t<int, char, bool>,
+                                      decltype(cs)>);
     }
 }
